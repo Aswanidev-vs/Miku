@@ -47,42 +47,30 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Build Debug APK
-        run: |
-          chmod +x android/gradlew
-          cd android && ./gradlew assembleDebug
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
 
-      - name: Extract version from tag
+      - name: Build Debug APK
+        run: cd android && ./gradlew assembleDebug
+
+      - name: Verify APK exists
+        run: |
+          ls -la android/app/build/outputs/apk/debug/app-debug.apk
+          echo "APK built successfully"
+
+      - name: Extract version
         id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        run: echo "TAG=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
       - name: Rename APK
-        run: mv android/app/build/outputs/apk/debug/app-debug.apk miku-v${{ steps.version.outputs.VERSION }}-debug.apk
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk miku-v${{ steps.version.outputs.TAG }}-debug.apk
+          ls -la miku-v${{ steps.version.outputs.TAG }}-debug.apk
 
-      - name: Upload APK to existing release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event.release.tag_name }}
-          files: miku-v${{ steps.version.outputs.VERSION }}-debug.apk
-
-      - name: Create new release with APK
-        if: github.event_name == 'push'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.VERSION }}
-          name: "Miku v${{ steps.version.outputs.VERSION }}"
-          body: |
-            ## Miku v${{ steps.version.outputs.VERSION }}
-
-            ### Install
-            1. Download `miku-v${{ steps.version.outputs.VERSION }}-debug.apk`
-            2. Open on your Android device
-            3. Enable "Install from unknown sources" if prompted
-
-            ### What's Changed
-            See the commit history for details.
-          files: miku-v${{ steps.version.outputs.VERSION }}-debug.apk
-          generate_release_notes: true
-          draft: false
-          prerelease: false
+      - name: Upload APK to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name || steps.version.outputs.TAG }}" \
+            "miku-v${{ steps.version.outputs.TAG }}-debug.apk" \
+            --clobber
