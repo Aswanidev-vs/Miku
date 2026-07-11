@@ -1,6 +1,8 @@
 name: Build & Release APK
 
 on:
+  release:
+    types: [created]
   push:
     tags:
       - 'v*'
@@ -63,9 +65,18 @@ jobs:
       - name: Rename APK
         run: mv android/app/build/outputs/apk/debug/app-debug.apk miku-v${{ steps.version.outputs.VERSION }}-debug.apk
 
-      - name: Create GitHub Release
+      - name: Upload APK to existing release
+        if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: miku-v${{ steps.version.outputs.VERSION }}-debug.apk
+
+      - name: Create new release with APK
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
           name: "Miku v${{ steps.version.outputs.VERSION }}"
           body: |
             ## Miku v${{ steps.version.outputs.VERSION }}
