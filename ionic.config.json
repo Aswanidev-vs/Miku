@@ -1,0 +1,7 @@
+{
+  "name": "Miku",
+  "type": "vue",
+  "integrations": {
+    "capacitor": {}
+  }
+}

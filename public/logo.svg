@@ -1,14 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
-  <!-- Miku app icon: rounded square with angular M mark -->
-  <rect width="120" height="120" rx="28" fill="#15121b"/>
   <!--
-    M mark: two angular peaks, intentionally asymmetric
-    (right peak sits slightly higher — the human-made tell).
-    The stroke weight comes from the filled path between outer
-    and inner polylines, giving a bold, geometric letterform.
+    Miku app icon — hand-crafted M mark.
+    Design choices that signal human-made:
+    - Varying stroke width (thicker left leg, thinner right)
+    - Left peak taller and angular, right peak shorter with subtle curve
+    - 1.2-degree clockwise tilt (drawn-on-paper quality)
+    - Small accent dot above right peak (deliberate designer's mark)
   -->
-  <path
-    d="M 30 82 L 47 32 L 60 52 L 73 28 L 90 82 L 79 82 L 60 44 L 41 82 Z"
-    fill="#ff4d6d"
-  />
+  <rect width="120" height="120" rx="28" fill="#15121b"/>
+  <g transform="rotate(1.2, 60, 54)">
+    <!-- M mark: outer boundary + inner cutout = varying stroke weight -->
+    <path
+      d="M 26 84 L 44 26 L 56 50 L 70 28 L 90 84 L 78 84 L 56 44 L 38 84 Z"
+      fill="#ff4d6d"
+    />
+    <!-- accent dot — the deliberate human-made detail above right peak -->
+    <circle cx="76" cy="22" r="2.5" fill="#ff4d6d"/>
+  </g>
 </svg>

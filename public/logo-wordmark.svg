@@ -2,10 +2,13 @@
   <!-- Miku wordmark lockup: icon + text -->
   <rect width="80" height="80" x="0" y="5" rx="20" fill="#15121b"/>
   <g transform="translate(13, 17) scale(0.55)">
-    <path
-      d="M 30 82 L 47 32 L 60 52 L 73 28 L 90 82 L 79 82 L 60 44 L 41 82 Z"
-      fill="#ff4d6d"
-    />
+    <g transform="rotate(1.2, 60, 54)">
+      <path
+        d="M 26 84 L 44 26 L 56 50 L 70 28 L 90 84 L 78 84 L 56 44 L 38 84 Z"
+        fill="#ff4d6d"
+      />
+      <circle cx="76" cy="22" r="2.5" fill="#ff4d6d"/>
+    </g>
   </g>
   <text
     x="96"
