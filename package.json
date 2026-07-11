@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@capacitor/android": "^6.0.0",
     "@capacitor/core": "^6.1.2",
     "@capacitor/haptics": "^6.0.0",
     "@ionic/vue": "^8.2.6",
@@ -22,6 +23,7 @@
     "vue-router": "^4.4.3"
   },
   "devDependencies": {
+    "@capacitor/cli": "^6.0.0",
     "@vitejs/plugin-vue": "^5.1.2",
     "@vue/test-utils": "^2.4.6",
     "fake-indexeddb": "^6.0.0",
