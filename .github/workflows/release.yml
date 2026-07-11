@@ -58,9 +58,17 @@ jobs:
           ls -la android/app/build/outputs/apk/debug/app-debug.apk
           echo "APK built successfully"
 
-      - name: Extract version
+      - name: Resolve tag
         id: version
-        run: echo "TAG=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            RAW_TAG="${{ github.event.release.tag_name }}"
+          else
+            RAW_TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          CLEAN_TAG="${RAW_TAG#v}"
+          echo "RAW_TAG=${RAW_TAG}" >> $GITHUB_OUTPUT
+          echo "TAG=${CLEAN_TAG}" >> $GITHUB_OUTPUT
 
       - name: Rename APK
         run: |
@@ -71,6 +79,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ github.event.release.tag_name || steps.version.outputs.TAG }}" \
+          gh release upload "${{ steps.version.outputs.RAW_TAG }}" \
             "miku-v${{ steps.version.outputs.TAG }}-debug.apk" \
             --clobber
