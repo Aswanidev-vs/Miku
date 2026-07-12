@@ -94,6 +94,33 @@ public class MainActivity extends AppCompatActivity {
 
         // Load the application
         loadApplication();
+
+        // Handle deep link intent (OAuth2 callback)
+        handleDeepLink(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleDeepLink(intent);
+    }
+
+    private void handleDeepLink(Intent intent) {
+        if (intent != null && intent.getData() != null) {
+            Uri uri = intent.getData();
+            if ("miku".equals(uri.getScheme()) && "callback".equals(uri.getHost())) {
+                String code = uri.getQueryParameter("code");
+                if (code != null && !code.isEmpty()) {
+                    // Send the code to JavaScript
+                    String js = String.format(
+                        "window.dispatchEvent(new CustomEvent('oauth-callback', { detail: '%s' }))",
+                        code.replace("'", "\\'")
+                    );
+                    executeJavaScript(js);
+                }
+            }
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")

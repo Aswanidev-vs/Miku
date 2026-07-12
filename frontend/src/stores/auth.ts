@@ -45,12 +45,22 @@ export const useAuthStore = defineStore('auth', () => {
   const currentUser = computed(() => user.value)
   const isLoggedIn = computed(() => isAuthenticated.value)
 
+  // Listen for OAuth callback from deep link
+  if (typeof window !== 'undefined') {
+    window.addEventListener('oauth-callback', ((e: CustomEvent) => {
+      const code = e.detail
+      if (code) {
+        handleCallback(code)
+      }
+    }) as EventListener)
+  }
+
   async function login() {
     loading.value = true
     error.value = null
     try {
       const url = await window.go.main.OAuth2Service.GetAuthorizationURL()
-      // Always show manual code entry as fallback
+      // Show manual code entry as fallback
       showCallbackInput.value = true
       // Use native Chrome Custom Tab on Android
       if (window.wails?.openURL) {
