@@ -62,7 +62,30 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y pkg-config build-essential libgtk-4-dev libwebkit2gtk-6.0-dev
+
+          # Base packages required
+          PKGS="pkg-config build-essential libgtk-4-dev"
+
+          # Candidate webkit dev packages to try (preferred to fallback)
+          CANDIDATES=("libwebkit2gtk-6.0-dev" "libwebkit2gtk-4.1-dev" "libwebkit2gtk-4.0-dev")
+
+          INSTALLED_WEBKIT=""
+          for p in "${CANDIDATES[@]}"; do
+            if apt-cache show "$p" >/dev/null 2>&1; then
+              INSTALLED_WEBKIT="$p"
+              break
+            fi
+          done
+
+          if [ -n "$INSTALLED_WEBKIT" ]; then
+            echo "Installing $INSTALLED_WEBKIT along with base packages"
+            sudo apt-get install -y $PKGS "$INSTALLED_WEBKIT"
+          else
+            echo "No suitable libwebkit2gtk dev package found. Showing available libwebkit2gtk packages:"
+            apt-cache search libwebkit2gtk || true
+            echo "If none of the candidate packages exist on this runner, consider pinning runs-on to ubuntu-22.04 or adding an appropriate repository."
+            exit 1
+          fi
 
       - name: Install Wails CLI
         run: |
@@ -218,7 +241,30 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y pkg-config build-essential libgtk-4-dev libwebkit2gtk-6.0-dev
+
+          # Base packages required
+          PKGS="pkg-config build-essential libgtk-4-dev"
+
+          # Candidate webkit dev packages to try (preferred to fallback)
+          CANDIDATES=("libwebkit2gtk-6.0-dev" "libwebkit2gtk-4.1-dev" "libwebkit2gtk-4.0-dev")
+
+          INSTALLED_WEBKIT=""
+          for p in "${CANDIDATES[@]}"; do
+            if apt-cache show "$p" >/dev/null 2>&1; then
+              INSTALLED_WEBKIT="$p"
+              break
+            fi
+          done
+
+          if [ -n "$INSTALLED_WEBKIT" ]; then
+            echo "Installing $INSTALLED_WEBKIT along with base packages"
+            sudo apt-get install -y $PKGS "$INSTALLED_WEBKIT"
+          else
+            echo "No suitable libwebkit2gtk dev package found. Showing available libwebkit2gtk packages:"
+            apt-cache search libwebkit2gtk || true
+            echo "If none of the candidate packages exist on this runner, consider pinning runs-on to ubuntu-22.04 or adding an appropriate repository."
+            exit 1
+          fi
 
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
