@@ -6,7 +6,6 @@ const route = useRoute()
 const router = useRouter()
 
 const tabs = [
-  { name: 'Home', route: 'home', icon: 'home' },
   { name: 'Discover', route: 'discover', icon: 'compass' },
   { name: 'Search', route: 'search', icon: 'search' },
   { name: 'My List', route: 'mylist', icon: 'list' },
@@ -33,11 +32,7 @@ function navigateTo(routeName: string) {
       :aria-current="currentRoute === tab.route ? 'page' : undefined"
     >
       <div class="nav-icon">
-        <svg v-if="tab.icon === 'home'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-          <polyline points="9 22 9 12 15 12 15 22"/>
-        </svg>
-        <svg v-else-if="tab.icon === 'compass'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg v-if="tab.icon === 'compass'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"/>
           <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
         </svg>

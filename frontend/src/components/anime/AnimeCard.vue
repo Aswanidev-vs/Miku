@@ -126,11 +126,11 @@ function statusClass(status?: string): string {
 }
 
 .card-info {
-  padding: var(--space-sm) var(--space-md) var(--space-md);
+  padding: var(--space-xs) var(--space-sm) var(--space-sm);
 }
 
 .card-title {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   line-height: var(--line-height-tight);
   color: var(--text-primary);
@@ -138,7 +138,7 @@ function statusClass(status?: string): string {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  margin-bottom: var(--space-xs);
+  margin-bottom: 2px;
 }
 
 .card-meta {

@@ -5,7 +5,7 @@
 <h1 align="center">Miku</h1>
 
 <p align="center">
-  <strong>A premium AniList client for Android built with Wails 3</strong>
+  <strong>A premium AniList client for Android & Desktop built with Wails 3</strong>
 </p>
 
 <p align="center">
@@ -20,30 +20,42 @@
 
 ## About
 
-Miku is a feature-rich, native-feeling AniList client that delivers a premium anime and manga tracking experience on Android. Built with Wails 3, it combines a Go backend for API handling and OAuth2 authentication with a Vue 3 frontend featuring a custom dark anime-inspired design language with cherry blossom motifs.
+Miku is a feature-rich AniList client that delivers a premium anime and manga tracking experience on Android and Desktop. Built with Wails 3, it combines a Go backend for OAuth2 authentication with a Vue 3 frontend featuring a custom dark anime-inspired design language with cherry blossom motifs.
 
 ## Features
 
 ### Core Features
-- **OAuth2 Authentication** — Secure login via AniList's OAuth2 flow with localhost callback
-- **Trending & Discovery** — Browse trending anime and manga with real-time updates
-- **Advanced Search** — Full-text search with filters for genre, status, and format
-- **Personal Lists** — Manage your anime/manga lists (Watching, Planning, Completed, Dropped, Paused)
-- **Activity Feed** — See what your friends and the community are up to
-- **Profile & Stats** — View your profile with detailed statistics, favourite genres, and GitHub-style activity heatmap
+- **OAuth2 Authentication** — Secure login via AniList's OAuth2 flow with localhost callback (works on desktop and Android)
+- **Trending & Discovery** — Browse trending, popular, seasonal anime, and top manga
+- **Advanced Search** — Full-text search with anime/manga type filter
+- **Personal Lists** — Manage your anime lists (Watching, Planning, Completed, Dropped, Paused)
+- **List Management** — Add/update anime to your list directly from detail pages (status, score, progress)
+- **Activity Feed** — See your AniList activity feed
+- **Profile & Stats** — View your profile with detailed statistics, favourite genres, and activity heatmap
+
+### Detail Pages
+- **Media Details** — Full anime/manga detail pages with banner, cover, scores, genres, description, airing info
+- **Characters & Voice Actors** — View cast with character images and Japanese voice actors
+- **Voice Actor Pages** — Click any voice actor to see all their voiced roles across anime
+- **Relations** — Navigate between related anime (prequels, sequels, adaptations)
+- **Recommendations** — Discover similar anime (deduplicated)
+
+### Auto-Sync
+- **Real-time List Sync** — Your anime list auto-syncs with AniList every 60 seconds
+- **Activity Refresh** — Feed updates automatically when you switch tabs
 
 ### UI/UX
 - **Dark Anime Theme** — Custom design system with deep purple/pink color palette
 - **Cherry Blossom Motifs** — Unique branding with sakura-inspired animations
 - **Smooth Animations** — Page transitions, skeleton loading, micro-interactions
 - **Virtual Scrolling** — Optimized list rendering for smooth 60 FPS performance
-- **Mobile-First Design** — Optimized for Android with proper touch interactions
+- **Mobile-First Design** — Optimized for Android and desktop
 
 ### Technical
-- **Offline Caching** — IndexedDB (Dexie.js) for offline data persistence
 - **GraphQL API** — Efficient data fetching with AniList's GraphQL API
 - **Type Safety** — Full TypeScript coverage with strict mode
 - **State Management** — Pinia stores for reactive state handling
+- **Cross-Platform** — Works on Windows, macOS, Linux, and Android
 
 ## Screenshots
 
@@ -63,10 +75,8 @@ Miku is a feature-rich, native-feeling AniList client that delivers a premium an
 | Build Tool | [Vite](https://vitejs.dev) | Fast development and production builds |
 | State Management | [Pinia](https://pinia.vuejs.org) | Reactive state stores |
 | Routing | [Vue Router](https://router.vuejs.org) | Client-side navigation |
-| HTTP Client | [Axios](https://axios-http.com) | API requests with interceptors |
-| Local Storage | [Dexie.js](https://dexie.org) | IndexedDB wrapper for offline caching |
-| Backend | [Go](https://go.dev) 1.25 | API proxy, OAuth2, business logic |
-| API | [AniList GraphQL](https://anilist.gitbook.io/anilist-apiv2-docs/) | Anime/manga data |
+| Backend | [Go](https://go.dev) 1.25 | OAuth2 localhost server, business logic |
+| API | [AniList GraphQL](https://anilist.gitbook.io/anilist-apiv2-docs/) | Anime/manga data (via frontend fetch) |
 
 ## Prerequisites
 
@@ -127,6 +137,12 @@ The compiled binary will be placed in the `build` directory.
 - Java Development Kit (JDK 17+)
 - Android NDK
 
+### Notes
+
+- The app includes a `network_security_config.xml` that allows cleartext HTTP to `localhost` for the OAuth callback
+- The `miku://` deep link intent filter is registered in `AndroidManifest.xml` as a fallback
+- Chrome Custom Tabs handle the OAuth redirect to `http://localhost:43219/callback`
+
 ### Build Commands
 
 ```bash
@@ -149,7 +165,9 @@ build/android/app/build/outputs/apk/debug/app-debug.apk
 
 ## AniList API Setup
 
-Miku uses the AniList GraphQL API. To authenticate with OAuth2 you need to register an application on AniList:
+Miku uses the AniList GraphQL API with OAuth2 authentication. The app runs a local HTTP server on port 43219 to receive the OAuth callback — this works on both desktop and Android (Chrome Custom Tabs redirect to `http://localhost:43219/callback` on the device).
+
+### Register Your Application
 
 1. Go to **[anilist.co/settings/developer](https://anilist.co/settings/developer)**
 2. Click **"Create New Client"**
@@ -220,12 +238,13 @@ Miku/
 │   │   │   └── common/
 │   │   │       └── SkeletonLoader.vue # Loading skeleton
 │   │   ├── views/
-│   │   │   ├── HomeView.vue           # Home/Trending
-│   │   │   ├── DiscoverView.vue       # Discovery
-│   │   │   ├── SearchView.vue         # Search with filters
-│   │   │   ├── MyListView.vue         # Personal lists
+│   │   │   ├── DiscoverView.vue       # Discovery (Trending, Popular, Seasonal, Top Manga)
+│   │   │   ├── SearchView.vue         # Search with anime/manga filter
+│   │   │   ├── MyListView.vue         # Personal lists with status tabs + auto-sync
 │   │   │   ├── FeedView.vue           # Activity feed
-│   │   │   ├── ProfileView.vue        # User profile
+│   │   │   ├── ProfileView.vue        # User profile with heatmap
+│   │   │   ├── MediaDetailView.vue    # Anime/manga detail with list management
+│   │   │   ├── VoiceActorView.vue     # Voice actor page with voiced roles
 │   │   │   ├── SettingsView.vue       # Settings
 │   │   │   └── LoginView.vue          # Login
 │   │   ├── stores/
