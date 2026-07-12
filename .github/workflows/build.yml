@@ -108,7 +108,7 @@ jobs:
         id: version
         run: |
           NEXT_VERSION=$(svu next)
-          CURRENT_VERSION=$(svu)
+          CURRENT_VERSION=$(svu current)
           echo "next=$NEXT_VERSION" >> $GITHUB_OUTPUT
           echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "Current: $CURRENT_VERSION -> Next: $NEXT_VERSION"
