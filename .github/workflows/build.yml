@@ -21,7 +21,7 @@ permissions:
 
 env:
   GO_VERSION: '1.25'
-  NODE_VERSION: '18'
+  NODE_VERSION: '22'
   JAVA_VERSION: '17'
 
 jobs:
