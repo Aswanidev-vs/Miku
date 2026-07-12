@@ -117,7 +117,7 @@ jobs:
 
       - name: Build Android APK
         run: |
-          wails3 task android:build
+          wails3 task android:package
         env:
           ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
           ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
@@ -125,10 +125,14 @@ jobs:
       - name: Find APK file
         id: find-apk
         run: |
-          APK_PATH=$(find build/android -name "*.apk" -type f | head -1)
+          APK_PATH=$(find bin build/android -name "*.apk" -type f | head -1)
           if [ -z "$APK_PATH" ]; then
             echo "APK not found, checking alternative locations..."
             APK_PATH=$(find . -name "*.apk" -type f | head -1)
+          fi
+          if [ -z "$APK_PATH" ]; then
+            echo "No APK file was produced by the Android packaging task." >&2
+            exit 1
           fi
           echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
           echo "Found APK: $APK_PATH"
