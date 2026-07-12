@@ -58,6 +58,10 @@ export interface User {
   bannerImage?: string
   statistics: UserStatistics
   options: UserOptions
+  favourites?: {
+    anime?: { nodes: { id: number; title: { romaji: string }; coverImage: { medium: string } }[] }
+    manga?: { nodes: { id: number; title: { romaji: string }; coverImage: { medium: string } }[] }
+  }
 }
 
 export interface UserOptions {
