@@ -73,6 +73,20 @@ jobs:
           GOFLAGS=-tags=gtk3 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha2.117
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
+      - name: Create build environment file
+        run: |
+          if [ -z "$ANILIST_CLIENT_ID" ] || [ -z "$ANILIST_CLIENT_SECRET" ]; then
+            echo "ANILIST_CLIENT_ID and ANILIST_CLIENT_SECRET GitHub secrets are required for OAuth builds." >&2
+            exit 1
+          fi
+          {
+            printf 'ANILIST_CLIENT_ID=%s\n' "$ANILIST_CLIENT_ID"
+            printf 'ANILIST_CLIENT_SECRET=%s\n' "$ANILIST_CLIENT_SECRET"
+          } > .env
+        env:
+          ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+          ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
+
       - name: Install frontend dependencies
         run: |
           cd frontend
@@ -173,6 +187,20 @@ jobs:
 
       - name: Install Wails CLI
         run: GOFLAGS=-tags=gtk3 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha2.117
+
+      - name: Create validation environment file
+        run: |
+          if [ -z "$ANILIST_CLIENT_ID" ] || [ -z "$ANILIST_CLIENT_SECRET" ]; then
+            echo "ANILIST_CLIENT_ID and ANILIST_CLIENT_SECRET GitHub secrets are required for validation." >&2
+            exit 1
+          fi
+          {
+            printf 'ANILIST_CLIENT_ID=%s\n' "$ANILIST_CLIENT_ID"
+            printf 'ANILIST_CLIENT_SECRET=%s\n' "$ANILIST_CLIENT_SECRET"
+          } > .env
+        env:
+          ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+          ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
 
       - name: Install frontend dependencies
         run: |

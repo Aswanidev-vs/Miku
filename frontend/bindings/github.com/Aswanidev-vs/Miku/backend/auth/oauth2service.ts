@@ -13,6 +13,13 @@ export function GetAuthorizationURL(): $CancellablePromise<string> {
     return $Call.ByID(3228093349);
 }
 
+/**
+ * GetPendingCode returns and clears any pending authorization code from a deep link.
+ */
+export function GetPendingCode(): $CancellablePromise<string> {
+    return $Call.ByID(1634895015);
+}
+
 export function GetToken(): $CancellablePromise<$models.TokenData | null> {
     return $Call.ByID(3947099560).then(($result: any) => {
         return $$createType1($result);
@@ -38,6 +45,13 @@ export function Logout(): $CancellablePromise<void> {
  */
 export function SaveToken(accessToken: string): $CancellablePromise<void> {
     return $Call.ByID(1975979673, accessToken);
+}
+
+/**
+ * SetPendingCode stores an authorization code from a deep link for later retrieval by the frontend.
+ */
+export function SetPendingCode(code: string): $CancellablePromise<void> {
+    return $Call.ByID(3950991427, code);
 }
 
 // Private type creation functions

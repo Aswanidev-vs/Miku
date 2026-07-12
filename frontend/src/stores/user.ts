@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { User, Activity, TextActivity, ListActivity } from '../types'
+import { gqlQuery, gqlMutate } from '../api/graphql'
 
 const USER_PROFILE_QUERY = `
 query ($name: String) {
@@ -157,7 +158,7 @@ export const useUserStore = defineStore('user', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await window.go.main.GraphQLClient.Query(USER_PROFILE_QUERY, { name })
+      const response = await gqlQuery(USER_PROFILE_QUERY, { name })
       if (response?.data?.User) {
         profile.value = response.data.User
       }
@@ -172,7 +173,7 @@ export const useUserStore = defineStore('user', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await window.go.main.GraphQLClient.Query(ACTIVITY_FEED_QUERY, {
+      const response = await gqlQuery(ACTIVITY_FEED_QUERY, {
         userId,
         page,
         perPage,
@@ -192,7 +193,7 @@ export const useUserStore = defineStore('user', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await window.go.main.GraphQLClient.Mutate(CREATE_TEXT_ACTIVITY_MUTATION, {
+      const response = await gqlMutate(CREATE_TEXT_ACTIVITY_MUTATION, {
         text,
       })
       if (response?.data?.CreateTextActivity) {
@@ -212,7 +213,7 @@ export const useUserStore = defineStore('user', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await window.go.main.GraphQLClient.Mutate(DELETE_ACTIVITY_MUTATION, {
+      const response = await gqlMutate(DELETE_ACTIVITY_MUTATION, {
         id: activityId,
       })
       if (response?.data?.DeleteActivity?.deleted) {

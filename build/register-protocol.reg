@@ -1,0 +1,15 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\Software\Classes\miku]
+@="URL:Miku Protocol"
+"URL Protocol"=""
+
+[HKEY_CURRENT_USER\Software\Classes\miku\DefaultIcon]
+@="G:\\fastbeam\\multiplefolder\\space\\Miku\\bin\\miku.exe,1"
+
+[HKEY_CURRENT_USER\Software\Classes\miku\shell]
+
+[HKEY_CURRENT_USER\Software\Classes\miku\shell\open]
+
+[HKEY_CURRENT_USER\Software\Classes\miku\shell\open\command]
+@="\"G:\\fastbeam\\multiplefolder\\space\\Miku\\bin\\miku.exe\" \"%1\""

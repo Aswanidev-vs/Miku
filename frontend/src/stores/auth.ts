@@ -1,40 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { Browser, Events } from '@wailsio/runtime'
+import * as OAuth2Service from '../../bindings/github.com/Aswanidev-vs/Miku/backend/auth/oauth2service'
 import type { User } from '../types'
-
-declare global {
-  interface Window {
-    wails: {
-      openURL(url: string): void
-    }
-    go: {
-      main: {
-        OAuth2Service: {
-          GetAuthorizationURL(): Promise<string>
-          HandleCallback(code: string): Promise<{
-            access_token: string
-            refresh_token?: string
-            token_type: string
-            expires_at: number
-          }>
-          SaveToken(accessToken: string): Promise<void>
-          GetToken(): Promise<{
-            access_token: string
-            refresh_token?: string
-            token_type: string
-            expires_at: number
-          } | null>
-          Logout(): Promise<void>
-          IsAuthenticated(): Promise<boolean>
-        }
-        GraphQLClient: {
-          Query(query: string, variables?: Record<string, any>): Promise<any>
-          Mutate(mutation: string, variables?: Record<string, any>): Promise<any>
-        }
-      }
-    }
-  }
-}
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -46,36 +14,23 @@ export const useAuthStore = defineStore('auth', () => {
   const currentUser = computed(() => user.value)
   const isLoggedIn = computed(() => isAuthenticated.value)
 
-  // Listen for OAuth callback from deep link
-  if (typeof window !== 'undefined') {
-    window.addEventListener('oauth-callback', ((e: CustomEvent) => {
-      const code = e.detail
-      if (code) {
-        handleCallback(code)
-      }
-    }) as EventListener)
-  }
+
 
   async function login() {
     loading.value = true
     error.value = null
     try {
-      // Check if Wails runtime is available
-      if (typeof window === 'undefined' || !window.go || !window.go.main || !window.go.main.OAuth2Service) {
-        throw new Error('Wails runtime not available. Please run the app using "wails3 dev" or the built binary, not the frontend directly.')
-      }
-      
-      const url = await window.go.main.OAuth2Service.GetAuthorizationURL()
-      
+      const url = await OAuth2Service.GetAuthorizationURL()
+
       if (!url || !url.includes('client_id=')) {
         throw new Error('Failed to generate authorization URL. Please check that ANILIST_CLIENT_ID is configured.')
       }
-      
-      // Use native Chrome Custom Tab on Android
-      if (window.wails?.openURL) {
-        window.wails.openURL(url)
-      } else {
-        // Fallback for desktop
+
+      // Open URL via Wails runtime (opens system browser / Chrome Custom Tab on Android)
+      try {
+        await Browser.OpenURL(url)
+      } catch {
+        // Fallback for desktop if OpenURL fails
         window.open(url, '_blank')
       }
     } catch (e) {
@@ -87,18 +42,20 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function handleCallback(token: string) {
+  async function handleCallback(tokenOrCode: string) {
     loading.value = true
     error.value = null
     try {
-      // With implicit grant, we receive the access token directly
-      await window.go.main.OAuth2Service.SaveToken(token)
+      // Always exchange the authorization code for a token via the backend.
+      // AniList auth codes can be hundreds of chars, so length-based heuristics fail.
+      await OAuth2Service.HandleCallback(tokenOrCode)
       isAuthenticated.value = true
       showCallbackInput.value = false
       await fetchUser()
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Authentication failed'
-      throw e
+      const msg = e instanceof Error ? e.message : 'Authentication failed'
+      console.error('[Miku] handleCallback error:', msg)
+      error.value = msg
     } finally {
       loading.value = false
     }
@@ -108,6 +65,13 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     error.value = null
     try {
+      // NOTE: GraphQLClient is not bound as a Wails service.
+      // For now, use the AniList GraphQL API directly from frontend via fetch.
+      const token = await OAuth2Service.GetToken()
+      if (!token) {
+        throw new Error('No auth token available')
+      }
+
       const query = `
         query {
           Viewer {
@@ -136,9 +100,21 @@ export const useAuthStore = defineStore('auth', () => {
           }
         }
       `
-      const response = await window.go.main.GraphQLClient.Query(query)
-      if (response?.data?.Viewer) {
-        user.value = response.data.Viewer
+
+      const response = await fetch('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token.access_token}`,
+        },
+        body: JSON.stringify({ query }),
+      })
+
+      const data = await response.json()
+
+      if (data?.data?.Viewer) {
+        user.value = data.data.Viewer
       }
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch user'
@@ -151,7 +127,7 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     error.value = null
     try {
-      await window.go.main.OAuth2Service.Logout()
+      await OAuth2Service.Logout()
       user.value = null
       isAuthenticated.value = false
     } catch (e) {
@@ -165,7 +141,7 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     error.value = null
     try {
-      const authenticated = await window.go.main.OAuth2Service.IsAuthenticated()
+      const authenticated = await OAuth2Service.IsAuthenticated()
       isAuthenticated.value = authenticated
       if (authenticated) {
         await fetchUser()

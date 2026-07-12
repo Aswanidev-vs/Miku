@@ -2,6 +2,7 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { useAnimeStore } from '../stores/anime'
 import { useMangaStore } from '../stores/manga'
+import { gqlQuery } from '../api/graphql'
 import AnimeGrid from '../components/anime/AnimeGrid.vue'
 import type { MediaType } from '../types'
 
@@ -53,7 +54,7 @@ async function loadMore() {
   if (!pageInfo.value || loading.value) return
   const nextPage = pageInfo.value.currentPage + 1
   const store = currentStore.value
-  const response = await window.go.main.GraphQLClient.Query(
+  const response = await gqlQuery(
     activeType.value === 'ANIME'
       ? `query ($search: String, $page: Int, $perPage: Int) {
           Page(page: $page, perPage: $perPage) {

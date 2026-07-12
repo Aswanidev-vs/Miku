@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Media, MediaListCollection, PageInfo } from '../types'
+import { gqlQuery, gqlMutate } from '../api/graphql'
 
 const TRENDING_ANIME_QUERY = `
 query ($page: Int, $perPage: Int) {
@@ -286,7 +287,7 @@ export const useAnimeStore = defineStore('anime', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await window.go.main.GraphQLClient.Query(TRENDING_ANIME_QUERY, {
+      const response = await gqlQuery(TRENDING_ANIME_QUERY, {
         page,
         perPage,
       })
@@ -305,7 +306,7 @@ export const useAnimeStore = defineStore('anime', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await window.go.main.GraphQLClient.Query(SEARCH_ANIME_QUERY, {
+      const response = await gqlQuery(SEARCH_ANIME_QUERY, {
         search: query,
         page,
         perPage,
@@ -329,7 +330,7 @@ export const useAnimeStore = defineStore('anime', () => {
       if (status) {
         variables.status = status
       }
-      const response = await window.go.main.GraphQLClient.Query(USER_ANIME_LIST_QUERY, variables)
+      const response = await gqlQuery(USER_ANIME_LIST_QUERY, variables)
       if (response?.data?.MediaListCollection) {
         myList.value = response.data.MediaListCollection
       }
@@ -356,7 +357,7 @@ export const useAnimeStore = defineStore('anime', () => {
       if (progress !== undefined) variables.progress = progress
       if (repeat !== undefined) variables.repeat = repeat
 
-      const response = await window.go.main.GraphQLClient.Mutate(
+      const response = await gqlMutate(
         SAVE_MEDIA_LIST_ENTRY_MUTATION,
         variables
       )
@@ -373,7 +374,7 @@ export const useAnimeStore = defineStore('anime', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await window.go.main.GraphQLClient.Mutate(
+      const response = await gqlMutate(
         DELETE_MEDIA_LIST_ENTRY_MUTATION,
         { id: entryId }
       )
@@ -390,7 +391,7 @@ export const useAnimeStore = defineStore('anime', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await window.go.main.GraphQLClient.Query(MEDIA_DETAILS_QUERY, { id })
+      const response = await gqlQuery(MEDIA_DETAILS_QUERY, { id })
       if (response?.data?.Media) {
         currentMedia.value = response.data.Media
       }
