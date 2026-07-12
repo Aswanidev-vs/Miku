@@ -1,6 +1,6 @@
-/* Miku Base Styles - Native-like feel */
+/* Miku Base Styles — Sakura Noir */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 /* Reset */
 *, *::before, *::after {
@@ -14,10 +14,11 @@ html {
   -webkit-text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  font-family: var(--font-family);
+  font-family: var(--font-body);
   font-size: var(--font-size-base);
   line-height: var(--line-height-normal);
   color: var(--text-primary);
@@ -27,6 +28,32 @@ body {
   overflow-x: hidden;
   -webkit-user-select: none;
   user-select: none;
+  position: relative;
+}
+
+/* Atmospheric ambient backdrop — soft coral/iris bloom, fixed */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 600px at 12% -8%, var(--ambient-coral), transparent 60%),
+    radial-gradient(800px 600px at 92% 4%, var(--ambient-iris), transparent 55%),
+    radial-gradient(700px 700px at 50% 110%, var(--ambient-gold), transparent 60%),
+    var(--bg-deepest);
+}
+
+/* Subtle film grain for a crafted, non-AI feel */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 a {
@@ -59,17 +86,32 @@ ul, ol {
   list-style: none;
 }
 
-/* Scrollbar - Minimal */
+/* Scrollbar — Thin, warm */
 ::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
 
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
   color: var(--text-primary);
+  letter-spacing: var(--letter-spacing-tight);
 }
 
 /* App Container */
@@ -78,10 +120,9 @@ h1, h2, h3, h4, h5, h6 {
   flex-direction: column;
   min-height: 100vh;
   min-height: 100dvh;
-  background: var(--bg-deepest);
 }
 
-/* Safe areas for mobile */
+/* Safe areas */
 .safe-area-top {
   padding-top: var(--safe-area-top);
 }
@@ -90,24 +131,32 @@ h1, h2, h3, h4, h5, h6 {
   padding-bottom: var(--safe-area-bottom);
 }
 
-/* Native-like card */
+/* Card */
 .card {
-  background: var(--bg-surface);
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
 }
 
-/* Native-like button */
+/* Buttons — shared design language */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-sm);
-  padding: var(--space-md) var(--space-xl);
-  border-radius: var(--radius-full);
+  padding: 11px var(--space-xl);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
   font-weight: var(--font-weight-semibold);
-  font-size: var(--font-size-base);
-  transition: all var(--transition-fast);
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-wide);
+  transition: transform var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .btn:active {
@@ -115,79 +164,244 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-primary {
-  background: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
   color: var(--text-on-primary);
+  box-shadow: 0 4px 16px rgba(255, 111, 145, 0.28);
 }
 
 .btn-primary:hover {
-  background: var(--color-primary-dark);
+  background: linear-gradient(135deg, var(--color-primary-light), var(--color-primary));
+  box-shadow: 0 6px 22px rgba(255, 111, 145, 0.36);
 }
 
 .btn-secondary {
   background: var(--bg-elevated);
   color: var(--text-primary);
+  border: 1px solid var(--border-default);
 }
 
 .btn-secondary:hover {
   background: var(--bg-hover);
+  border-color: var(--border-strong);
 }
 
-/* Native-like input */
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.btn-ghost:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* Input */
 .input {
   width: 100%;
-  padding: var(--space-md) var(--space-lg);
+  padding: 11px var(--space-lg);
   background: var(--bg-surface);
-  border: 1px solid var(--bg-hover);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: var(--font-size-base);
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .input:focus {
   outline: none;
   border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-glow);
 }
 
 .input::placeholder {
   color: var(--text-muted);
 }
 
-/* Loading spinner */
+/* Spinner */
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
 .spinner {
-  width: 24px;
-  height: 24px;
-  border: 2.5px solid var(--bg-hover);
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid var(--border-default);
   border-top-color: var(--color-primary);
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: spin 0.7s linear infinite;
 }
 
-/* Fade animations */
+/* Utility animations */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
 @keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.fade-in {
-  animation: fadeIn 0.3s ease;
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }
 
-.slide-up {
-  animation: slideUp 0.4s ease;
+@keyframes floatIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.fade-in { animation: fadeIn 0.3s var(--ease-out); }
+.slide-up { animation: slideUp 0.4s var(--ease-out); }
+
+/* Selection */
+::selection {
+  background: var(--color-primary);
+  color: var(--text-on-primary);
+}
+
+/* ============================================================
+   Platform-Specific Optimizations
+   ============================================================ */
+
+/* Content container — centered on desktop */
+.is-desktop .view-shell,
+.is-desktop .discover-view,
+.is-desktop .mylist-view,
+.is-desktop .feed-view,
+.is-desktop .search-view,
+.is-desktop .profile-view {
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+
+/* Desktop: generous spacing, hover affordances, floating pill nav */
+.is-desktop .discover-section,
+.is-desktop .mylist-section,
+.is-desktop .feed-section,
+.is-desktop .profile-section {
+  padding: 0 var(--space-3xl);
+}
+
+/* Align view headers with their sections on desktop */
+.is-desktop .discover-header,
+.is-desktop .mylist-header,
+.is-desktop .feed-header {
+  padding-left: var(--space-3xl);
+  padding-right: var(--space-3xl);
+}
+
+/* Thin, unobtrusive scrollbars for horizontal rows (relations, recs, tabs) */
+.relation-list::-webkit-scrollbar,
+.recommendation-list::-webkit-scrollbar,
+.tab-bar::-webkit-scrollbar,
+.type-filter::-webkit-scrollbar,
+.favorite-genres-list::-webkit-scrollbar {
+  height: 0;
+}
+
+.is-desktop .anime-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-card);
+}
+
+.is-desktop .anime-card:hover .card-image img {
+  transform: scale(1.06);
+}
+
+.is-desktop .role-item:hover,
+.is-desktop .relation-item:hover,
+.is-desktop .recommendation-item:hover,
+.is-desktop .character-item:hover {
+  background: var(--bg-hover);
+}
+
+.is-desktop .btn:hover {
+  opacity: 0.94;
+}
+
+.is-desktop .main-content {
+  padding-bottom: 96px !important;
+}
+
+/* Mobile: tighter, larger touch targets, full-width bottom nav */
+.is-mobile .bottom-nav {
+  height: var(--nav-height);
+}
+
+.is-mobile .nav-item {
+  padding: 7px 0;
+}
+
+.is-mobile .anime-card:active {
+  transform: scale(0.965);
+}
+
+.is-mobile .btn {
+  min-height: 46px;
+}
+
+.is-mobile .filter-btn,
+.is-mobile .control-btn {
+  min-height: 42px;
+}
+
+/* Screen-size adjustments */
+.screen-sm .discover-header {
+  padding: var(--space-lg) var(--space-md) var(--space-md);
+}
+
+.screen-sm .discover-title {
+  font-size: var(--font-size-2xl);
+}
+
+.screen-md .discover-title {
+  font-size: var(--font-size-3xl);
+}
+
+.screen-lg .discover-title {
+  font-size: var(--font-size-4xl);
+}
+
+/* Page transition */
+.view-fade-enter-active {
+  animation: floatIn 0.42s var(--ease-out);
+}
+.view-fade-leave-active {
+  animation: fadeOut 0.18s var(--ease-in-out);
+}
+@keyframes fadeOut {
+  to { opacity: 0; }
+}
+
+/* ============================================================
+   User Preference Toggles
+   ============================================ */
+
+/* Compact layout — denser grids & smaller cards */
+.compact-layout .anime-grid {
+  gap: var(--space-xs) !important;
+}
+.compact-layout .anime-card .card-info {
+  padding: 6px 6px 7px;
+}
+.compact-layout .anime-card .card-title {
+  font-size: 10.5px;
+}
+.compact-layout .detail-content {
+  padding: 0 var(--space-md) var(--space-md);
+}
+
+/* Reduce motion — disable animations & transitions.
+   1ms (not 0ms/none) keeps the event firing so Vue's out-in transition
+   doesn't hang and blank the page. */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  scroll-behavior: auto !important;
 }

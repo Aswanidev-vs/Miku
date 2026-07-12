@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Aswanidev-vs/Miku/backend/auth"
+	"github.com/Aswanidev-vs/Miku/backend/platform"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -67,6 +68,7 @@ func main() {
 	if oauthService != nil {
 		services = append(services, application.NewService(oauthService))
 	}
+	services = append(services, application.NewService(&platform.PlatformService{}))
 
 	var mainWindow *application.WebviewWindow
 

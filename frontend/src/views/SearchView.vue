@@ -2,12 +2,14 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { useAnimeStore } from '../stores/anime'
 import { useMangaStore } from '../stores/manga'
+import { usePlatform } from '../composables/usePlatform'
 import { gqlQuery } from '../api/graphql'
 import AnimeGrid from '../components/anime/AnimeGrid.vue'
 import type { MediaType } from '../types'
 
 const animeStore = useAnimeStore()
 const mangaStore = useMangaStore()
+const { gridColumns } = usePlatform()
 
 const query = ref('')
 const activeType = ref<MediaType>('ANIME')
@@ -148,10 +150,10 @@ onUnmounted(() => {
     <div class="search-results">
       <template v-if="hasSearched">
         <template v-if="loading && results.length === 0">
-          <AnimeGrid :items="[]" :loading="true" :columns="3" />
+          <AnimeGrid :items="[]" :loading="true" :columns="gridColumns" />
         </template>
         <template v-else-if="results.length > 0">
-          <AnimeGrid :items="results" :columns="3" />
+          <AnimeGrid :items="results" :columns="gridColumns" />
           <button
             v-if="hasMore && !loading"
             class="load-more-btn"
@@ -233,7 +235,7 @@ onUnmounted(() => {
   outline: none;
   color: var(--text-primary);
   font-size: var(--font-size-base);
-  font-family: var(--font-family);
+  font-family: var(--font-body);
   padding: var(--space-xs) 0;
 }
 
@@ -274,13 +276,13 @@ onUnmounted(() => {
 .filter-btn {
   flex: 1;
   padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--bg-hover);
+  border: 1px solid var(--border-default);
   background: var(--bg-surface);
   color: var(--text-secondary);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
+  font-family: var(--font-heading);
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  font-family: var(--font-family);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
@@ -293,7 +295,6 @@ onUnmounted(() => {
   background: var(--color-primary);
   color: var(--text-on-primary);
   border-color: var(--color-primary);
-  box-shadow: var(--shadow-glow-primary);
 }
 
 .search-results {
@@ -341,7 +342,7 @@ onUnmounted(() => {
   border-radius: var(--radius-lg);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  font-family: var(--font-family);
+  font-family: var(--font-body);
   cursor: pointer;
   transition: all var(--transition-fast);
 }

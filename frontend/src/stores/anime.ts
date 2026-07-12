@@ -78,6 +78,33 @@ query ($search: String, $page: Int, $perPage: Int) {
 }
 `
 
+// Genre-based recommendations — used to supplement sparse native AniList recs.
+const GENRE_RECS_QUERY = `
+query ($genre: String, $page: Int, $perPage: Int) {
+  Page(page: $page, perPage: $perPage) {
+    media(genre: $genre, type: ANIME, sort: POPULARITY_DESC) {
+      id
+      title {
+        romaji
+        english
+        native
+        userPreferred
+      }
+      coverImage {
+        large
+        medium
+        color
+      }
+      format
+      status
+      episodes
+      averageScore
+      genres
+    }
+  }
+}
+`
+
 const USER_ANIME_LIST_QUERY = `
 query ($userId: Int, $status: MediaListStatus) {
   MediaListCollection(userId: $userId, type: ANIME, status: $status) {
@@ -279,6 +306,7 @@ export const useAnimeStore = defineStore('anime', () => {
   const searchResults = ref<Media[]>([])
   const myList = ref<MediaListCollection | null>(null)
   const currentMedia = ref<Media | null>(null)
+  const genreRecommendations = ref<Media[]>([])
   const pageInfo = ref<PageInfo | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -393,12 +421,52 @@ export const useAnimeStore = defineStore('anime', () => {
     try {
       const response = await gqlQuery(MEDIA_DETAILS_QUERY, { id })
       if (response?.data?.Media) {
-        currentMedia.value = response.data.Media
+        const media = response.data.Media as Media
+        currentMedia.value = media
+        await supplementRecommendations(media)
       }
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch anime details'
     } finally {
       loading.value = false
+    }
+  }
+
+  // When AniList's native recommendations are sparse, pull popular titles that
+  // share the current media's top genres — ranked by shared-genre overlap.
+  async function supplementRecommendations(media: Media) {
+    genreRecommendations.value = []
+    const nativeIds = new Set<number>()
+    for (const edge of media.recommendations?.edges ?? []) {
+      const rid = edge.node?.media?.id
+      if (rid) nativeIds.add(rid)
+    }
+
+    const genres = (media.genres ?? []).slice(0, 3)
+    if (genres.length === 0) return
+
+    try {
+      const results = await Promise.all(
+        genres.map((g) =>
+          gqlQuery(GENRE_RECS_QUERY, { genre: g, page: 1, perPage: 12 })
+            .then((r) => r?.data?.Page?.media ?? [])
+            .catch(() => [])
+        )
+      )
+
+      const seen = new Set<number>([media.id, ...nativeIds])
+      const merged: Media[] = []
+      for (const list of results) {
+        for (const item of list as Media[]) {
+          if (item.id && !seen.has(item.id)) {
+            seen.add(item.id)
+            merged.push(item)
+          }
+        }
+      }
+      genreRecommendations.value = merged.slice(0, 12)
+    } catch {
+      genreRecommendations.value = []
     }
   }
 
@@ -409,6 +477,7 @@ export const useAnimeStore = defineStore('anime', () => {
 
   function clearCurrentMedia() {
     currentMedia.value = null
+    genreRecommendations.value = []
   }
 
   // --- Auto-sync polling ---
@@ -440,6 +509,7 @@ export const useAnimeStore = defineStore('anime', () => {
     searchResults,
     myList,
     currentMedia,
+    genreRecommendations,
     pageInfo,
     loading,
     error,

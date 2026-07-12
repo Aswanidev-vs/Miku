@@ -2,11 +2,13 @@
 import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
 import { useAnimeStore } from '../stores/anime'
 import { useAuthStore } from '../stores/auth'
+import { usePlatform } from '../composables/usePlatform'
 import AnimeGrid from '../components/anime/AnimeGrid.vue'
 import type { Media, ListStatus } from '../types'
 
 const animeStore = useAnimeStore()
 const authStore = useAuthStore()
+const { gridColumns } = usePlatform()
 
 const activeTab = ref<ListStatus>('CURRENT')
 
@@ -89,7 +91,7 @@ watch(isLoggedIn, (val) => {
       <!-- Content -->
       <div v-else class="mylist-content">
         <template v-if="listMedia.length > 0">
-          <AnimeGrid :items="listMedia" :columns="3" />
+          <AnimeGrid :items="listMedia" :columns="gridColumns" />
         </template>
         <template v-else>
           <div class="empty-state">
@@ -139,7 +141,7 @@ watch(isLoggedIn, (val) => {
   border-radius: var(--radius-full);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  font-family: var(--font-family);
+  font-family: var(--font-body);
   cursor: pointer;
   white-space: nowrap;
   transition: all var(--transition-fast);

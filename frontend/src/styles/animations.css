@@ -1,43 +1,41 @@
-/* ============================================
-   Miku AniList Client — Animations
-   ============================================ */
+/* Miku Animations — Refined, natural motion */
 
 /* ---- Page Transitions ---- */
 .page-enter-active,
 .page-leave-active {
-  transition: opacity var(--transition-normal), transform var(--transition-normal);
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
 }
 
 .page-enter-from {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(6px);
 }
 
 .page-leave-to {
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translateY(-4px);
 }
 
-/* ---- Slide Up (toast, modal entrance) ---- */
+/* ---- Slide Up ---- */
 .slide-up-enter-active,
 .slide-up-leave-active {
-  transition: opacity var(--transition-normal), transform var(--transition-normal);
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
 }
 
 .slide-up-enter-from {
   opacity: 0;
-  transform: translateY(16px);
+  transform: translateY(10px);
 }
 
 .slide-up-leave-to {
   opacity: 0;
-  transform: translateY(16px);
+  transform: translateY(10px);
 }
 
 /* ---- Fade ---- */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity var(--transition-normal);
+  transition: opacity 180ms var(--ease-out);
 }
 
 .fade-enter-from,
@@ -45,30 +43,26 @@
   opacity: 0;
 }
 
-/* ---- Scale (pop-in for modals) ---- */
+/* ---- Scale ---- */
 .scale-enter-active,
 .scale-leave-active {
-  transition: opacity var(--transition-normal), transform var(--transition-normal);
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-spring);
 }
 
 .scale-enter-from {
   opacity: 0;
-  transform: scale(0.95);
+  transform: scale(0.96);
 }
 
 .scale-leave-to {
   opacity: 0;
-  transform: scale(0.95);
+  transform: scale(0.96);
 }
 
 /* ---- Skeleton Shimmer ---- */
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 .skeleton {
@@ -79,101 +73,13 @@
     var(--bg-elevated) 75%
   );
   background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
-  border-radius: var(--radius-md);
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: var(--radius-sm);
 }
 
-/* ---- Float (generic gentle bob) ---- */
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
-}
-
-.animate-float {
-  animation: float 3s ease-in-out infinite;
-}
-
-/* ---- Pulse ---- */
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-.animate-pulse {
-  animation: pulse 2s ease-in-out infinite;
-}
-
-/* ---- Spin ---- */
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-/* ---- Cherry Blossom Float ---- */
-@keyframes cherry-blossom-float {
-  0% {
-    transform: translate(0, 0) rotate(0deg);
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    transform: translate(var(--petal-drift-x, 40px), 100vh) rotate(var(--petal-rotate, 360deg));
-    opacity: 0;
-  }
-}
-
-.cherry-blossom {
-  position: fixed;
-  top: -20px;
-  width: 10px;
-  height: 10px;
-  background: var(--color-accent-light);
-  border-radius: 50% 0 50% 0;
-  pointer-events: none;
-  z-index: var(--z-tooltip);
-  animation: cherry-blossom-float var(--petal-duration, 6s) linear forwards;
-  animation-delay: var(--petal-delay, 0s);
-  opacity: 0;
-}
-
-/* ---- Glow Pulse (for active nav indicators) ---- */
-@keyframes glow-pulse {
-  0%, 100% {
-    box-shadow: 0 0 4px var(--color-primary-glow);
-  }
-  50% {
-    box-shadow: 0 0 12px var(--color-primary-glow);
-  }
-}
-
-.animate-glow {
-  animation: glow-pulse 2s ease-in-out infinite;
-}
-
-/* ---- List stagger (utility for children) ---- */
+/* ---- Stagger children ---- */
 .stagger-enter-active {
-  transition: opacity var(--transition-normal), transform var(--transition-normal);
+  transition: opacity 250ms var(--ease-out), transform 250ms var(--ease-out);
 }
 
 .stagger-enter-from {

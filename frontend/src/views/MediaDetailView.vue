@@ -14,6 +14,7 @@ const authStore = useAuthStore()
 const media = computed(() => animeStore.currentMedia)
 const loading = computed(() => animeStore.loading)
 const isLoggedIn = computed(() => authStore.isLoggedIn)
+const loaded = ref(false)
 
 // Characters
 const showAllCharacters = ref(false)
@@ -27,20 +28,33 @@ const hasMoreCharacters = computed(() => {
   return (media.value?.characters?.edges?.length || 0) > 12
 })
 
-// Recommendations - filter duplicates and exclude current media
+// Recommendations - native recs + genre-based supplements, deduped & self-excluded
 const uniqueRecommendations = computed(() => {
-  if (!media.value?.recommendations?.edges) return []
+  const currentId = media.value?.id
   const seen = new Set<number>()
-  const currentId = media.value.id
-  const results: typeof media.value.recommendations.edges = []
-  for (const edge of media.value.recommendations.edges) {
-    const id = edge.node.media?.id
+  const items: { id: number; title: any; coverImage: any }[] = []
+
+  // Native AniList recommendations
+  for (const edge of media.value?.recommendations?.edges ?? []) {
+    const node = edge.node?.media
+    const id = node?.id
     if (id && id !== currentId && !seen.has(id)) {
       seen.add(id)
-      results.push(edge)
+      items.push({ id, title: node.title, coverImage: node.coverImage })
     }
   }
-  return results.slice(0, 6)
+
+  // Genre-based supplements (only when native recs are sparse)
+  if (items.length < 4) {
+    for (const item of animeStore.genreRecommendations) {
+      if (item.id && item.id !== currentId && !seen.has(item.id)) {
+        seen.add(item.id)
+        items.push({ id: item.id, title: item.title, coverImage: item.coverImage })
+      }
+    }
+  }
+
+  return items.slice(0, 8)
 })
 
 // List management state
@@ -66,15 +80,16 @@ const scoreOptions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 onMounted(() => {
   const id = Number(route.params.id)
   if (id) {
-    animeStore.fetchDetails(id)
+    animeStore.fetchDetails(id).finally(() => { loaded.value = true })
   }
 })
 
 // Re-fetch when navigating between media (same component, different route)
 watch(() => route.params.id, (newId) => {
   if (newId) {
+    loaded.value = false
     showAllCharacters.value = false
-    animeStore.fetchDetails(Number(newId))
+    animeStore.fetchDetails(Number(newId)).finally(() => { loaded.value = true })
   }
 })
 
@@ -403,21 +418,23 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
 
         <!-- Recommendations -->
         <div v-if="uniqueRecommendations.length > 0" class="detail-section">
-          <h3 class="section-title">Recommendations</h3>
+          <h3 class="section-title">You Might Also Like</h3>
           <div class="recommendation-list">
             <div
-              v-for="edge in uniqueRecommendations"
-              :key="edge.node.id"
+              v-for="rec in uniqueRecommendations"
+              :key="rec.id"
               class="recommendation-item"
-              @click="edge.node.media?.id && router.push({ name: 'media-detail', params: { id: edge.node.media.id } })"
+              @click="router.push({ name: 'media-detail', params: { id: rec.id } })"
             >
-              <img
-                v-if="edge.node.media?.coverImage"
-                :src="edge.node.media.coverImage.medium"
-                :alt="edge.node.media.title?.romaji"
-                class="recommendation-img"
-              />
-              <span class="recommendation-title">{{ edge.node.media?.title?.romaji }}</span>
+              <div class="recommendation-poster">
+                <img
+                  v-if="rec.coverImage"
+                  :src="rec.coverImage.medium || rec.coverImage.large"
+                  :alt="rec.title?.romaji"
+                  loading="lazy"
+                />
+              </div>
+              <span class="recommendation-title">{{ rec.title?.userPreferred || rec.title?.romaji }}</span>
             </div>
           </div>
         </div>
@@ -425,7 +442,7 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
     </template>
 
     <!-- Not found -->
-    <template v-else-if="!loading">
+    <template v-else-if="!loading && loaded">
       <div class="empty-state">
         <p>Media not found</p>
         <button class="btn btn-secondary" @click="goBack">Go Back</button>
@@ -560,7 +577,7 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
   color: var(--text-primary);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
-  font-family: var(--font-family);
+  font-family: var(--font-body);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -605,7 +622,7 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
   background: none;
   color: var(--text-secondary);
   font-size: var(--font-size-sm);
-  font-family: var(--font-family);
+  font-family: var(--font-body);
   text-align: left;
   cursor: pointer;
   transition: background var(--transition-fast);
@@ -654,7 +671,7 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  font-family: var(--font-family);
+  font-family: var(--font-body);
   cursor: pointer;
   border: none;
   transition: all var(--transition-fast);
@@ -764,15 +781,19 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
 .relation-type { font-size: 10px; color: var(--text-muted); }
 
 /* Recommendations */
-.recommendation-list { display: flex; gap: var(--space-sm); overflow-x: auto; padding-bottom: var(--space-sm); }
+.recommendation-list { display: flex; gap: var(--space-sm); overflow-x: auto; padding-bottom: var(--space-sm); -webkit-overflow-scrolling: touch; }
 .recommendation-item {
-  display: flex; flex-direction: column; align-items: center; gap: var(--space-xs);
-  cursor: pointer; flex-shrink: 0; width: 90px;
-  transition: transform var(--transition-fast);
+  display: flex; flex-direction: column; gap: var(--space-xs);
+  cursor: pointer; flex-shrink: 0; width: 96px;
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
 }
-.recommendation-item:hover { transform: translateY(-2px); }
-.recommendation-img { width: 90px; height: 126px; border-radius: var(--radius-md); object-fit: cover; }
-.recommendation-title { font-size: 10px; color: var(--text-secondary); text-align: center; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.recommendation-item:hover { transform: translateY(-3px); opacity: 0.92; }
+.recommendation-poster {
+  width: 96px; height: 134px; border-radius: var(--radius-md); overflow: hidden;
+  background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+}
+.recommendation-poster img { width: 100%; height: 100%; object-fit: cover; }
+.recommendation-title { font-size: 10.5px; color: var(--text-secondary); text-align: center; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.25; }
 
 /* Empty */
 .empty-state {
@@ -785,7 +806,7 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  font-family: var(--font-family);
+  font-family: var(--font-body);
   cursor: pointer;
   border: 1px solid var(--bg-hover);
   background: var(--bg-surface);

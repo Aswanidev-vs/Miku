@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
 import { useAnimeStore } from '../stores/anime'
+import { usePlatform } from '../composables/usePlatform'
 import { gqlQuery } from '../api/graphql'
 import AnimeGrid from '../components/anime/AnimeGrid.vue'
 import type { Media } from '../types'
 
 const animeStore = useAnimeStore()
+const { gridColumns } = usePlatform()
 
 const popularAnime = ref<Media[]>([])
 const seasonalAnime = ref<Media[]>([])
@@ -69,14 +71,12 @@ function getCurrentSeason(): { season: string; year: number } {
 onMounted(async () => {
   loading.value = true
 
-  // Fetch trending (reuse store if already loaded)
   if (animeStore.trending.length === 0) {
     animeStore.fetchTrending()
   }
 
   const { season, year } = getCurrentSeason()
 
-  // Fetch in parallel
   const [popularRes, seasonalRes, mangaRes] = await Promise.all([
     gqlQuery(POPULAR_QUERY, { page: 1, perPage: 12 }).catch(() => null),
     gqlQuery(SEASONAL_QUERY, { season, year }).catch(() => null),
@@ -94,36 +94,40 @@ onMounted(async () => {
 <template>
   <div class="discover-view">
     <header class="discover-header safe-area-top">
+      <p class="discover-eyebrow">Miku · AniList</p>
       <h1 class="discover-title">Discover</h1>
-      <p class="discover-subtitle">Browse anime and manga</p>
+      <p class="discover-sub">Hand-picked seasons, trends & hidden gems.</p>
     </header>
 
-    <!-- Trending -->
     <section v-if="trendingAnime.length > 0" class="discover-section">
-      <h2 class="section-title">Trending Now</h2>
-      <AnimeGrid :items="trendingAnime.slice(0, 12)" :columns="3" />
+      <div class="section-header">
+        <h2 class="section-title"><span class="title-dot"></span>Trending Now</h2>
+      </div>
+      <AnimeGrid :items="trendingAnime.slice(0, 12)" :columns="gridColumns" />
     </section>
 
-    <!-- Popular -->
     <section v-if="popularAnime.length > 0" class="discover-section">
-      <h2 class="section-title">Most Popular</h2>
-      <AnimeGrid :items="popularAnime" :columns="3" />
+      <div class="section-header">
+        <h2 class="section-title"><span class="title-dot"></span>Most Popular</h2>
+      </div>
+      <AnimeGrid :items="popularAnime" :columns="gridColumns" />
     </section>
 
-    <!-- Seasonal -->
     <section v-if="seasonalAnime.length > 0" class="discover-section">
-      <h2 class="section-title">This Season</h2>
-      <AnimeGrid :items="seasonalAnime" :columns="3" />
+      <div class="section-header">
+        <h2 class="section-title"><span class="title-dot"></span>This Season</h2>
+      </div>
+      <AnimeGrid :items="seasonalAnime" :columns="gridColumns" />
     </section>
 
-    <!-- Top Manga -->
     <section v-if="topManga.length > 0" class="discover-section">
-      <h2 class="section-title">Top Manga</h2>
-      <AnimeGrid :items="topManga" :columns="3" />
+      <div class="section-header">
+        <h2 class="section-title"><span class="title-dot"></span>Top Manga</h2>
+      </div>
+      <AnimeGrid :items="topManga" :columns="gridColumns" />
     </section>
 
-    <!-- Loading -->
-    <div v-if="loading" class="loading-state">
+    <div v-if="loading && trendingAnime.length === 0" class="loading-state">
       <div class="spinner"></div>
     </div>
   </div>
@@ -132,49 +136,80 @@ onMounted(async () => {
 <style scoped>
 .discover-view {
   min-height: 100%;
+  padding-bottom: var(--space-3xl);
 }
 
 .discover-header {
-  padding: var(--space-xl) var(--space-lg) var(--space-lg);
+  padding: var(--space-3xl) var(--space-lg) var(--space-lg);
+}
+
+.discover-eyebrow {
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+  color: var(--color-primary);
+  margin-bottom: var(--space-xs);
 }
 
 .discover-title {
-  font-size: 28px;
-  font-weight: var(--font-weight-bold);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: 1.05;
 }
 
-.discover-subtitle {
+.discover-sub {
+  margin-top: var(--space-xs);
   font-size: var(--font-size-sm);
   color: var(--text-muted);
-  margin-top: 2px;
 }
 
 .discover-section {
   padding: 0 var(--space-lg);
-  margin-bottom: var(--space-xl);
+  margin-bottom: var(--space-3xl);
+}
+
+.section-header {
+  margin-bottom: var(--space-md);
 }
 
 .section-title {
-  font-size: var(--font-size-lg);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
-  margin-bottom: var(--space-md);
+  letter-spacing: var(--letter-spacing-tight);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.title-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  box-shadow: 0 0 10px var(--color-primary-glow);
+  flex-shrink: 0;
 }
 
 .loading-state {
   display: flex;
   justify-content: center;
-  padding: var(--space-2xl);
+  padding: var(--space-4xl);
 }
 
 .spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--bg-surface);
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-default);
   border-top-color: var(--color-primary);
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: spin 0.7s linear infinite;
 }
 
 @keyframes spin {
