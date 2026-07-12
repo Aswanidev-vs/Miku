@@ -117,7 +117,7 @@ jobs:
 
       - name: Build Android APK
         run: |
-          wails3 task android:package
+          wails3 task android:package:fat
         env:
           ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
           ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
