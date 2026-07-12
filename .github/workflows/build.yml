@@ -93,7 +93,7 @@ jobs:
           cd ..
 
       - name: Generate Wails bindings
-        run: wails3 generate bindings
+        run: GOFLAGS=-tags=gtk3 wails3 generate bindings
 
       - name: Determine build type
         id: build-type
@@ -256,7 +256,7 @@ jobs:
           cd ..
 
       - name: Generate Wails bindings
-        run: wails3 generate bindings
+        run: GOFLAGS=-tags=gtk3 wails3 generate bindings
 
       - name: Build frontend (required for go vet embed)
         run: |
