@@ -55,9 +55,19 @@ func (s *OAuth2Service) GetAuthorizationURL() string {
 	params := url.Values{}
 	params.Set("client_id", s.config.ClientID)
 	params.Set("redirect_uri", s.config.RedirectURI)
-	params.Set("response_type", "code")
+	params.Set("response_type", "token") // Implicit grant for mobile
 
 	return fmt.Sprintf("%s?%s", AniListAuthURL, params.Encode())
+}
+
+// SaveToken saves an access token directly (for implicit grant flow)
+func (s *OAuth2Service) SaveToken(accessToken string) error {
+	tokenData := &TokenData{
+		AccessToken: accessToken,
+		TokenType:   "Bearer",
+		ExpiresAt:   time.Now().Add(365 * 24 * time.Hour).Unix(), // 1 year
+	}
+	return s.tokenStore.Save(tokenData)
 }
 
 func (s *OAuth2Service) HandleCallback(code string) (*TokenData, error) {

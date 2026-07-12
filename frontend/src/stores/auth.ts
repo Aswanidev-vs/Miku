@@ -17,6 +17,7 @@ declare global {
             token_type: string
             expires_at: number
           }>
+          SaveToken(accessToken: string): Promise<void>
           GetToken(): Promise<{
             access_token: string
             refresh_token?: string
@@ -80,16 +81,17 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function handleCallback(code: string) {
+  async function handleCallback(token: string) {
     loading.value = true
     error.value = null
     try {
-      await window.go.main.OAuth2Service.HandleCallback(code)
+      // With implicit grant, we receive the access token directly
+      await window.go.main.OAuth2Service.SaveToken(token)
       isAuthenticated.value = true
       showCallbackInput.value = false
       await fetchUser()
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Callback handling failed'
+      error.value = e instanceof Error ? e.message : 'Authentication failed'
       throw e
     } finally {
       loading.value = false

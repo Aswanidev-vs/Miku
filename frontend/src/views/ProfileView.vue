@@ -100,7 +100,7 @@ async function submitCallback() {
         <!-- Manual callback input for Android -->
         <div v-if="authStore.showCallbackInput" class="callback-section">
           <div class="divider">
-            <span>Enter code from URL</span>
+            <span>Enter access token</span>
           </div>
 
           <div v-if="authUrl" class="url-display">
@@ -113,13 +113,13 @@ async function submitCallback() {
             </div>
           </div>
 
-          <p class="callback-hint">2. After authorizing, copy the code from the URL and paste below</p>
+          <p class="callback-hint">2. After authorizing, copy the access_token from the URL and paste below</p>
           <div class="callback-input-group">
             <input
               v-model="callbackCode"
               type="text"
               class="input callback-input"
-              placeholder="Paste authorization code"
+              placeholder="Paste access token"
               @keyup.enter="submitCallback"
             />
             <button class="btn btn-primary callback-btn" @click="submitCallback" :disabled="loading">
