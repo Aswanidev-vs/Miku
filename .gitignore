@@ -11,3 +11,36 @@ build/android/overlay.json
 build/android/gen/
 .mimocode/
 docs/
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.prof
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug
+__debug_bin
+coverage.out
+
+# Wails build output
+build/bin/

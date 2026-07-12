@@ -50,9 +50,8 @@ func main() {
 	// 'Mac' options tailor the application when running an macOS.
 	app := application.New(application.Options{
 		Name:        "Miku",
-		Description: "A demo of using raw HTML & CSS",
+		Description: "AniList Client for Android",
 		Services: []application.Service{
-			application.NewService(&GreetService{}),
 			application.NewService(oauthService),
 		},
 		Assets: application.AssetOptions{
