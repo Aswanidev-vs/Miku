@@ -8,7 +8,6 @@ import BottomNav from './components/layout/BottomNav.vue'
 
 const authStore = useAuthStore()
 
-// Check for pending OAuth code stored by Go backend (reliable binding-based fallback)
 async function checkPendingCode() {
   try {
     const code = await OAuth2Service.GetPendingCode()
@@ -21,16 +20,16 @@ async function checkPendingCode() {
   }
 }
 
-onMounted(async () => {
+onMounted(() => {
   // Check authentication status on startup
   authStore.checkAuth().catch(err => {
     console.error('Initial auth check failed:', err)
   })
 
-  // Listen for OAuth callbacks via Wails event (fast path)
+  // Listen for OAuth callback from the localhost server
   Events.On('oauth:callback', (eventData: any) => {
     const code = eventData?.data?.code ?? eventData?.code
-    console.log('[Miku App] Deep link event received, code length:', code?.length)
+    console.log('[Miku App] OAuth callback received, code length:', code?.length)
     if (code) {
       authStore.handleCallback(code).catch((err: unknown) => {
         console.error('[Miku App] handleCallback failed:', err)
@@ -38,17 +37,10 @@ onMounted(async () => {
     }
   })
 
-  // Also check when window regains focus (covers the second-instance redirect case)
+  // Fallback: check for pending code stored by Go backend
   Events.On('common:WindowFocus', () => {
     checkPendingCode()
   })
-
-  // Signal Go backend that frontend is ready to receive events (for cold-start deep links)
-  await Events.Emit('frontend:ready')
-
-  // Check for pending code again after frontend:ready — handles cold-start deep links
-  // where Go stores the code in response to our ready signal
-  await checkPendingCode()
 })
 </script>
 

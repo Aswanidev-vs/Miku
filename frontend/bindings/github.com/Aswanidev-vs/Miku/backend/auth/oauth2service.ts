@@ -14,7 +14,7 @@ export function GetAuthorizationURL(): $CancellablePromise<string> {
 }
 
 /**
- * GetPendingCode returns and clears any pending authorization code from a deep link.
+ * GetPendingCode returns and clears any pending authorization code.
  */
 export function GetPendingCode(): $CancellablePromise<string> {
     return $Call.ByID(1634895015);
@@ -48,10 +48,25 @@ export function SaveToken(accessToken: string): $CancellablePromise<void> {
 }
 
 /**
- * SetPendingCode stores an authorization code from a deep link for later retrieval by the frontend.
+ * SetPendingCode stores an authorization code for later retrieval by the frontend.
  */
 export function SetPendingCode(code: string): $CancellablePromise<void> {
     return $Call.ByID(3950991427, code);
+}
+
+/**
+ * StartCallbackServer starts a temporary HTTP server to receive the OAuth callback.
+ * It tries the configured port first, then falls back to nearby ports.
+ */
+export function StartCallbackServer(): $CancellablePromise<void> {
+    return $Call.ByID(3871667447);
+}
+
+/**
+ * StopCallbackServer shuts down the callback server.
+ */
+export function StopCallbackServer(): $CancellablePromise<void> {
+    return $Call.ByID(2528056125);
 }
 
 // Private type creation functions

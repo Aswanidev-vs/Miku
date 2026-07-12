@@ -2,21 +2,24 @@ package auth
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 const (
 	AniListAuthURL  = "https://anilist.co/api/v2/oauth/authorize"
 	AniListTokenURL = "https://anilist.co/api/v2/oauth/token"
-	CallbackURL     = "miku://callback"
-	ClientID        = "" // Set via Configure
+	CallbackPort    = 43219
 )
 
 type OAuth2Config struct {
@@ -26,11 +29,12 @@ type OAuth2Config struct {
 }
 
 type OAuth2Service struct {
-	config      OAuth2Config
-	tokenStore  *TokenStore
-	httpClient  *http.Client
-	mu          sync.Mutex
-	pendingCode string
+	config       OAuth2Config
+	tokenStore   *TokenStore
+	httpClient   *http.Client
+	mu           sync.Mutex
+	pendingCode  string
+	callbackSrv  *http.Server
 }
 
 type TokenResponse struct {
@@ -53,6 +57,11 @@ func NewOAuth2Service(config OAuth2Config) (*OAuth2Service, error) {
 			Timeout: 30 * time.Second,
 		},
 	}, nil
+}
+
+// CallbackURL returns the redirect URI for the given port.
+func CallbackURL(port int) string {
+	return fmt.Sprintf("http://localhost:%d/callback", port)
 }
 
 func (s *OAuth2Service) GetAuthorizationURL() string {
@@ -148,7 +157,7 @@ func (s *OAuth2Service) IsAuthenticated() bool {
 	return token != nil && !s.tokenStore.IsExpired()
 }
 
-// SetPendingCode stores an authorization code from a deep link for later retrieval by the frontend.
+// SetPendingCode stores an authorization code for later retrieval by the frontend.
 func (s *OAuth2Service) SetPendingCode(code string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -156,7 +165,7 @@ func (s *OAuth2Service) SetPendingCode(code string) {
 	log.Printf("[OAuth] SetPendingCode: stored code length %d", len(code))
 }
 
-// GetPendingCode returns and clears any pending authorization code from a deep link.
+// GetPendingCode returns and clears any pending authorization code.
 func (s *OAuth2Service) GetPendingCode() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -166,4 +175,101 @@ func (s *OAuth2Service) GetPendingCode() string {
 		log.Printf("[OAuth] GetPendingCode: returning code length %d", len(code))
 	}
 	return code
+}
+
+// StartCallbackServer starts a temporary HTTP server to receive the OAuth callback.
+// It tries the configured port first, then falls back to nearby ports.
+func (s *OAuth2Service) StartCallbackServer() error {
+	s.StopCallbackServer()
+
+	// Update redirect URI to match the port we'll actually use
+	redirectURI, err := s.findAvailablePort()
+	if err != nil {
+		return fmt.Errorf("no available port for OAuth callback: %w", err)
+	}
+	s.config.RedirectURI = redirectURI
+	log.Printf("[OAuth] Starting callback server on %s", redirectURI)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/callback", s.handleHTTPCallback)
+
+	// Extract port from redirect URI for listening
+	_, portStr, _ := net.SplitHostPort(s.config.RedirectURI)
+	listenAddr := ":" + portStr
+
+	s.callbackSrv = &http.Server{
+		Addr:    listenAddr,
+		Handler: mux,
+	}
+
+	go func() {
+		if err := s.callbackSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("[OAuth] Callback server error: %v", err)
+		}
+	}()
+
+	return nil
+}
+
+// StopCallbackServer shuts down the callback server.
+func (s *OAuth2Service) StopCallbackServer() {
+	if s.callbackSrv != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		s.callbackSrv.Shutdown(ctx)
+		s.callbackSrv = nil
+		log.Printf("[OAuth] Callback server stopped")
+	}
+}
+
+// handleHTTPCallback handles the OAuth redirect from the browser.
+func (s *OAuth2Service) handleHTTPCallback(w http.ResponseWriter, r *http.Request) {
+	code := r.URL.Query().Get("code")
+	if code == "" {
+		http.Error(w, "Missing authorization code", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("[OAuth] Received authorization code via localhost callback, length: %d", len(code))
+	s.SetPendingCode(code)
+
+	// Emit event to frontend so it can pick up the code immediately
+	app := application.Get()
+	if app != nil {
+		app.Event.Emit("oauth:callback", map[string]interface{}{
+			"code": code,
+		})
+		log.Printf("[OAuth] Emitted oauth:callback event to frontend")
+	}
+
+	// Show a user-friendly page
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprint(w, `<!DOCTYPE html>
+<html><head><title>Miku - Authorized</title><style>
+body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#0a0a12;color:#fff}
+.box{text-align:center;padding:3rem}
+h1{font-size:1.5rem;margin-bottom:0.5rem}
+p{color:#a0a0b0;font-size:0.9rem}
+</style></head><body>
+<div class="box">
+<h1>&#10003; Authorized</h1>
+<p>You can close this tab and return to Miku.</p>
+</div></body></html>`)
+
+	// Shut down server after responding
+	go s.StopCallbackServer()
+}
+
+// findAvailablePort tries CallbackPort, then nearby ports, and returns the redirect URI.
+func (s *OAuth2Service) findAvailablePort() (string, error) {
+	for i := 0; i < 10; i++ {
+		port := CallbackPort + i
+		addr := fmt.Sprintf(":%d", port)
+		ln, err := net.Listen("tcp", addr)
+		if err == nil {
+			ln.Close()
+			return CallbackURL(port), nil
+		}
+	}
+	return "", fmt.Errorf("all ports %d-%d are in use", CallbackPort, CallbackPort+9)
 }

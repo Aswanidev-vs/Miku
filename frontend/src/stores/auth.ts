@@ -20,6 +20,10 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     error.value = null
     try {
+      // Start localhost callback server before generating the URL
+      // (this updates the redirect URI to match the actual port)
+      await OAuth2Service.StartCallbackServer()
+
       const url = await OAuth2Service.GetAuthorizationURL()
 
       if (!url || !url.includes('client_id=')) {

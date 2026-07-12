@@ -3,7 +3,6 @@ package main
 import (
 	"embed"
 	"log"
-	"net/url"
 	"os"
 	"strings"
 
@@ -49,10 +48,13 @@ func main() {
 		log.Println("WARNING: ANILIST_CLIENT_ID not set. OAuth2 will not work.")
 	}
 
+	// Default redirect URI — will be updated by StartCallbackServer to the actual port
+	redirectURI := auth.CallbackURL(auth.CallbackPort)
+
 	oauthConfig := auth.OAuth2Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
-		RedirectURI:  auth.CallbackURL,
+		RedirectURI:  redirectURI,
 	}
 
 	// Create OAuth2 service - handle errors gracefully
@@ -68,61 +70,7 @@ func main() {
 
 	var mainWindow *application.WebviewWindow
 
-	// Helper to extract token from miku:// URL fragment and dispatch it to frontend
-	handleDeepLink := func(urlStr string) {
-		log.Printf("Raw deep link received: %s", urlStr)
-		if !strings.HasPrefix(urlStr, "miku://") {
-			return
-		}
-		u, err := url.Parse(urlStr)
-		if err != nil {
-			log.Printf("Failed to parse deep link URL: %v", err)
-			return
-		}
-
-		// Implicit grant returns parameters in the fragment (hash): miku://callback#access_token=xxx&token_type=Bearer
-		var token string
-		fragment := u.Fragment
-		if fragment != "" {
-			params, err := url.ParseQuery(fragment)
-			if err == nil {
-				token = params.Get("access_token")
-			}
-		}
-
-		// Fallback to query params just in case
-		if token == "" {
-			token = u.Query().Get("access_token")
-		}
-		if token == "" {
-			token = u.Query().Get("code") // Keep fallback for code
-		}
-
-		if token == "" {
-			log.Printf("No token found in deep link URL")
-			return
-		}
-
-		log.Printf("Received token/code from deep link: %s", token)
-
-		// Store code via OAuth2Service binding so frontend can retrieve it
-		if oauthService != nil {
-			oauthService.SetPendingCode(token)
-		}
-
-		// Also emit event as a fast path (may or may not reach frontend)
-		if app != nil {
-			app.Event.Emit("oauth:callback", map[string]interface{}{
-				"code": token,
-			})
-			log.Printf("[Miku] Emitted oauth:callback event")
-		} else {
-			log.Printf("[Miku] WARNING: app is nil, event not emitted (code stored in pendingCode)")
-		}
-	}
-
 	var app *application.App
-	var pendingDeepLink string
 
 	app = application.New(application.Options{
 		Name:        "Miku",
@@ -137,10 +85,7 @@ func main() {
 		SingleInstance: &application.SingleInstanceOptions{
 			UniqueID: "com.aswanidev.miku",
 			OnSecondInstanceLaunch: func(data application.SecondInstanceData) {
-				log.Printf("Second instance launched with args: %v", data.Args)
-				if len(data.Args) > 1 {
-					handleDeepLink(data.Args[1])
-				}
+				log.Printf("Second instance launched, focusing main window")
 				if mainWindow != nil {
 					mainWindow.Focus()
 				}
@@ -160,21 +105,6 @@ func main() {
 			TitleBar:                application.MacTitleBarHiddenInset,
 		},
 	})
-
-	// Listen for frontend ready signal to deliver pending cold-start deep link
-	app.Event.On("frontend:ready", func(e *application.CustomEvent) {
-		if pendingDeepLink != "" {
-			log.Printf("Frontend ready, delivering pending deep link: %s", pendingDeepLink)
-			handleDeepLink(pendingDeepLink)
-			pendingDeepLink = ""
-		}
-	})
-
-	// Check if started directly with deep link in arguments (cold start)
-	if len(os.Args) > 1 {
-		pendingDeepLink = os.Args[1]
-		log.Printf("Cold start deep link stored for later delivery: %s", pendingDeepLink)
-	}
 
 	err = app.Run()
 	if err != nil {

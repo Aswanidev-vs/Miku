@@ -25,7 +25,7 @@ Miku is a feature-rich, native-feeling AniList client that delivers a premium an
 ## Features
 
 ### Core Features
-- **OAuth2 Authentication** — Secure login via AniList's OAuth2 flow with custom protocol handler (`miku://`)
+- **OAuth2 Authentication** — Secure login via AniList's OAuth2 flow with localhost callback
 - **Trending & Discovery** — Browse trending anime and manga with real-time updates
 - **Advanced Search** — Full-text search with filters for genre, status, and format
 - **Personal Lists** — Manage your anime/manga lists (Watching, Planning, Completed, Dropped, Paused)
@@ -155,7 +155,7 @@ Miku uses the AniList GraphQL API. To authenticate with OAuth2 you need to regis
 2. Click **"Create New Client"**
 3. Fill in the details:
    - **Name**: `Miku` (or anything you prefer)
-   - **Redirect URL**: `miku://callback`
+   - **Redirect URL**: `http://localhost:43219/callback`
 4. Click **"Create"**
 5. Copy the generated **Client ID** and **Client Secret**
 
