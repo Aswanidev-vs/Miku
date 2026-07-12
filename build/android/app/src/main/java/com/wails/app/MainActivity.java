@@ -109,16 +109,22 @@ public class MainActivity extends AppCompatActivity {
     private void handleDeepLink(Intent intent) {
         if (intent != null && intent.getData() != null) {
             Uri uri = intent.getData();
+            if (DEBUG) Log.d(TAG, "Received deep link: " + uri.toString());
+            
             if ("miku".equals(uri.getScheme()) && "callback".equals(uri.getHost())) {
+                if (DEBUG) Log.d(TAG, "Deep link scheme and host match");
+                
                 // Implicit grant returns token in fragment: miku://callback#access_token=xxx
                 String fragment = uri.getFragment();
                 if (fragment != null) {
+                    if (DEBUG) Log.d(TAG, "Fragment found: " + fragment);
                     // Parse fragment as query string
                     String[] pairs = fragment.split("&");
                     for (String pair : pairs) {
                         String[] kv = pair.split("=");
                         if (kv.length == 2 && "access_token".equals(kv[0])) {
                             String token = kv[1];
+                            if (DEBUG) Log.d(TAG, "Access token extracted, sending to JavaScript");
                             // Send the token to JavaScript
                             String js = String.format(
                                 "window.dispatchEvent(new CustomEvent('oauth-callback', { detail: '%s' }))",
@@ -133,13 +139,20 @@ public class MainActivity extends AppCompatActivity {
                 // Fallback: check for code parameter (authorization code grant)
                 String code = uri.getQueryParameter("code");
                 if (code != null && !code.isEmpty()) {
+                    if (DEBUG) Log.d(TAG, "Authorization code found, sending to JavaScript");
                     String js = String.format(
                         "window.dispatchEvent(new CustomEvent('oauth-callback', { detail: '%s' }))",
                         code.replace("'", "\\'")
                     );
                     executeJavaScript(js);
+                } else {
+                    if (DEBUG) Log.w(TAG, "No access_token or code found in deep link");
                 }
+            } else {
+                if (DEBUG) Log.w(TAG, "Deep link scheme/host mismatch: scheme=" + uri.getScheme() + ", host=" + uri.getHost());
             }
+        } else {
+            if (DEBUG) Log.w(TAG, "Deep link intent or data is null");
         }
     }
 

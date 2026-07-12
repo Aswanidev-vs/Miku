@@ -95,7 +95,8 @@ async function submitCallback() {
           <span v-else>Sign In with AniList</span>
         </button>
 
-        <p class="login-hint">You'll be redirected to AniList to authorize the app</p>
+        <p v-if="authStore.error" class="login-error">{{ authStore.error }}</p>
+        <p v-else class="login-hint">You'll be redirected to AniList to authorize the app</p>
 
         <!-- Manual callback input for Android -->
         <div v-if="authStore.showCallbackInput" class="callback-section">
@@ -236,6 +237,13 @@ async function submitCallback() {
   font-size: var(--font-size-xs);
   color: var(--text-muted);
   margin-top: var(--space-md);
+}
+
+.login-error {
+  font-size: var(--font-size-xs);
+  color: var(--status-dropped);
+  margin-top: var(--space-md);
+  max-width: 280px;
 }
 
 /* Callback Section */

@@ -15,14 +15,27 @@ var assets embed.FS
 func main() {
 	// Initialize OAuth2 service with AniList credentials
 	// On Android, these must be embedded at build time via ldflags
+	clientID := os.Getenv("ANILIST_CLIENT_ID")
+	clientSecret := os.Getenv("ANILIST_CLIENT_SECRET")
+
+	// Log warning if credentials are missing
+	if clientID == "" {
+		log.Println("WARNING: ANILIST_CLIENT_ID environment variable not set. OAuth2 authentication will not work.")
+		log.Println("Set ANILIST_CLIENT_ID and ANILIST_CLIENT_SECRET to enable AniList sign-in.")
+	}
+
 	oauthConfig := auth.OAuth2Config{
-		ClientID:     os.Getenv("ANILIST_CLIENT_ID"),
-		ClientSecret: os.Getenv("ANILIST_CLIENT_SECRET"),
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
 		RedirectURI:  auth.CallbackURL,
 	}
 
 	// Create OAuth2 service - don't fatal if credentials are missing
-	oauthService, _ := auth.NewOAuth2Service(oauthConfig)
+	oauthService, err := auth.NewOAuth2Service(oauthConfig)
+	if err != nil {
+		log.Printf("Failed to create OAuth2 service: %v", err)
+		oauthService = nil
+	}
 
 	services := []application.Service{}
 	if oauthService != nil {
@@ -54,7 +67,7 @@ func main() {
 		},
 	})
 
-	err := app.Run()
+	err = app.Run()
 	if err != nil {
 		log.Fatal(err)
 	}

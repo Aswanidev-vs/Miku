@@ -61,6 +61,11 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     try {
       const url = await window.go.main.OAuth2Service.GetAuthorizationURL()
+      
+      if (!url || url.includes('client_id=')) {
+        throw new Error('Failed to generate authorization URL. Please check that ANILIST_CLIENT_ID is configured.')
+      }
+      
       // Show manual code entry as fallback
       showCallbackInput.value = true
       // Use native Chrome Custom Tab on Android
@@ -72,10 +77,15 @@ export const useAuthStore = defineStore('auth', () => {
           window.open(url, '_blank')
         } catch {
           // User can copy URL manually
+          console.warn('Failed to open URL automatically, user must copy manually')
         }
       }
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Login failed'
+      const errorMessage = e instanceof Error ? e.message : 'Login failed'
+      error.value = errorMessage
+      console.error('Login error:', errorMessage)
+      // Still show manual input as fallback
+      showCallbackInput.value = true
     } finally {
       loading.value = false
     }
