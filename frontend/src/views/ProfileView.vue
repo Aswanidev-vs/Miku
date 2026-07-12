@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed, ref } from 'vue'
+import { onMounted, computed, ref, onUnmounted } from 'vue'
 import { useAuthStore } from '../stores'
 import { useUserStore } from '../stores'
 import StatsCard from '../components/profile/StatsCard.vue'
@@ -15,11 +15,17 @@ const loading = computed(() => authStore.loading || userStore.loading)
 
 const callbackCode = ref('')
 const callbackError = ref('')
+const authUrl = ref('')
+const urlCopied = ref(false)
 
 onMounted(async () => {
   if (isLoggedIn.value && user.value) {
     await userStore.fetchActivities(user.value.id, 1, 50)
   }
+})
+
+onUnmounted(() => {
+  authStore.showCallbackInput = false
 })
 
 const stats = computed(() => {
@@ -32,6 +38,26 @@ const stats = computed(() => {
     chapters: s.manga.chaptersRead,
   }
 })
+
+async function handleLogin() {
+  await authStore.login()
+  // Get the auth URL to display
+  try {
+    authUrl.value = await window.go.main.OAuth2Service.GetAuthorizationURL()
+  } catch {
+    // ignore
+  }
+}
+
+async function copyUrl() {
+  try {
+    await navigator.clipboard.writeText(authUrl.value)
+    urlCopied.value = true
+    setTimeout(() => urlCopied.value = false, 2000)
+  } catch {
+    // fallback
+  }
+}
 
 async function submitCallback() {
   if (!callbackCode.value.trim()) {
@@ -64,7 +90,7 @@ async function submitCallback() {
         <h1 class="login-title">Welcome to Miku</h1>
         <p class="login-subtitle">Sign in with your AniList account to track your anime and manga</p>
 
-        <button class="btn btn-primary login-btn" @click="authStore.login()" :disabled="loading">
+        <button class="btn btn-primary login-btn" @click="handleLogin" :disabled="loading">
           <span v-if="loading" class="spinner"></span>
           <span v-else>Sign In with AniList</span>
         </button>
@@ -74,9 +100,20 @@ async function submitCallback() {
         <!-- Manual callback input for Android -->
         <div v-if="authStore.showCallbackInput" class="callback-section">
           <div class="divider">
-            <span>Or enter code manually</span>
+            <span>Enter code from URL</span>
           </div>
-          <p class="callback-hint">After authorizing, copy the code from the URL and paste it below</p>
+
+          <div v-if="authUrl" class="url-display">
+            <p class="url-label">1. Open this URL in your browser:</p>
+            <div class="url-box">
+              <code class="url-text">{{ authUrl }}</code>
+              <button class="copy-btn" @click="copyUrl">
+                {{ urlCopied ? 'Copied!' : 'Copy' }}
+              </button>
+            </div>
+          </div>
+
+          <p class="callback-hint">2. After authorizing, copy the code from the URL and paste below</p>
           <div class="callback-input-group">
             <input
               v-model="callbackCode"
@@ -253,6 +290,49 @@ async function submitCallback() {
   font-size: var(--font-size-xs);
   color: var(--status-dropped);
   margin-top: var(--space-sm);
+}
+
+/* URL Display */
+.url-display {
+  margin-bottom: var(--space-lg);
+}
+
+.url-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.url-box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--bg-hover);
+}
+
+.url-text {
+  flex: 1;
+  font-size: var(--font-size-xs);
+  color: var(--color-primary-light);
+  word-break: break-all;
+  font-family: monospace;
+}
+
+.copy-btn {
+  flex-shrink: 0;
+  padding: var(--space-xs) var(--space-md);
+  background: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.copy-btn:hover {
+  background: var(--color-primary-dark);
 }
 
 /* Profile */

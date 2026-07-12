@@ -47,11 +47,14 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     try {
       const url = await window.go.main.OAuth2Service.GetAuthorizationURL()
-      // On Android, we can't use window.open properly
-      // Show the callback input for manual code entry
+      // Always show manual code entry as fallback
       showCallbackInput.value = true
-      // Try to open in external browser
-      window.location.href = url
+      // Try to open in new tab (works on desktop)
+      try {
+        window.open(url, '_blank')
+      } catch {
+        // On Android, window.open may fail - user can copy URL manually
+      }
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Login failed'
     } finally {
