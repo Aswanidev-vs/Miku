@@ -1,39 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
   <defs>
-    <linearGradient id="mg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#c084fc"/>
-      <stop offset="100%" stop-color="#7c3aed"/>
-    </linearGradient>
     <linearGradient id="pg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fdf2f8"/>
-      <stop offset="100%" stop-color="#f9a8d4"/>
+      <stop offset="0%" stop-color="#f9a8d4"/>
+      <stop offset="100%" stop-color="#ec4899"/>
     </linearGradient>
-    <radialGradient id="bg" cx="50%" cy="40%" r="60%">
-      <stop offset="0%" stop-color="#2e1065"/>
-      <stop offset="100%" stop-color="#0f0524"/>
-    </radialGradient>
   </defs>
   
-  <!-- Background -->
-  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <!-- Dark circle -->
+  <circle cx="32" cy="32" r="30" fill="#0c0a14"/>
+  <circle cx="32" cy="32" r="30" fill="none" stroke="#4a3a5c" stroke-width="1" opacity="0.5"/>
   
-  <!-- M -->
-  <g transform="translate(10, 8) scale(0.75)">
-    <path d="M8 48 L8 12 C8 8, 12 6, 16 6 L20 6" 
-          fill="none" stroke="url(#mg)" stroke-width="5" stroke-linecap="round"/>
-    <path d="M12 10 L22 28" fill="none" stroke="url(#mg)" stroke-width="5" stroke-linecap="round"/>
-    <path d="M28 28 L38 10" fill="none" stroke="url(#mg)" stroke-width="5" stroke-linecap="round"/>
-    <path d="M36 6 L40 6 C44 6, 48 8, 48 12 L48 48" 
-          fill="none" stroke="url(#mg)" stroke-width="5" stroke-linecap="round"/>
-  </g>
+  <!-- Simple M -->
+  <path d="M18 44 L18 20 C18 18, 20 17, 22 17 L24 17 C26 17, 27 18, 27 20 L27 30 L35 20 L37 20 L45 30 L45 17 L47 17 L47 44 L45 44 L45 32 L37 40 L35 40 L27 32 L27 44 Z" 
+        fill="#e8e4ef" 
+        transform="translate(-3, -2) skewX(-6)"/>
   
-  <!-- Cherry blossom -->
-  <g transform="translate(50, 12) scale(0.35)">
-    <ellipse cx="0" cy="-10" rx="5" ry="12" fill="url(#pg)" opacity="0.9"/>
-    <ellipse cx="0" cy="-10" rx="5" ry="12" fill="url(#pg)" opacity="0.85" transform="rotate(72)"/>
-    <ellipse cx="0" cy="-10" rx="5" ry="12" fill="url(#pg)" opacity="0.8" transform="rotate(144)"/>
-    <ellipse cx="0" cy="-10" rx="5" ry="12" fill="url(#pg)" opacity="0.8" transform="rotate(216)"/>
-    <ellipse cx="0" cy="-10" rx="5" ry="12" fill="url(#pg)" opacity="0.75" transform="rotate(288)"/>
-    <circle cx="0" cy="0" r="4" fill="#fbbf24"/>
+  <!-- Small flower -->
+  <g transform="translate(48, 20) scale(0.35)">
+    <ellipse cx="0" cy="-8" rx="3" ry="7" fill="url(#pg)" opacity="0.8"/>
+    <ellipse cx="0" cy="-8" rx="3" ry="7" fill="url(#pg)" opacity="0.75" transform="rotate(72)"/>
+    <ellipse cx="0" cy="-8" rx="3" ry="7" fill="url(#pg)" opacity="0.7" transform="rotate(144)"/>
+    <ellipse cx="0" cy="-8" rx="3" ry="7" fill="url(#pg)" opacity="0.7" transform="rotate(216)"/>
+    <ellipse cx="0" cy="-8" rx="3" ry="7" fill="url(#pg)" opacity="0.65" transform="rotate(288)"/>
+    <circle cx="0" cy="0" r="2.5" fill="#fbbf24"/>
   </g>
 </svg>
