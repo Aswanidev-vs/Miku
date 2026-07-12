@@ -1,6 +1,13 @@
-node_modules
-dist
-.DS_Store
-*.local
-android/app/build
-android/.gradle
+.task
+bin
+frontend/dist
+frontend/node_modules
+build/linux/appimage/build
+build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
+# Mobile generated (per-machine; overlays hold absolute paths)
+build/ios/xcode/overlay.json
+build/ios/xcode/gen/
+build/android/overlay.json
+build/android/gen/
+.mimocode/
+docs/

@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 90">
-  <!-- Miku M mark on transparent background — hand-crafted -->
-  <g transform="rotate(1.2, 45, 42)">
-    <path
-      d="M 10 78 L 28 24 L 40 46 L 54 24 L 74 78 L 62 78 L 40 38 L 22 78 Z"
-      fill="#ff4d6d"
-    />
-  </g>
-</svg>
