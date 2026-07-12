@@ -15,6 +15,18 @@ const media = computed(() => animeStore.currentMedia)
 const loading = computed(() => animeStore.loading)
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 
+// Characters
+const showAllCharacters = ref(false)
+const visibleCharacters = computed(() => {
+  if (!media.value?.characters?.edges) return []
+  return showAllCharacters.value
+    ? media.value.characters.edges
+    : media.value.characters.edges.slice(0, 12)
+})
+const hasMoreCharacters = computed(() => {
+  return (media.value?.characters?.edges?.length || 0) > 12
+})
+
 // List management state
 const listStatus = ref<ListStatus | null>(null)
 const listProgress = ref(0)
@@ -39,6 +51,14 @@ onMounted(() => {
   const id = Number(route.params.id)
   if (id) {
     animeStore.fetchDetails(id)
+  }
+})
+
+// Re-fetch when navigating between media (same component, different route)
+watch(() => route.params.id, (newId) => {
+  if (newId) {
+    showAllCharacters.value = false
+    animeStore.fetchDetails(Number(newId))
   }
 })
 
@@ -310,9 +330,12 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
 
         <!-- Characters -->
         <div v-if="media.characters?.edges?.length" class="detail-section">
-          <h3 class="section-title">Characters</h3>
+          <h3 class="section-title clickable" @click="showAllCharacters = !showAllCharacters">
+            Characters
+            <span class="toggle-label">{{ showAllCharacters ? 'show less' : `show all (${media.characters.edges.length})` }}</span>
+          </h3>
           <div class="character-list">
-            <div v-for="edge in media.characters.edges.slice(0, 12)" :key="edge.id" class="character-item">
+            <div v-for="edge in visibleCharacters" :key="edge.id" class="character-item">
               <img
                 v-if="edge.node.image"
                 :src="edge.node.image.large || edge.node.image.medium"
@@ -322,6 +345,17 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
               <div class="character-info">
                 <span class="character-name">{{ edge.node.name.full }}</span>
                 <span class="character-role">{{ edge.role }}</span>
+              </div>
+              <div v-if="edge.voiceActors?.length" class="character-va">
+                <img
+                  :src="edge.voiceActors[0].image?.medium"
+                  :alt="edge.voiceActors[0].name.full"
+                  class="va-img"
+                />
+                <div class="va-info">
+                  <span class="va-name">{{ edge.voiceActors[0].name.full }}</span>
+                  <span class="va-label">VA</span>
+                </div>
               </div>
             </div>
           </div>
@@ -661,6 +695,9 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
 /* Sections */
 .detail-section { margin-bottom: var(--space-xl); }
 .section-title { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); color: var(--text-primary); margin-bottom: var(--space-md); }
+.section-title.clickable { cursor: pointer; display: flex; align-items: center; gap: var(--space-sm); }
+.section-title.clickable:hover { color: var(--color-primary-light); }
+.toggle-label { font-size: var(--font-size-xs); color: var(--text-muted); font-weight: var(--font-weight-normal); }
 .description-text { font-size: var(--font-size-sm); color: var(--text-secondary); line-height: var(--line-height-relaxed); white-space: pre-line; }
 
 /* Dates */
@@ -670,12 +707,26 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
 .date-value { font-size: var(--font-size-sm); color: var(--text-primary); }
 
 /* Characters */
-.character-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-sm); }
-.character-item { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-xs); background: var(--bg-surface); border-radius: var(--radius-md); }
-.character-img { width: 36px; height: 36px; border-radius: var(--radius-full); object-fit: cover; }
-.character-info { display: flex; flex-direction: column; min-width: 0; }
-.character-name { font-size: var(--font-size-xs); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.character-role { font-size: 10px; color: var(--text-muted); text-transform: capitalize; }
+.character-list { display: flex; flex-direction: column; gap: var(--space-xs); }
+.character-item {
+  display: flex; align-items: center; gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-surface); border-radius: var(--radius-md);
+}
+.character-img { width: 40px; height: 40px; border-radius: var(--radius-full); object-fit: cover; flex-shrink: 0; }
+.character-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.character-name { font-size: var(--font-size-sm); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.character-role { font-size: var(--font-size-xs); color: var(--text-muted); text-transform: capitalize; }
+.character-va {
+  display: flex; align-items: center; gap: var(--space-xs);
+  padding-left: var(--space-md);
+  border-left: 1px solid var(--bg-hover);
+  flex-shrink: 0;
+}
+.va-img { width: 32px; height: 32px; border-radius: var(--radius-full); object-fit: cover; }
+.va-info { display: flex; flex-direction: column; }
+.va-name { font-size: var(--font-size-xs); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+.va-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
 
 /* Relations */
 .relation-list { display: flex; gap: var(--space-sm); overflow-x: auto; padding-bottom: var(--space-sm); }
