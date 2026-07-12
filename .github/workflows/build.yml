@@ -64,7 +64,7 @@ jobs:
           sudo apt-get update
 
           PKGS="pkg-config build-essential libgtk-4-dev"
-          CANDIDATE=$(apt-cache pkgnames 'libwebkit2gtk-*-dev' | sort -V | tail -n1 || true)
+          CANDIDATE=$(apt-cache search --names-only '^libwebkit2gtk-.*-dev$' | awk '{print $1}' | sort -V | tail -n1 || true)
 
           if [ -n "$CANDIDATE" ]; then
             echo "Installing $CANDIDATE along with base packages"
@@ -232,7 +232,7 @@ jobs:
           sudo apt-get update
 
           PKGS="pkg-config build-essential libgtk-4-dev"
-          CANDIDATE=$(apt-cache pkgnames 'libwebkit2gtk-*-dev' | sort -V | tail -n1 || true)
+          CANDIDATE=$(apt-cache search --names-only '^libwebkit2gtk-.*-dev$' | awk '{print $1}' | sort -V | tail -n1 || true)
 
           if [ -n "$CANDIDATE" ]; then
             echo "Installing $CANDIDATE along with base packages"
