@@ -13,11 +13,6 @@ const user = computed(() => authStore.currentUser)
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const loading = computed(() => authStore.loading || userStore.loading)
 
-const callbackCode = ref('')
-const callbackError = ref('')
-const authUrl = ref('')
-const urlCopied = ref(false)
-
 onMounted(async () => {
   if (isLoggedIn.value && user.value) {
     await userStore.fetchActivities(user.value.id, 1, 50)
@@ -41,35 +36,6 @@ const stats = computed(() => {
 
 async function handleLogin() {
   await authStore.login()
-  // Get the auth URL to display
-  try {
-    authUrl.value = await window.go.main.OAuth2Service.GetAuthorizationURL()
-  } catch {
-    // ignore
-  }
-}
-
-async function copyUrl() {
-  try {
-    await navigator.clipboard.writeText(authUrl.value)
-    urlCopied.value = true
-    setTimeout(() => urlCopied.value = false, 2000)
-  } catch {
-    // fallback
-  }
-}
-
-async function submitCallback() {
-  if (!callbackCode.value.trim()) {
-    callbackError.value = 'Please enter the code'
-    return
-  }
-  callbackError.value = ''
-  try {
-    await authStore.handleCallback(callbackCode.value.trim())
-  } catch (e) {
-    callbackError.value = 'Invalid code. Please try again.'
-  }
 }
 </script>
 
@@ -97,38 +63,6 @@ async function submitCallback() {
 
         <p v-if="authStore.error" class="login-error">{{ authStore.error }}</p>
         <p v-else class="login-hint">You'll be redirected to AniList to authorize the app</p>
-
-        <!-- Manual callback input for Android -->
-        <div v-if="authStore.showCallbackInput" class="callback-section">
-          <div class="divider">
-            <span>Enter access token</span>
-          </div>
-
-          <div v-if="authUrl" class="url-display">
-            <p class="url-label">1. Open this URL in your browser:</p>
-            <div class="url-box">
-              <code class="url-text">{{ authUrl }}</code>
-              <button class="copy-btn" @click="copyUrl">
-                {{ urlCopied ? 'Copied!' : 'Copy' }}
-              </button>
-            </div>
-          </div>
-
-          <p class="callback-hint">2. After authorizing, copy the access_token from the URL and paste below</p>
-          <div class="callback-input-group">
-            <input
-              v-model="callbackCode"
-              type="text"
-              class="input callback-input"
-              placeholder="Paste access token"
-              @keyup.enter="submitCallback"
-            />
-            <button class="btn btn-primary callback-btn" @click="submitCallback" :disabled="loading">
-              Submit
-            </button>
-          </div>
-          <p v-if="callbackError" class="callback-error">{{ callbackError }}</p>
-        </div>
       </div>
     </template>
 
@@ -244,103 +178,6 @@ async function submitCallback() {
   color: var(--status-dropped);
   margin-top: var(--space-md);
   max-width: 280px;
-}
-
-/* Callback Section */
-.callback-section {
-  width: 100%;
-  max-width: 280px;
-  margin-top: var(--space-2xl);
-}
-
-.divider {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  margin-bottom: var(--space-lg);
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--bg-hover);
-}
-
-.divider span {
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.callback-hint {
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-  margin-bottom: var(--space-md);
-}
-
-.callback-input-group {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-.callback-input {
-  flex: 1;
-  min-width: 0;
-}
-
-.callback-btn {
-  flex-shrink: 0;
-}
-
-.callback-error {
-  font-size: var(--font-size-xs);
-  color: var(--status-dropped);
-  margin-top: var(--space-sm);
-}
-
-/* URL Display */
-.url-display {
-  margin-bottom: var(--space-lg);
-}
-
-.url-label {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  margin-bottom: var(--space-sm);
-}
-
-.url-box {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  background: var(--bg-surface);
-  border-radius: var(--radius-md);
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--bg-hover);
-}
-
-.url-text {
-  flex: 1;
-  font-size: var(--font-size-xs);
-  color: var(--color-primary-light);
-  word-break: break-all;
-  font-family: monospace;
-}
-
-.copy-btn {
-  flex-shrink: 0;
-  padding: var(--space-xs) var(--space-md);
-  background: var(--color-primary);
-  color: white;
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-}
-
-.copy-btn:hover {
-  background: var(--color-primary-dark);
 }
 
 /* Profile */

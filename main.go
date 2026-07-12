@@ -30,17 +30,18 @@ func main() {
 		RedirectURI:  auth.CallbackURL,
 	}
 
-	// Create OAuth2 service - don't fatal if credentials are missing
+	// Create OAuth2 service - always register it even if credentials are missing
+	// This ensures window.go.main.OAuth2Service is available in the frontend
 	oauthService, err := auth.NewOAuth2Service(oauthConfig)
 	if err != nil {
 		log.Printf("Failed to create OAuth2 service: %v", err)
-		oauthService = nil
+		// Still create a service instance to prevent frontend errors
+		// The service methods will fail gracefully when called
+		oauthService, _ = auth.NewOAuth2Service(auth.OAuth2Config{})
 	}
 
 	services := []application.Service{}
-	if oauthService != nil {
-		services = append(services, application.NewService(oauthService))
-	}
+	services = append(services, application.NewService(oauthService))
 
 	app := application.New(application.Options{
 		Name:        "Miku",

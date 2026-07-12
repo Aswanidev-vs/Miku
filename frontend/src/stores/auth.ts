@@ -60,32 +60,28 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     error.value = null
     try {
+      // Check if Wails runtime is available
+      if (typeof window === 'undefined' || !window.go || !window.go.main || !window.go.main.OAuth2Service) {
+        throw new Error('Wails runtime not available. Please run the app using "wails3 dev" or the built binary, not the frontend directly.')
+      }
+      
       const url = await window.go.main.OAuth2Service.GetAuthorizationURL()
       
       if (!url || url.includes('client_id=')) {
         throw new Error('Failed to generate authorization URL. Please check that ANILIST_CLIENT_ID is configured.')
       }
       
-      // Show manual code entry as fallback
-      showCallbackInput.value = true
       // Use native Chrome Custom Tab on Android
       if (window.wails?.openURL) {
         window.wails.openURL(url)
       } else {
         // Fallback for desktop
-        try {
-          window.open(url, '_blank')
-        } catch {
-          // User can copy URL manually
-          console.warn('Failed to open URL automatically, user must copy manually')
-        }
+        window.open(url, '_blank')
       }
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Login failed'
       error.value = errorMessage
       console.error('Login error:', errorMessage)
-      // Still show manual input as fallback
-      showCallbackInput.value = true
     } finally {
       loading.value = false
     }
