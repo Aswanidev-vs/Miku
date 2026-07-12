@@ -24,13 +24,13 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^6.0.0",
-    "@vitejs/plugin-vue": "^5.1.2",
+    "@vitejs/plugin-vue": "^6.0.7",
     "@vue/test-utils": "^2.4.6",
     "fake-indexeddb": "^6.0.0",
     "jsdom": "^24.1.1",
     "typescript": "^5.5.4",
-    "vite": "^5.4.2",
-    "vitest": "^2.0.5",
+    "vite": "^8.1.4",
+    "vitest": "^4.1.10",
     "vue-tsc": "^2.0.29"
   }
 }
