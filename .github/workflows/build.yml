@@ -3,6 +3,7 @@ name: Build Android APK
 on:
   push:
     branches: [ main, develop ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -104,6 +105,17 @@ jobs:
           name: miku-android-${{ github.sha }}
           path: ${{ steps.find-apk.outputs.apk_path }}
           retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          gh release create "$TAG_NAME" \
+            --title "Miku $TAG_NAME" \
+            --generate-notes \
+            "${{ steps.find-apk.outputs.apk_path }}#Miku-${TAG_NAME}.apk"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   validate:
     name: Validate Code
