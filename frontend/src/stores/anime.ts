@@ -1,0 +1,430 @@
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import type { Media, MediaListCollection, PageInfo } from '../types'
+
+const TRENDING_ANIME_QUERY = `
+query ($page: Int, $perPage: Int) {
+  Page(page: $page, perPage: $perPage) {
+    media(sort: TRENDING_DESC, type: ANIME) {
+      id
+      title {
+        romaji
+        english
+        native
+        userPreferred
+      }
+      coverImage {
+        large
+        medium
+        color
+      }
+      bannerImage
+      format
+      status
+      episodes
+      averageScore
+      popularity
+      trending
+      genres
+      description(asHtml: false)
+      nextAiringEpisode {
+        episode
+        airingAt
+        timeUntilAiring
+      }
+    }
+    pageInfo {
+      total
+      perPage
+      currentPage
+      lastPage
+      hasNextPage
+    }
+  }
+}
+`
+
+const SEARCH_ANIME_QUERY = `
+query ($search: String, $page: Int, $perPage: Int) {
+  Page(page: $page, perPage: $perPage) {
+    media(search: $search, type: ANIME, sort: SEARCH_MATCH) {
+      id
+      title {
+        romaji
+        english
+        native
+        userPreferred
+      }
+      coverImage {
+        large
+        medium
+        color
+      }
+      format
+      status
+      episodes
+      averageScore
+      genres
+    }
+    pageInfo {
+      total
+      perPage
+      currentPage
+      lastPage
+      hasNextPage
+    }
+  }
+}
+`
+
+const USER_ANIME_LIST_QUERY = `
+query ($userId: Int, $status: MediaListStatus) {
+  MediaListCollection(userId: $userId, type: ANIME, status: $status) {
+    lists {
+      name
+      status
+      entries {
+        id
+        mediaId
+        status
+        score
+        progress
+        repeat
+        startedAt {
+          year
+          month
+          day
+        }
+        completedAt {
+          year
+          month
+          day
+        }
+        media {
+          id
+          title {
+            romaji
+            english
+            userPreferred
+          }
+          coverImage {
+            large
+            medium
+          }
+          format
+          episodes
+          status
+        }
+      }
+    }
+  }
+}
+`
+
+const MEDIA_DETAILS_QUERY = `
+query ($id: Int) {
+  Media(id: $id) {
+    id
+    title {
+      romaji
+      english
+      native
+      userPreferred
+    }
+    coverImage {
+      large
+      medium
+      color
+    }
+    bannerImage
+    format
+    status
+    episodes
+    chapters
+    volumes
+    duration
+    averageScore
+    meanScore
+    popularity
+    trending
+    favourites
+    genres
+    tags {
+      id
+      name
+      description
+      category
+      rank
+      isGeneralSpoiler
+      isMediaSpoiler
+      isAdult
+    }
+    description(asHtml: false)
+    startDate {
+      year
+      month
+      day
+    }
+    endDate {
+      year
+      month
+      day
+    }
+    season
+    seasonYear
+    nextAiringEpisode {
+      id
+      episode
+      airingAt
+      timeUntilAiring
+    }
+    relations {
+      edges {
+        id
+        relationType
+        node {
+          id
+          title {
+            romaji
+          }
+          coverImage {
+            medium
+          }
+          format
+        }
+      }
+    }
+    recommendations {
+      edges {
+        node {
+          id
+          userRating
+          media {
+            id
+            title {
+              romaji
+            }
+            coverImage {
+              medium
+            }
+          }
+        }
+      }
+    }
+    characters {
+      edges {
+        id
+        role
+        node {
+          id
+          name {
+            full
+          }
+          image {
+            medium
+            large
+          }
+        }
+        voiceActors {
+          id
+          name {
+            full
+          }
+          image {
+            medium
+          }
+        }
+      }
+    }
+  }
+}
+`
+
+const SAVE_MEDIA_LIST_ENTRY_MUTATION = `
+mutation ($mediaId: Int, $status: MediaListStatus, $score: Float, $progress: Int, $repeat: Int) {
+  SaveMediaListEntry(
+    mediaId: $mediaId
+    status: $status
+    score: $score
+    progress: $progress
+    repeat: $repeat
+  ) {
+    id
+    mediaId
+    status
+    score
+    progress
+    repeat
+    media {
+      id
+      title {
+        romaji
+      }
+    }
+  }
+}
+`
+
+const DELETE_MEDIA_LIST_ENTRY_MUTATION = `
+mutation ($id: Int) {
+  DeleteMediaListEntry(id: $id) {
+    deleted
+  }
+}
+`
+
+export const useAnimeStore = defineStore('anime', () => {
+  const trending = ref<Media[]>([])
+  const searchResults = ref<Media[]>([])
+  const myList = ref<MediaListCollection | null>(null)
+  const currentMedia = ref<Media | null>(null)
+  const pageInfo = ref<PageInfo | null>(null)
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+
+  async function fetchTrending(page = 1, perPage = 20) {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await window.go.main.GraphQLClient.Query(TRENDING_ANIME_QUERY, {
+        page,
+        perPage,
+      })
+      if (response?.data?.Page) {
+        trending.value = response.data.Page.media
+        pageInfo.value = response.data.Page.pageInfo
+      }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to fetch trending anime'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function search(query: string, page = 1, perPage = 20) {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await window.go.main.GraphQLClient.Query(SEARCH_ANIME_QUERY, {
+        search: query,
+        page,
+        perPage,
+      })
+      if (response?.data?.Page) {
+        searchResults.value = response.data.Page.media
+        pageInfo.value = response.data.Page.pageInfo
+      }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to search anime'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function fetchMyList(userId: number, status?: string) {
+    loading.value = true
+    error.value = null
+    try {
+      const variables: Record<string, any> = { userId }
+      if (status) {
+        variables.status = status
+      }
+      const response = await window.go.main.GraphQLClient.Query(USER_ANIME_LIST_QUERY, variables)
+      if (response?.data?.MediaListCollection) {
+        myList.value = response.data.MediaListCollection
+      }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to fetch anime list'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function updateEntry(
+    mediaId: number,
+    status?: string,
+    score?: number,
+    progress?: number,
+    repeat?: number
+  ) {
+    loading.value = true
+    error.value = null
+    try {
+      const variables: Record<string, any> = { mediaId }
+      if (status) variables.status = status
+      if (score !== undefined) variables.score = score
+      if (progress !== undefined) variables.progress = progress
+      if (repeat !== undefined) variables.repeat = repeat
+
+      const response = await window.go.main.GraphQLClient.Mutate(
+        SAVE_MEDIA_LIST_ENTRY_MUTATION,
+        variables
+      )
+      return response?.data?.SaveMediaListEntry
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to update entry'
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function deleteEntry(entryId: number) {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await window.go.main.GraphQLClient.Mutate(
+        DELETE_MEDIA_LIST_ENTRY_MUTATION,
+        { id: entryId }
+      )
+      return response?.data?.DeleteMediaListEntry?.deleted
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to delete entry'
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function fetchDetails(id: number) {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await window.go.main.GraphQLClient.Query(MEDIA_DETAILS_QUERY, { id })
+      if (response?.data?.Media) {
+        currentMedia.value = response.data.Media
+      }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to fetch anime details'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  function clearSearch() {
+    searchResults.value = []
+    pageInfo.value = null
+  }
+
+  function clearCurrentMedia() {
+    currentMedia.value = null
+  }
+
+  return {
+    trending,
+    searchResults,
+    myList,
+    currentMedia,
+    pageInfo,
+    loading,
+    error,
+    fetchTrending,
+    search,
+    fetchMyList,
+    updateEntry,
+    deleteEntry,
+    fetchDetails,
+    clearSearch,
+    clearCurrentMedia,
+  }
+})

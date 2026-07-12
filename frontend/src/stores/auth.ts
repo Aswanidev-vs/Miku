@@ -1,0 +1,166 @@
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import type { User } from '../types'
+
+declare global {
+  interface Window {
+    go: {
+      main: {
+        OAuth2Service: {
+          GetAuthorizationURL(): Promise<string>
+          HandleCallback(code: string): Promise<{
+            access_token: string
+            refresh_token?: string
+            token_type: string
+            expires_at: number
+          }>
+          GetToken(): Promise<{
+            access_token: string
+            refresh_token?: string
+            token_type: string
+            expires_at: number
+          } | null>
+          Logout(): Promise<void>
+          IsAuthenticated(): Promise<boolean>
+        }
+        GraphQLClient: {
+          Query(query: string, variables?: Record<string, any>): Promise<any>
+          Mutate(mutation: string, variables?: Record<string, any>): Promise<any>
+        }
+      }
+    }
+  }
+}
+
+export const useAuthStore = defineStore('auth', () => {
+  const user = ref<User | null>(null)
+  const isAuthenticated = ref(false)
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+
+  const currentUser = computed(() => user.value)
+  const isLoggedIn = computed(() => isAuthenticated.value)
+
+  async function login() {
+    loading.value = true
+    error.value = null
+    try {
+      const url = await window.go.main.OAuth2Service.GetAuthorizationURL()
+      window.open(url, '_blank')
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Login failed'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function handleCallback(code: string) {
+    loading.value = true
+    error.value = null
+    try {
+      await window.go.main.OAuth2Service.HandleCallback(code)
+      isAuthenticated.value = true
+      await fetchUser()
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Callback handling failed'
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function fetchUser() {
+    loading.value = true
+    error.value = null
+    try {
+      const query = `
+        query {
+          Viewer {
+            id
+            name
+            about(asHtml: false)
+            avatar {
+              large
+              medium
+            }
+            bannerImage
+            statistics {
+              anime {
+                count
+                meanScore
+                minutesWatched
+                episodesWatched
+              }
+              manga {
+                count
+                meanScore
+                chaptersRead
+                volumesRead
+              }
+            }
+            options {
+              titleLanguage
+              adultContent
+              scoreFormat
+              rowOrder
+              displayCharacters
+            }
+          }
+        }
+      `
+      const response = await window.go.main.GraphQLClient.Query(query)
+      if (response?.data?.Viewer) {
+        user.value = response.data.Viewer
+      }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to fetch user'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function logout() {
+    loading.value = true
+    error.value = null
+    try {
+      await window.go.main.OAuth2Service.Logout()
+      user.value = null
+      isAuthenticated.value = false
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Logout failed'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function checkAuth() {
+    loading.value = true
+    error.value = null
+    try {
+      const authenticated = await window.go.main.OAuth2Service.IsAuthenticated()
+      isAuthenticated.value = authenticated
+      if (authenticated) {
+        await fetchUser()
+      }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Auth check failed'
+      isAuthenticated.value = false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  return {
+    user,
+    isAuthenticated,
+    loading,
+    error,
+    currentUser,
+    isLoggedIn,
+    login,
+    handleCallback,
+    fetchUser,
+    logout,
+    checkAuth,
+  }
+})
