@@ -99,10 +99,21 @@ jobs:
           echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
           echo "Found APK: $APK_PATH"
 
+      - name: Get version
+        id: version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+          else
+            VERSION="dev-$(git rev-parse --short HEAD)"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: miku-android-${{ github.sha }}
+          name: miku-${{ steps.version.outputs.version }}
           path: ${{ steps.find-apk.outputs.apk_path }}
           retention-days: 30
 
@@ -110,12 +121,16 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           TAG_NAME="${GITHUB_REF#refs/tags/}"
+          APK_PATH="${{ steps.find-apk.outputs.apk_path }}"
+          APK_NAME="Miku-${TAG_NAME}.apk"
+
+          # Rename APK to include version
+          mv "$APK_PATH" "$(dirname "$APK_PATH")/$APK_NAME"
+
           gh release create "$TAG_NAME" \
             --title "Miku $TAG_NAME" \
             --generate-notes \
-            "${{ steps.find-apk.outputs.apk_path }}#Miku-${TAG_NAME}.apk"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            "$(dirname "$APK_PATH")/$APK_NAME"
 
   validate:
     name: Validate Code
