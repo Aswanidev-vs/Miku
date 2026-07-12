@@ -1,0 +1,102 @@
+/* ============================================
+   Miku AniList Client — Design Tokens
+   ============================================ */
+
+:root {
+  /* ---- Primary Palette ---- */
+  --color-primary: #9c27b0;
+  --color-primary-light: #ba68c8;
+  --color-primary-dark: #7b1fa2;
+  --color-primary-glow: rgba(156, 39, 176, 0.4);
+
+  --color-accent: #ff4081;
+  --color-accent-light: #ff80ab;
+  --color-accent-dark: #c51162;
+  --color-accent-glow: rgba(255, 64, 129, 0.4);
+
+  /* ---- Backgrounds ---- */
+  --bg-deepest: #0a0a12;
+  --bg-deep: #12121f;
+  --bg-surface: #1a1a2e;
+  --bg-elevated: #222240;
+  --bg-hover: #2a2a4a;
+
+  /* ---- Text ---- */
+  --text-primary: #eeeef0;
+  --text-secondary: #a0a0b8;
+  --text-muted: #6a6a82;
+  --text-on-primary: #ffffff;
+
+  /* ---- Status Colors ---- */
+  --status-watching: #00e676;
+  --status-completed: #2196f3;
+  --status-paused: #ff9800;
+  --status-dropped: #f44336;
+  --status-planning: #ab47bc;
+
+  /* ---- Semantic ---- */
+  --color-success: #00e676;
+  --color-warning: #ff9800;
+  --color-error: #f44336;
+  --color-info: #2196f3;
+
+  /* ---- Spacing ---- */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+
+  /* ---- Border Radius ---- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* ---- Shadows ---- */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-glow-primary: 0 0 20px var(--color-primary-glow);
+  --shadow-glow-accent: 0 0 20px var(--color-accent-glow);
+
+  /* ---- Typography ---- */
+  --font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-size-xs: 0.7rem;
+  --font-size-sm: 0.8rem;
+  --font-size-base: 0.9rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.2rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 2rem;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+
+  /* ---- Transitions ---- */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow: 400ms ease;
+
+  /* ---- Z-Index ---- */
+  --z-base: 1;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal-backdrop: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
+
+  /* ---- Layout ---- */
+  --nav-height: 60px;
+  --header-height: 56px;
+  --content-max-width: 600px;
+}
