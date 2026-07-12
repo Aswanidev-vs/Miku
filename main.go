@@ -49,7 +49,7 @@ func main() {
 	}
 
 	// Default redirect URI — will be updated by StartCallbackServer to the actual port
-	redirectURI := auth.CallbackURL(auth.CallbackPort)
+	redirectURI := auth.CallbackURL(auth.DefaultCallbackPort)
 
 	oauthConfig := auth.OAuth2Config{
 		ClientID:     clientID,

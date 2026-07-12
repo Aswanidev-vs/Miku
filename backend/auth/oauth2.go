@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	AniListAuthURL  = "https://anilist.co/api/v2/oauth/authorize"
-	AniListTokenURL = "https://anilist.co/api/v2/oauth/token"
-	CallbackPort    = 43219
+	AniListAuthURL        = "https://anilist.co/api/v2/oauth/authorize"
+	AniListTokenURL       = "https://anilist.co/api/v2/oauth/token"
+	DefaultCallbackPort   = 43219
+	DefaultCallbackHost   = "localhost"
 )
 
 type OAuth2Config struct {
@@ -61,7 +62,7 @@ func NewOAuth2Service(config OAuth2Config) (*OAuth2Service, error) {
 
 // CallbackURL returns the redirect URI for the given port.
 func CallbackURL(port int) string {
-	return fmt.Sprintf("http://localhost:%d/callback", port)
+	return fmt.Sprintf("http://%s:%d/callback", DefaultCallbackHost, port)
 }
 
 func (s *OAuth2Service) GetAuthorizationURL() string {
@@ -182,28 +183,37 @@ func (s *OAuth2Service) GetPendingCode() string {
 func (s *OAuth2Service) StartCallbackServer() error {
 	s.StopCallbackServer()
 
-	// Update redirect URI to match the port we'll actually use
-	redirectURI, err := s.findAvailablePort()
-	if err != nil {
-		return fmt.Errorf("no available port for OAuth callback: %w", err)
-	}
-	s.config.RedirectURI = redirectURI
-	log.Printf("[OAuth] Starting callback server on %s", redirectURI)
-
 	mux := http.NewServeMux()
 	mux.HandleFunc("/callback", s.handleHTTPCallback)
 
-	// Extract port from redirect URI for listening
-	_, portStr, _ := net.SplitHostPort(s.config.RedirectURI)
-	listenAddr := ":" + portStr
+	// Try to bind a listener on available ports
+	var ln net.Listener
+	var redirectURI string
+	for i := 0; i < 10; i++ {
+		port := DefaultCallbackPort + i
+		addr := fmt.Sprintf(":%d", port)
+		var err error
+		ln, err = net.Listen("tcp", addr)
+		if err == nil {
+			redirectURI = CallbackURL(port)
+			break
+		}
+		log.Printf("[OAuth] Port %d unavailable: %v", port, err)
+	}
+	if ln == nil {
+		return fmt.Errorf("all ports %d-%d are in use", DefaultCallbackPort, DefaultCallbackPort+9)
+	}
+
+	s.config.RedirectURI = redirectURI
+	log.Printf("[OAuth] Starting callback server on %s", redirectURI)
 
 	s.callbackSrv = &http.Server{
-		Addr:    listenAddr,
 		Handler: mux,
 	}
 
+	// Serve on the pre-bound listener (no race condition)
 	go func() {
-		if err := s.callbackSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := s.callbackSrv.Serve(ln); err != nil && err != http.ErrServerClosed {
 			log.Printf("[OAuth] Callback server error: %v", err)
 		}
 	}()
@@ -258,18 +268,4 @@ p{color:#a0a0b0;font-size:0.9rem}
 
 	// Shut down server after responding
 	go s.StopCallbackServer()
-}
-
-// findAvailablePort tries CallbackPort, then nearby ports, and returns the redirect URI.
-func (s *OAuth2Service) findAvailablePort() (string, error) {
-	for i := 0; i < 10; i++ {
-		port := CallbackPort + i
-		addr := fmt.Sprintf(":%d", port)
-		ln, err := net.Listen("tcp", addr)
-		if err == nil {
-			ln.Close()
-			return CallbackURL(port), nil
-		}
-	}
-	return "", fmt.Errorf("all ports %d-%d are in use", CallbackPort, CallbackPort+9)
 }
