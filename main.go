@@ -59,8 +59,8 @@ func main() {
 	// 'URL' is the URL that will be loaded into the webview.
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "Miku",
-		Width:            390,
-		Height:           844,
+		Width:            1000,
+		Height:           618,
 		BackgroundColour: application.NewRGB(10, 10, 18),
 		URL:              "/",
 		Mac: application.MacWindow{
