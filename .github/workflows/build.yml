@@ -258,13 +258,16 @@ jobs:
       - name: Generate Wails bindings
         run: wails3 generate bindings
 
+      - name: Build frontend (required for go vet embed)
+        run: |
+          cd frontend
+          npm run build
+          cd ..
+
       - name: Validate Go code
         run: |
           go vet -tags gtk3 ./...
           echo "Go validation passed"
 
       - name: Validate frontend build
-        run: |
-          cd frontend
-          npm run build
-          echo "Frontend build passed"
+        run: echo "Frontend already built above"
