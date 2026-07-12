@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@wailsio/runtime": "latest",
+    "axios": "^1.7.0",
     "dexie": "^4.4.4",
     "pinia": "^2.3.1",
     "vue": "^3.2.45",
