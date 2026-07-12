@@ -27,6 +27,22 @@ const hasMoreCharacters = computed(() => {
   return (media.value?.characters?.edges?.length || 0) > 12
 })
 
+// Recommendations - filter duplicates and exclude current media
+const uniqueRecommendations = computed(() => {
+  if (!media.value?.recommendations?.edges) return []
+  const seen = new Set<number>()
+  const currentId = media.value.id
+  const results: typeof media.value.recommendations.edges = []
+  for (const edge of media.value.recommendations.edges) {
+    const id = edge.node.media?.id
+    if (id && id !== currentId && !seen.has(id)) {
+      seen.add(id)
+      results.push(edge)
+    }
+  }
+  return results.slice(0, 6)
+})
+
 // List management state
 const listStatus = ref<ListStatus | null>(null)
 const listProgress = ref(0)
@@ -346,7 +362,7 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
                 <span class="character-name">{{ edge.node.name.full }}</span>
                 <span class="character-role">{{ edge.role }}</span>
               </div>
-              <div v-if="edge.voiceActors?.length" class="character-va">
+              <div v-if="edge.voiceActors?.length" class="character-va" @click.stop="edge.voiceActors[0].id && router.push({ name: 'voice-actor', params: { id: edge.voiceActors[0].id } })">
                 <img
                   :src="edge.voiceActors[0].image?.medium"
                   :alt="edge.voiceActors[0].name.full"
@@ -386,11 +402,11 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
         </div>
 
         <!-- Recommendations -->
-        <div v-if="media.recommendations?.edges?.length" class="detail-section">
+        <div v-if="uniqueRecommendations.length > 0" class="detail-section">
           <h3 class="section-title">Recommendations</h3>
           <div class="recommendation-list">
             <div
-              v-for="edge in media.recommendations.edges.slice(0, 6)"
+              v-for="edge in uniqueRecommendations"
               :key="edge.node.id"
               class="recommendation-item"
               @click="edge.node.media?.id && router.push({ name: 'media-detail', params: { id: edge.node.media.id } })"
@@ -722,7 +738,11 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
   padding-left: var(--space-md);
   border-left: 1px solid var(--bg-hover);
   flex-shrink: 0;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
 }
+
+.character-va:hover { opacity: 0.8; }
 .va-img { width: 32px; height: 32px; border-radius: var(--radius-full); object-fit: cover; }
 .va-info { display: flex; flex-direction: column; }
 .va-name { font-size: var(--font-size-xs); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
