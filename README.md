@@ -1,188 +1,158 @@
-<p align="center">
-  <img src="public/logo-wordmark.svg" alt="Miku — AniList Android Client" width="300" />
-</p>
+# Miku
 
-<p align="center">
-  <strong>A high-performance, unofficial AniList client for Android</strong><br/>
-  Built with Ionic + Vue 3 + TypeScript · Material mode · Neon Ink design system
-</p>
-
----
+A native desktop client for [AniList](https://anilist.co) built with [Wails 3](https://wails.io), [Vue 3](https://vuejs.org), and [Go](https://go.dev). Browse trending anime and manga, manage your personal lists, track your activity feed, view your profile with statistics, and search the entire AniList catalog — all from a lightweight desktop app.
 
 ## Features
 
-- **Cache-first data layer** — normalized GraphQL cache backed by IndexedDB; instant cold-start restores
-- **Request coalescing** — identical in-flight queries deduplicate to a single network call
-- **Optimistic mutations** — list edits (progress, score, status) apply immediately with automatic rollback on failure
-- **60fps motion budget** — physics springs, shared-element FLIP transitions, staggered hero reveals; all transform/opacity only
-- **Dark-first design** — "Neon Ink" system: ink-black base, coral `#FF4D6D` accent, Bricolage Grotesque + Hanken Grotesk + Departure Mono type stack
-- **Gesture navigation** — swipe-back, elastic pull-to-refresh, drag-dismiss bottom sheets
-- **Rate-limit aware** — serialized write scheduler respects AniList API limits
-- **Responsive** — adapts from 320px phones to 768px+ tablets; safe-area aware; 44dp touch targets
+- **Trending & Discovery** — Browse trending anime, seasonal recommendations, and discover new titles
+- **Search** — Full-text search across AniList's anime and manga database
+- **Personal Lists** — View and manage your anime/manga lists (currently watching, planning, completed, dropped, etc.)
+- **Activity Feed** — See what your friends and the community are up to
+- **Profile & Stats** — View your profile with detailed statistics, favourite genres, and heatmap calendar
+- **OAuth2 Authentication** — Secure login via AniList's OAuth2 flow
+- **Settings** — Customize app preferences
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | Ionic 8 + Vue 3 (Composition API, `<script setup>`) |
-| Language | TypeScript (strict) |
-| State | Pinia (normalized stores per domain) |
-| Transport | AniList GraphQL API (typed documents) |
-| Cache | In-memory LRU Map + IndexedDB (`idb-keyval`) |
-| Build | Vite 5 |
-| Native | Capacitor 6 (Android target) |
-| Testing | Vitest (unit) + Cypress (e2e, planned) |
+| Desktop framework | Wails 3 (alpha) |
+| Frontend | Vue 3 + TypeScript + Vite |
+| State management | Pinia |
+| Routing | Vue Router |
+| HTTP client | Axios |
+| Local storage | Dexie (IndexedDB) |
+| Backend | Go 1.25 |
+| API | AniList GraphQL API |
 
-## Architecture
+## Prerequisites
+
+- **Go** 1.25 or later — [install guide](https://go.dev/doc/install)
+- **Node.js** 18+ and npm — [install guide](https://nodejs.org)
+- **Wails 3 CLI** — `go install github.com/wailsapp/wails/v3/cmd/wails@latest`
+- **Task** (optional) — [taskfile.dev](https://taskfile.dev) for convenience commands
+
+## Installation
+
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/Aswanidev-vs/Miku.git
+   cd Miku
+   ```
+
+2. **Install frontend dependencies**
+
+   ```bash
+   cd frontend
+   npm install
+   cd ..
+   ```
+
+3. **Run in development mode**
+
+   ```bash
+   wails3 dev
+   ```
+
+   This starts both the Go backend and the Vite dev server with hot-reload.
+
+4. **Build for production**
+
+   ```bash
+   wails3 build
+   ```
+
+   The compiled binary will be placed in the `build` directory.
+
+## AniList API Setup
+
+Miku uses the AniList GraphQL API. To authenticate with OAuth2 you need to register an application on AniList:
+
+1. Go to **[anilist.co/settings/developer](https://anilist.co/settings/developer)**
+2. Click **"Create New Client"**
+3. Set the **Name** to `Miku` (or anything you prefer)
+4. Set the **Redirect URL** to `miku://callback`
+5. Copy the generated **Client ID** and **Client Secret**
+
+Then set them as environment variables before running the app:
+
+**Windows (PowerShell):**
+
+```powershell
+$env:ANILIST_CLIENT_ID = "your-client-id"
+$env:ANILIST_CLIENT_SECRET = "your-client-secret"
+```
+
+**macOS / Linux:**
+
+```bash
+export ANILIST_CLIENT_ID="your-client-id"
+export ANILIST_CLIENT_SECRET="your-client-secret"
+```
+
+Alternatively, you can create a `.env` file in the project root (make sure to add it to `.gitignore`):
 
 ```
-UI Layer (Ionic Vue pages + components)
-        │ calls
-Domain Layer (Pinia stores: media, list, user, social, auth, ui)
-        │ reads/writes
-Data Layer (repositories → GraphQL client + coalescer + normalized cache + sync scheduler)
-        │ HTTPS
-AniList GraphQL API
+ANILIST_CLIENT_ID=your-client-id
+ANILIST_CLIENT_SECRET=your-client-secret
 ```
-
-Key invariants:
-- UI never talks to the network directly; it calls store actions
-- Stores never know about HTTP; they call repository methods
-- The repository owns caching, coalescing, and revalidation
-- All mutations are optimistic with rollback on failure
 
 ## Project Structure
 
 ```
 Miku/
-├── public/                  Static assets (logo SVGs)
-├── src/
-│   ├── main.ts              Entry point
-│   ├── App.vue              Root shell
-│   ├── router/              Vue Router (lazy page routes)
-│   ├── layouts/             TabsLayout (bottom nav)
-│   ├── pages/               Home, Search, MediaDetail, MyList, Social, Profile, Login
-│   ├── components/
-│   │   ├── common/          AppBar, VirtualScroller, SkeletonBlock, EmptyState
-│   │   ├── media/           MediaCard, MediaGrid, ScoreRing, StatusChip
-│   │   ├── list/            ListRow, ListEditorSheet, ProgressStepper
-│   │   ├── social/          ActivityItem, ThreadCard
-│   │   └── gesture/         SwipeableCard, PullRefresh
-│   ├── composables/         useFps, useHaptics, useGesture, useInfiniteScroll
-│   ├── directives/          vSharedElement, vLongPress, vParallax
-│   ├── stores/              Pinia: media, list, user, social, auth, ui
-│   ├── data/
-│   │   ├── graphql/         Client, documents (typed queries)
-│   │   ├── auth/            PKCE flow, token storage
-│   │   ├── cache/           NormalizedCache (LRU + IndexedDB), coalescer
-│   │   ├── repositories/    media, list, user, social
-│   │   └── sunc/            SyncScheduler (rate-limit batching)
-│   ├── types/               AniList TypeScript types
-│   └── theme/               Neon Ink CSS variables
-├── tests/
-│   └── unit/                Vitest specs (client, cache, stores)
-├── docs/compose/            Roadmap, task plans, design system
-├── package.json
-├── vite.config.ts
-└── tsconfig.json
+├── backend/
+│   ├── api/              # AniList GraphQL client and queries
+│   └── auth/             # OAuth2 service and token storage
+├── frontend/
+│   ├── src/
+│   │   ├── components/   # Reusable Vue components (anime cards, grids, nav, etc.)
+│   │   ├── views/        # Page components (Home, Discover, Search, Profile, etc.)
+│   │   ├── stores/       # Pinia stores (auth, anime, manga, user)
+│   │   ├── router/       # Vue Router configuration
+│   │   └── types/        # TypeScript type definitions
+│   └── public/           # Static assets
+├── build/                # Platform-specific build configs (Windows, macOS, Linux)
+├── docs/                 # Documentation
+├── main.go               # Application entry point
+├── go.mod                # Go module definition
+└── Taskfile.yml          # Task runner configuration
 ```
 
-## Getting Started
+## Contributing
 
-### Prerequisites
+Contributions are welcome! Here's how to get started:
 
-- Node.js 18+
-- npm or pnpm
-- An AniList app registration (for OAuth client ID)
+1. **Fork** the repository
+2. **Create** a feature branch from `main`
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+3. **Make** your changes
+4. **Test** your changes in development mode
+   ```bash
+   wails3 dev
+   ```
+5. **Commit** with a descriptive message
+   ```bash
+   git commit -m "feat: add your feature description"
+   ```
+6. **Push** to your fork and open a **Pull Request**
 
-### Install
+### Guidelines
 
-```bash
-git clone <repo-url> Miku
-cd Miku
-npm install
-```
-
-### Development
-
-```bash
-npm run dev        # Vite dev server at localhost:5173
-npm run typecheck  # vue-tsc strict
-npm run test:unit  # Vitest
-```
-
-### Environment Variables
-
-Create `.env`:
-
-```
-VITE_ANILIST_CLIENT_ID=your_client_id
-VITE_ANILIST_REDIRECT=miku://auth
-```
-
-### Build
-
-```bash
-npm run build      # typecheck + production build → dist/
-```
-
-### Android (Capacitor)
-
-```bash
-npx cap add android
-npx cap sync
-npx cap open android   # opens Android Studio
-```
-
-## Design System
-
-Miku uses the **Neon Ink** design system — defined in `docs/compose/specs/2026-07-11-miku-design-system.md`.
-
-**Palette:**
-| Token | Value | Use |
-|-------|-------|-----|
-| `--bg-base` | `#0C0A0F` | Page background |
-| `--bg-surface` | `#15121B` | Cards, sheets |
-| `--accent` | `#FF4D6D` | Primary coral |
-| `--aurora-1/2` | coral → periwinkle | Hero gradients only |
-
-**Typography:**
-| Role | Font | Weight |
-|------|------|--------|
-| Display | Bricolage Grotesque | 700–800 |
-| Body | Hanken Grotesk | 400–500 |
-| Stats/numbers | Departure Mono | 400 |
-
-**Motion:** Spring easing (`cubic-bezier(.34,1.56,.64,1)`), `transform`/`opacity` only, `prefers-reduced-motion` respected.
-
-## Testing
-
-```bash
-npm run test:unit    # 16 unit tests (client, cache, coalescer, stores)
-```
-
-Tests cover:
-- GraphQL client error mapping (429 → RateLimitError, schema errors)
-- Request coalescing (identical in-flight dedup)
-- Normalized cache persistence + LRU eviction
-- Optimistic mutation rollback on failure
-- UI store density/motion toggles
-
-## Roadmap
-
-| Phase | Status | Description |
-|-------|--------|-------------|
-| Phase 1 | Done | Scaffold, Ionic md mode, Neon Ink theme, router, stores |
-| Phase 2 | Done | GraphQL client, cache, auth PKCE, repositories, stores |
-| Phase 3 | Done | Core UI (Home, Search, Detail, MyList, Social, Profile) |
-| Phase 4 | Done | Perf budget, gestures, motion, density toggle |
-
-**Planned:**
-- Cypress e2e tests + 60fps perf gate
-- Web Worker normalization for heavy batches
-- Push notifications for list updates
-- Android native splash screen + app icon
+- Follow the existing code style and patterns
+- Keep commits focused and atomic
+- Write clear commit messages (conventional commits preferred: `feat:`, `fix:`, `docs:`, `refactor:`, etc.)
+- Test your changes before submitting a PR
 
 ## License
 
-Unofficial — not affiliated with AniList. Respect AniList API terms of service.
+This project is open source. See the repository for license details.
+
+## Acknowledgments
+
+- [AniList](https://anilist.co) for the API and platform
+- [Wails](https://wails.io) for the desktop framework
+- [Vue.js](https://vuejs.org) team for the frontend framework
