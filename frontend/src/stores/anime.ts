@@ -411,6 +411,30 @@ export const useAnimeStore = defineStore('anime', () => {
     currentMedia.value = null
   }
 
+  // --- Auto-sync polling ---
+  let syncTimer: ReturnType<typeof setInterval> | null = null
+  let syncUserId: number | null = null
+
+  function startSync(userId: number, intervalMs = 60000) {
+    stopSync()
+    syncUserId = userId
+    // Immediately fetch fresh data
+    fetchMyList(userId)
+    // Then poll at interval
+    syncTimer = setInterval(() => {
+      fetchMyList(userId)
+      fetchTrending(1, 20)
+    }, intervalMs)
+  }
+
+  function stopSync() {
+    if (syncTimer) {
+      clearInterval(syncTimer)
+      syncTimer = null
+    }
+    syncUserId = null
+  }
+
   return {
     trending,
     searchResults,
@@ -427,5 +451,7 @@ export const useAnimeStore = defineStore('anime', () => {
     fetchDetails,
     clearSearch,
     clearCurrentMedia,
+    startSync,
+    stopSync,
   }
 })

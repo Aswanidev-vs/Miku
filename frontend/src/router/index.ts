@@ -34,6 +34,11 @@ const router = createRouter({
       component: () => import('../views/ProfileView.vue'),
     },
     {
+      path: '/media/:id',
+      name: 'media-detail',
+      component: () => import('../views/MediaDetailView.vue'),
+    },
+    {
       path: '/settings',
       name: 'settings',
       component: () => import('../views/SettingsView.vue'),

@@ -1,10 +1,16 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import type { Media } from '../../types'
-import SkeletonLoader from '../common/SkeletonLoader.vue'
 
 defineProps<{
   anime: Media
 }>()
+
+const router = useRouter()
+
+function navigateToDetail(id: number) {
+  router.push({ name: 'media-detail', params: { id } })
+}
 
 function formatLabel(format?: string): string {
   if (!format) return ''
@@ -29,7 +35,7 @@ function statusClass(status?: string): string {
 </script>
 
 <template>
-  <div class="anime-card">
+  <div class="anime-card" @click="navigateToDetail(anime.id)">
     <div class="card-image">
       <img
         :src="anime.coverImage.large"

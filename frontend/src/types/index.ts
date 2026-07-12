@@ -98,6 +98,7 @@ export interface Media {
   episodes?: number
   chapters?: number
   volumes?: number
+  duration?: number
   meanScore?: number
   averageScore?: number
   popularity?: number
@@ -106,6 +107,8 @@ export interface Media {
   description?: string
   startDate?: FuzzyDate
   endDate?: FuzzyDate
+  season?: string
+  seasonYear?: number
   nextAiringEpisode?: AiringEpisode
   genres: string[]
   tags: MediaTag[]
