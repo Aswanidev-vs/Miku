@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c026d3"/>
+      <stop offset="100%" stop-color="#db2777"/>
+    </linearGradient>
+    <linearGradient id="petal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f9a8d4"/>
+      <stop offset="100%" stop-color="#f0abfc"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="62" fill="#1a0a2e"/>
+
+  <!-- Letter M -->
+  <path d="M30 92V46l18 26 18-26v46" fill="none" stroke="url(#grad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Cherry blossom petals -->
+  <g transform="translate(92,32) rotate(15)">
+    <ellipse cx="0" cy="-8" rx="4" ry="9" fill="url(#petal)" opacity="0.9"/>
+    <ellipse cx="0" cy="-8" rx="4" ry="9" fill="url(#petal)" opacity="0.9" transform="rotate(72)"/>
+    <ellipse cx="0" cy="-8" rx="4" ry="9" fill="url(#petal)" opacity="0.9" transform="rotate(144)"/>
+    <ellipse cx="0" cy="-8" rx="4" ry="9" fill="url(#petal)" opacity="0.9" transform="rotate(216)"/>
+    <ellipse cx="0" cy="-8" rx="4" ry="9" fill="url(#petal)" opacity="0.9" transform="rotate(288)"/>
+    <circle cx="0" cy="0" r="2.5" fill="#fbbf24"/>
+  </g>
+
+  <!-- Smaller petal accent -->
+  <g transform="translate(28,38) rotate(-10) scale(0.6)">
+    <ellipse cx="0" cy="-8" rx="4" ry="9" fill="url(#petal)" opacity="0.7"/>
+    <ellipse cx="0" cy="-8" rx="4" ry="9" fill="url(#petal)" opacity="0.7" transform="rotate(72)"/>
+    <ellipse cx="0" cy="-8" rx="4" ry="9" fill="url(#petal)" opacity="0.7" transform="rotate(144)"/>
+    <ellipse cx="0" cy="-8" rx="4" ry="9" fill="url(#petal)" opacity="0.7" transform="rotate(216)"/>
+    <ellipse cx="0" cy="-8" rx="4" ry="9" fill="url(#petal)" opacity="0.7" transform="rotate(288)"/>
+    <circle cx="0" cy="0" r="2" fill="#fbbf24"/>
+  </g>
+
+  <!-- Falling petal -->
+  <ellipse cx="80" cy="85" rx="3" ry="6" fill="#f9a8d4" opacity="0.5" transform="rotate(35, 80, 85)"/>
+</svg>
