@@ -6,15 +6,6 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
-    inputs:
-      build_type:
-        description: 'Build type'
-        required: false
-        default: 'debug'
-        type: choice
-        options:
-          - debug
-          - release
 
 permissions:
   contents: write
@@ -72,9 +63,7 @@ jobs:
             echo "Installing $CANDIDATE along with base packages"
             sudo apt-get install -y $PKGS "$CANDIDATE"
           else
-            echo "No suitable libwebkit2gtk dev package found. Showing available libwebkit2gtk packages:"
-            apt-cache search libwebkit2gtk || true
-            echo "If no development package is available on this runner, keep ubuntu-22.04 pinned or add an appropriate repository."
+            echo "No suitable libwebkit2gtk dev package found."
             exit 1
           fi
 
@@ -82,9 +71,6 @@ jobs:
         run: |
           GOFLAGS=-tags=gtk3 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha2.117
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-
-      - name: Install svu
-        run: go install github.com/caarlos0/svu/v3@latest
 
       - name: Install frontend dependencies
         run: |
@@ -95,29 +81,8 @@ jobs:
       - name: Generate Wails bindings
         run: GOFLAGS=-tags=gtk3 wails3 generate bindings
 
-      - name: Determine build type
-        id: build-type
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "type=${{ github.event.inputs.build_type }}" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "type=release" >> $GITHUB_OUTPUT
-          else
-            echo "type=debug" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Get next version
-        id: version
-        run: |
-          NEXT_VERSION=$(svu next)
-          CURRENT_VERSION=$(svu current)
-          echo "next=$NEXT_VERSION" >> $GITHUB_OUTPUT
-          echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-          echo "Current: $CURRENT_VERSION -> Next: $NEXT_VERSION"
-
       - name: Build Android APK
-        run: |
-          wails3 task android:package:fat
+        run: wails3 task android:package:fat
         env:
           ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
           ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
@@ -127,89 +92,18 @@ jobs:
         run: |
           APK_PATH=$(find bin build/android -name "*.apk" -type f | head -1)
           if [ -z "$APK_PATH" ]; then
-            echo "APK not found, checking alternative locations..."
-            APK_PATH=$(find . -name "*.apk" -type f | head -1)
-          fi
-          if [ -z "$APK_PATH" ]; then
-            echo "No APK file was produced by the Android packaging task." >&2
+            echo "APK not found" >&2
             exit 1
           fi
           echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
           echo "Found APK: $APK_PATH"
 
-      - name: Generate version info
-        id: version-info
-        run: |
-          COMMIT=$(git rev-parse --short HEAD)
-          echo "commit=$COMMIT" >> $GITHUB_OUTPUT
-          echo "version_name=${{ steps.version.outputs.next }}+${COMMIT}" >> $GITHUB_OUTPUT
-
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: miku-android-${{ steps.build-type.outputs.type }}-${{ steps.version-info.outputs.commit }}
+          name: miku-android-${{ github.sha }}
           path: ${{ steps.find-apk.outputs.apk_path }}
           retention-days: 30
-
-      - name: Upload APK to release (main branch only)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          gh release create ${{ steps.version.outputs.next }} \
-            --title "Miku ${{ steps.version-info.outputs.version_name }}" \
-            --notes "## Miku ${{ steps.version-info.outputs.version_name }}
-
-            ### What's Changed
-            - Built from commit ${{ steps.version-info.outputs.commit }}
-            - Previous version: ${{ steps.version.outputs.current }}
-
-            ### Installation
-            1. Download the APK below
-            2. Enable 'Install from unknown sources' on your Android device
-            3. Open the APK to install
-
-            ### Requirements
-            - Android 7.0 (API 24) or higher
-            - AniList account for authentication" \
-            "${{ steps.find-apk.outputs.apk_path }}#miku-${{ steps.version.outputs.next }}.apk"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Comment on PR with build info
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const apkPath = '${{ steps.find-apk.outputs.apk_path }}';
-            const version = '${{ steps.version-info.outputs.version_name }}';
-            const buildType = '${{ steps.build-type.outputs.type }}';
-            
-            let apkSize = 'Unknown';
-            if (apkPath && fs.existsSync(apkPath)) {
-              const stats = fs.statSync(apkPath);
-              apkSize = (stats.size / (1024 * 1024)).toFixed(2) + ' MB';
-            }
-            
-            const body = `## 🤖 Android Build Complete
-            
-            | Property | Value |
-            |----------|-------|
-            | **Version** | \`${version}\` |
-            | **Build Type** | ${buildType} |
-            | **APK Size** | ${apkSize} |
-            | **Commit** | \`${context.sha.substring(0, 7)}\` |
-            
-            ### Download
-            Download the APK artifact from the [workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).
-            
-            > ⚠️ This is an automated build. Please test before merging.`;
-            
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: body
-            });
 
   validate:
     name: Validate Code
@@ -244,9 +138,7 @@ jobs:
             echo "Installing $CANDIDATE along with base packages"
             sudo apt-get install -y $PKGS "$CANDIDATE"
           else
-            echo "No suitable libwebkit2gtk dev package found. Showing available libwebkit2gtk packages:"
-            apt-cache search libwebkit2gtk || true
-            echo "If no development package is available on this runner, keep ubuntu-22.04 pinned or add an appropriate repository."
+            echo "No suitable libwebkit2gtk dev package found."
             exit 1
           fi
 
@@ -272,6 +164,3 @@ jobs:
         run: |
           go vet -tags gtk3 ./...
           echo "Go validation passed"
-
-      - name: Validate frontend build
-        run: echo "Frontend already built above"
