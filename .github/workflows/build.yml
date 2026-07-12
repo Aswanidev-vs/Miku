@@ -27,7 +27,7 @@ env:
 jobs:
   build-android:
     name: Build Android APK
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 30
 
     steps:
@@ -63,27 +63,16 @@ jobs:
         run: |
           sudo apt-get update
 
-          # Base packages required
           PKGS="pkg-config build-essential libgtk-4-dev"
+          CANDIDATE=$(apt-cache pkgnames 'libwebkit2gtk-*-dev' | sort -V | tail -n1 || true)
 
-          # Candidate webkit dev packages to try (preferred to fallback)
-          CANDIDATES=("libwebkit2gtk-6.0-dev" "libwebkit2gtk-4.1-dev" "libwebkit2gtk-4.0-dev")
-
-          INSTALLED_WEBKIT=""
-          for p in "${CANDIDATES[@]}"; do
-            if apt-cache show "$p" >/dev/null 2>&1; then
-              INSTALLED_WEBKIT="$p"
-              break
-            fi
-          done
-
-          if [ -n "$INSTALLED_WEBKIT" ]; then
-            echo "Installing $INSTALLED_WEBKIT along with base packages"
-            sudo apt-get install -y $PKGS "$INSTALLED_WEBKIT"
+          if [ -n "$CANDIDATE" ]; then
+            echo "Installing $CANDIDATE along with base packages"
+            sudo apt-get install -y $PKGS "$CANDIDATE"
           else
             echo "No suitable libwebkit2gtk dev package found. Showing available libwebkit2gtk packages:"
             apt-cache search libwebkit2gtk || true
-            echo "If none of the candidate packages exist on this runner, consider pinning runs-on to ubuntu-22.04 or adding an appropriate repository."
+            echo "If no development package is available on this runner, keep ubuntu-22.04 pinned or add an appropriate repository."
             exit 1
           fi
 
@@ -218,7 +207,7 @@ jobs:
 
   validate:
     name: Validate Code
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
 
     steps:
@@ -242,27 +231,16 @@ jobs:
         run: |
           sudo apt-get update
 
-          # Base packages required
           PKGS="pkg-config build-essential libgtk-4-dev"
+          CANDIDATE=$(apt-cache pkgnames 'libwebkit2gtk-*-dev' | sort -V | tail -n1 || true)
 
-          # Candidate webkit dev packages to try (preferred to fallback)
-          CANDIDATES=("libwebkit2gtk-6.0-dev" "libwebkit2gtk-4.1-dev" "libwebkit2gtk-4.0-dev")
-
-          INSTALLED_WEBKIT=""
-          for p in "${CANDIDATES[@]}"; do
-            if apt-cache show "$p" >/dev/null 2>&1; then
-              INSTALLED_WEBKIT="$p"
-              break
-            fi
-          done
-
-          if [ -n "$INSTALLED_WEBKIT" ]; then
-            echo "Installing $INSTALLED_WEBKIT along with base packages"
-            sudo apt-get install -y $PKGS "$INSTALLED_WEBKIT"
+          if [ -n "$CANDIDATE" ]; then
+            echo "Installing $CANDIDATE along with base packages"
+            sudo apt-get install -y $PKGS "$CANDIDATE"
           else
             echo "No suitable libwebkit2gtk dev package found. Showing available libwebkit2gtk packages:"
             apt-cache search libwebkit2gtk || true
-            echo "If none of the candidate packages exist on this runner, consider pinning runs-on to ubuntu-22.04 or adding an appropriate repository."
+            echo "If no development package is available on this runner, keep ubuntu-22.04 pinned or add an appropriate repository."
             exit 1
           fi
 
