@@ -14,14 +14,12 @@ var assets embed.FS
 
 func main() {
 	// Initialize OAuth2 service with AniList credentials
-	// On Android, these must be embedded at build time via ldflags
 	clientID := os.Getenv("ANILIST_CLIENT_ID")
 	clientSecret := os.Getenv("ANILIST_CLIENT_SECRET")
 
 	// Log warning if credentials are missing
 	if clientID == "" {
-		log.Println("WARNING: ANILIST_CLIENT_ID environment variable not set. OAuth2 authentication will not work.")
-		log.Println("Set ANILIST_CLIENT_ID and ANILIST_CLIENT_SECRET to enable AniList sign-in.")
+		log.Println("WARNING: ANILIST_CLIENT_ID not set. OAuth2 will not work.")
 	}
 
 	oauthConfig := auth.OAuth2Config{
@@ -30,18 +28,16 @@ func main() {
 		RedirectURI:  auth.CallbackURL,
 	}
 
-	// Create OAuth2 service - always register it even if credentials are missing
-	// This ensures window.go.main.OAuth2Service is available in the frontend
+	// Create OAuth2 service - handle errors gracefully
 	oauthService, err := auth.NewOAuth2Service(oauthConfig)
 	if err != nil {
-		log.Printf("Failed to create OAuth2 service: %v", err)
-		// Still create a service instance to prevent frontend errors
-		// The service methods will fail gracefully when called
-		oauthService, _ = auth.NewOAuth2Service(auth.OAuth2Config{})
+		log.Printf("OAuth2 service error (non-fatal): %v", err)
 	}
 
 	services := []application.Service{}
-	services = append(services, application.NewService(oauthService))
+	if oauthService != nil {
+		services = append(services, application.NewService(oauthService))
+	}
 
 	app := application.New(application.Options{
 		Name:        "Miku",
