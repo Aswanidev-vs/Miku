@@ -78,7 +78,7 @@ jobs:
 
       - name: Install Wails CLI
         run: |
-          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha2.117
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Install svu
@@ -245,7 +245,7 @@ jobs:
           fi
 
       - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha2.117
 
       - name: Install frontend dependencies
         run: |
