@@ -1,53 +1,154 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <defs>
-    <!-- Subtle gradient for the circle border -->
-    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#4a3a5c"/>
-      <stop offset="50%" stop-color="#6b4a7a"/>
-      <stop offset="100%" stop-color="#4a3a5c"/>
+    <!-- Pink gradient for M and circle - lighter top, deeper bottom -->
+    <linearGradient id="pinkGrad" x1="0%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#fecdd3"/>
+      <stop offset="30%" stop-color="#fda4af"/>
+      <stop offset="70%" stop-color="#fb7185"/>
+      <stop offset="100%" stop-color="#e11d48"/>
     </linearGradient>
     
-    <!-- Petal gradient - soft pink -->
+    <!-- Petal gradient -->
     <linearGradient id="petalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f9a8d4"/>
-      <stop offset="100%" stop-color="#ec4899"/>
+      <stop offset="0%" stop-color="#fecdd3"/>
+      <stop offset="50%" stop-color="#fda4af"/>
+      <stop offset="100%" stop-color="#f472b6"/>
     </linearGradient>
+    
+    <!-- Background -->
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#151020"/>
+      <stop offset="100%" stop-color="#0a0710"/>
+    </radialGradient>
+    
+    <!-- Brush texture filter -->
+    <filter id="brushTexture" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="4" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
   </defs>
 
-  <!-- Dark circular background -->
-  <circle cx="256" cy="256" r="248" fill="#0c0a14"/>
+  <!-- Background with rounded corners -->
+  <rect width="1024" height="1024" rx="180" fill="url(#bgGrad)"/>
   
-  <!-- Thin elegant border -->
-  <circle cx="256" cy="256" r="248" fill="none" stroke="url(#borderGrad)" stroke-width="2" opacity="0.6"/>
-  
-  <!-- Elegant italic M -->
-  <g transform="translate(256, 248)">
-    <!-- M letterform - italic serif style -->
-    <path d="M-95 75 L-95 -65 C-95 -80, -85 -85, -75 -85 L-55 -85 C-45 -85, -40 -78, -40 -70 L-40 -20 L5 -85 L25 -85 L75 -5 L75 -85 L95 -85 L95 75 L75 75 L75 -45 L30 30 L20 30 L-55 -45 L-55 75 Z" 
-          fill="#e8e4ef" 
-          fill-rule="evenodd"
-          transform="skewX(-8)"/>
+  <!-- Brush stroke circle - main ring -->
+  <g transform="translate(512, 500)">
+    <!-- Main circle with brush effect -->
+    <circle cx="0" cy="0" r="340" fill="none" stroke="url(#pinkGrad)" stroke-width="28" opacity="0.95"/>
+    
+    <!-- Brush texture overlay - makes it look hand-painted -->
+    <circle cx="0" cy="0" r="340" fill="none" stroke="url(#pinkGrad)" stroke-width="28" 
+            stroke-dasharray="8 2 15 3 20 2 10 4" opacity="0.3"/>
+    
+    <!-- Inner brush strokes for depth -->
+    <circle cx="0" cy="0" r="340" fill="none" stroke="url(#pinkGrad)" stroke-width="4" 
+            stroke-dasharray="30 5 20 8 40 3" opacity="0.4" transform="rotate(5)"/>
+    
+    <!-- Outer rough edge -->
+    <circle cx="0" cy="0" r="355" fill="none" stroke="url(#pinkGrad)" stroke-width="2" 
+            stroke-dasharray="5 8 12 4 8 6" opacity="0.2"/>
   </g>
 
-  <!-- Cherry blossom flower - positioned to the right of M -->
-  <g transform="translate(330, 215)">
-    <!-- 5 petals - organic shapes -->
-    <path d="M0,-22 C5,-18 8,-10 7,-4 C6,2 3,6 0,8 C-3,6 -6,2 -7,-4 C-8,-10 -5,-18 0,-22" 
-          fill="url(#petalGrad)" opacity="0.85"/>
-    <path d="M0,-22 C5,-18 8,-10 7,-4 C6,2 3,6 0,8 C-3,6 -6,2 -7,-4 C-8,-10 -5,-18 0,-22" 
-          fill="url(#petalGrad)" opacity="0.8" transform="rotate(72)"/>
-    <path d="M0,-22 C5,-18 8,-10 7,-4 C6,2 3,6 0,8 C-3,6 -6,2 -7,-4 C-8,-10 -5,-18 0,-22" 
-          fill="url(#petalGrad)" opacity="0.75" transform="rotate(144)"/>
-    <path d="M0,-22 C5,-18 8,-10 7,-4 C6,2 3,6 0,8 C-3,6 -6,2 -7,-4 C-8,-10 -5,-18 0,-22" 
-          fill="url(#petalGrad)" opacity="0.75" transform="rotate(216)"/>
-    <path d="M0,-22 C5,-18 8,-10 7,-4 C6,2 3,6 0,8 C-3,6 -6,2 -7,-4 C-8,-10 -5,-18 0,-22" 
-          fill="url(#petalGrad)" opacity="0.7" transform="rotate(288)"/>
+  <!-- Calligraphic M - brush stroke style -->
+  <g transform="translate(480, 490)">
+    <!-- M letterform - flowing calligraphy -->
+    <path d="M-180 120 
+             C-180 120, -175 -40, -170 -100 
+             C-165 -140, -155 -160, -140 -160 
+             L-120 -160 
+             C-105 -160, -100 -145, -95 -120 
+             L-40 10 
+             C-35 20, -25 25, -15 25 
+             L-10 25
+             M-15 25
+             L60 -160
+             C65 -175, 75 -180, 90 -175
+             L120 -160
+             C135 -152, 140 -140, 142 -120
+             L160 40
+             C162 60, 165 80, 168 100
+             L175 130" 
+          fill="none" 
+          stroke="url(#pinkGrad)" 
+          stroke-width="38" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"
+          filter="url(#brushTexture)"/>
     
-    <!-- Center dots -->
-    <circle cx="0" cy="0" r="4" fill="#fbbf24"/>
-    <circle cx="-1.5" cy="-1.5" r="1.5" fill="#f59e0b"/>
+    <!-- Brush texture on M - left stroke bottom -->
+    <path d="M-180 120 C-178 100, -175 80, -170 60" 
+          fill="none" stroke="url(#pinkGrad)" stroke-width="50" stroke-linecap="round" opacity="0.6"/>
+    
+    <!-- Brush flick at bottom left -->
+    <path d="M-185 135 C-175 125, -165 115, -155 110" 
+          fill="none" stroke="url(#pinkGrad)" stroke-width="8" stroke-linecap="round" opacity="0.7"/>
+    <path d="M-190 145 C-180 130, -170 120, -158 115" 
+          fill="none" stroke="url(#pinkGrad)" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+    <path d="M-195 155 C-185 140, -175 128, -162 120" 
+          fill="none" stroke="url(#pinkGrad)" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
   </g>
-  
-  <!-- Small accent dot -->
-  <circle cx="305" cy="195" r="2" fill="#f9a8d4" opacity="0.5"/>
+
+  <!-- Cherry blossom flower -->
+  <g transform="translate(700, 520)">
+    <!-- Petals - 5 petals with natural shape -->
+    <g transform="rotate(-15)">
+      <!-- Petal 1 - top -->
+      <path d="M0,-55 C15,-45 25,-25 22,-10 C18,8 8,20 0,28 C-8,20 -18,8 -22,-10 C-25,-25 -15,-45 0,-55" 
+            fill="url(#petalGrad)" opacity="0.9"/>
+      
+      <!-- Petal 2 - top right -->
+      <path d="M0,-55 C15,-45 25,-25 22,-10 C18,8 8,20 0,28 C-8,20 -18,8 -22,-10 C-25,-25 -15,-45 0,-55" 
+            fill="url(#petalGrad)" opacity="0.85" transform="rotate(72)"/>
+      
+      <!-- Petal 3 - bottom right -->
+      <path d="M0,-55 C15,-45 25,-25 22,-10 C18,8 8,20 0,28 C-8,20 -18,8 -22,-10 C-25,-25 -15,-45 0,-55" 
+            fill="url(#petalGrad)" opacity="0.8" transform="rotate(144)"/>
+      
+      <!-- Petal 4 - bottom left -->
+      <path d="M0,-55 C15,-45 25,-25 22,-10 C18,8 8,20 0,28 C-8,20 -18,8 -22,-10 C-25,-25 -15,-45 0,-55" 
+            fill="url(#petalGrad)" opacity="0.8" transform="rotate(216)"/>
+      
+      <!-- Petal 5 - top left -->
+      <path d="M0,-55 C15,-45 25,-25 22,-10 C18,8 8,20 0,28 C-8,20 -18,8 -22,-10 C-25,-25 -15,-45 0,-55" 
+            fill="url(#petalGrad)" opacity="0.75" transform="rotate(288)"/>
+    </g>
+    
+    <!-- Center details - pistil/stamen -->
+    <circle cx="0" cy="0" r="8" fill="#be185d"/>
+    <circle cx="0" cy="0" r="4" fill="#9f1239"/>
+    
+    <!-- Stamen lines radiating from center -->
+    <g stroke="#9f1239" stroke-width="1.5" fill="none" opacity="0.8">
+      <line x1="0" y1="-10" x2="0" y2="-22"/>
+      <line x1="9" y1="-3" x2="19" y2="-10"/>
+      <line x1="6" y1="8" x2="15" y2="18"/>
+      <line x1="-6" y1="8" x2="-15" y2="18"/>
+      <line x1="-9" y1="-3" x2="-19" y2="-10"/>
+    </g>
+    
+    <!-- Stamen dots -->
+    <circle cx="0" cy="-24" r="3" fill="#be185d"/>
+    <circle cx="20" cy="-12" r="3" fill="#be185d"/>
+    <circle cx="16" cy="20" r="3" fill="#be185d"/>
+    <circle cx="-16" cy="20" r="3" fill="#be185d"/>
+    <circle cx="-20" cy="-12" r="3" fill="#be185d"/>
+  </g>
+
+  <!-- Floating petals -->
+  <g opacity="0.7">
+    <!-- Petal near M top left -->
+    <ellipse cx="310" cy="350" rx="8" ry="14" fill="url(#petalGrad)" transform="rotate(25, 310, 350)" opacity="0.6"/>
+    
+    <!-- Petal near circle top -->
+    <ellipse cx="550" cy="200" rx="6" ry="11" fill="url(#petalGrad)" transform="rotate(-20, 550, 200)" opacity="0.5"/>
+    
+    <!-- Petal near flower -->
+    <ellipse cx="780" cy="420" rx="7" ry="12" fill="url(#petalGrad)" transform="rotate(45, 780, 420)" opacity="0.55"/>
+    
+    <!-- Small petal bottom -->
+    <ellipse cx="650" cy="750" rx="5" ry="9" fill="url(#petalGrad)" transform="rotate(60, 650, 750)" opacity="0.4"/>
+    
+    <!-- Tiny accent petal -->
+    <ellipse cx="380" cy="680" rx="4" ry="7" fill="url(#petalGrad)" transform="rotate(-30, 380, 680)" opacity="0.35"/>
+  </g>
 </svg>

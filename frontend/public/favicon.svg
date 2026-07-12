@@ -1,27 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <defs>
-    <linearGradient id="pg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f9a8d4"/>
-      <stop offset="100%" stop-color="#ec4899"/>
+    <linearGradient id="pg" x1="0%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#fecdd3"/>
+      <stop offset="50%" stop-color="#fda4af"/>
+      <stop offset="100%" stop-color="#fb7185"/>
     </linearGradient>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#151020"/>
+      <stop offset="100%" stop-color="#0a0710"/>
+    </radialGradient>
   </defs>
+
+  <!-- Background -->
+  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
   
-  <!-- Dark circle -->
-  <circle cx="32" cy="32" r="30" fill="#0c0a14"/>
-  <circle cx="32" cy="32" r="30" fill="none" stroke="#4a3a5c" stroke-width="1" opacity="0.5"/>
+  <!-- Brush circle -->
+  <circle cx="64" cy="62" r="44" fill="none" stroke="url(#pg)" stroke-width="4" opacity="0.9"/>
+  <circle cx="64" cy="62" r="44" fill="none" stroke="url(#pg)" stroke-width="4" 
+          stroke-dasharray="6 2 10 2" opacity="0.3"/>
   
-  <!-- Simple M -->
-  <path d="M18 44 L18 20 C18 18, 20 17, 22 17 L24 17 C26 17, 27 18, 27 20 L27 30 L35 20 L37 20 L45 30 L45 17 L47 17 L47 44 L45 44 L45 32 L37 40 L35 40 L27 32 L27 44 Z" 
-        fill="#e8e4ef" 
-        transform="translate(-3, -2) skewX(-6)"/>
+  <!-- M -->
+  <path d="M40 82 C40 82, 42 45, 44 35 C46 28, 50 26, 54 26 L58 26 C62 26, 64 30, 66 38 L76 62 L88 38 C90 32, 94 28, 98 28 L102 28 C106 28, 108 32, 108 38 L108 82" 
+        fill="none" stroke="url(#pg)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
   
-  <!-- Small flower -->
-  <g transform="translate(48, 20) scale(0.35)">
-    <ellipse cx="0" cy="-8" rx="3" ry="7" fill="url(#pg)" opacity="0.8"/>
-    <ellipse cx="0" cy="-8" rx="3" ry="7" fill="url(#pg)" opacity="0.75" transform="rotate(72)"/>
-    <ellipse cx="0" cy="-8" rx="3" ry="7" fill="url(#pg)" opacity="0.7" transform="rotate(144)"/>
-    <ellipse cx="0" cy="-8" rx="3" ry="7" fill="url(#pg)" opacity="0.7" transform="rotate(216)"/>
-    <ellipse cx="0" cy="-8" rx="3" ry="7" fill="url(#pg)" opacity="0.65" transform="rotate(288)"/>
-    <circle cx="0" cy="0" r="2.5" fill="#fbbf24"/>
+  <!-- Flower -->
+  <g transform="translate(98, 58) scale(0.18)">
+    <ellipse cx="0" cy="-30" rx="12" ry="28" fill="url(#pg)" opacity="0.85"/>
+    <ellipse cx="0" cy="-30" rx="12" ry="28" fill="url(#pg)" opacity="0.8" transform="rotate(72)"/>
+    <ellipse cx="0" cy="-30" rx="12" ry="28" fill="url(#pg)" opacity="0.75" transform="rotate(144)"/>
+    <ellipse cx="0" cy="-30" rx="12" ry="28" fill="url(#pg)" opacity="0.75" transform="rotate(216)"/>
+    <ellipse cx="0" cy="-30" rx="12" ry="28" fill="url(#pg)" opacity="0.7" transform="rotate(288)"/>
+    <circle cx="0" cy="0" r="6" fill="#be185d"/>
   </g>
 </svg>
