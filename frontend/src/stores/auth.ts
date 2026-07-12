@@ -67,7 +67,7 @@ export const useAuthStore = defineStore('auth', () => {
       
       const url = await window.go.main.OAuth2Service.GetAuthorizationURL()
       
-      if (!url || url.includes('client_id=')) {
+      if (!url || !url.includes('client_id=')) {
         throw new Error('Failed to generate authorization URL. Please check that ANILIST_CLIENT_ID is configured.')
       }
       
