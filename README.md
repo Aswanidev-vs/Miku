@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/public/logo.svg" alt="Miku Logo" width="150" height="150">
+  <img src="logo.png" alt="Miku Logo" width="150" height="150">
 </p>
 
 <h1 align="center">Miku</h1>
