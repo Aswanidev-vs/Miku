@@ -15,6 +15,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden;
 }
 
 body {
@@ -120,6 +121,9 @@ h1, h2, h3, h4, h5, h6 {
   flex-direction: column;
   min-height: 100vh;
   min-height: 100dvh;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
 }
 
 /* Safe areas */
@@ -265,31 +269,54 @@ h1, h2, h3, h4, h5, h6 {
    Platform-Specific Optimizations
    ============================================================ */
 
-/* Content container — centered on desktop */
-.is-desktop .view-shell,
+/* Content container — centered on desktop, padded on all platforms.
+   Only views that flow with page-scroll get view-level padding.
+   SearchView has its own internal scroll layout.
+   detail-view gets NO view-level padding (banner is full-bleed). */
+.discover-view,
+.mylist-view,
+.feed-view,
+.profile-view,
+.va-view {
+  overflow-x: hidden;
+  padding-left: max(var(--space-lg), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--space-lg), env(safe-area-inset-right, 0px));
+}
+
 .is-desktop .discover-view,
 .is-desktop .mylist-view,
 .is-desktop .feed-view,
-.is-desktop .search-view,
-.is-desktop .profile-view {
+.is-desktop .profile-view,
+.is-desktop .va-view {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding-left: max(var(--space-2xl), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--space-2xl), env(safe-area-inset-right, 0px));
+}
+
+/* Detail view: banner is full-bleed, content is padded */
+.detail-view {
+  overflow-x: hidden;
+}
+
+.detail-content {
+  padding-left: max(var(--space-lg), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--space-lg), env(safe-area-inset-right, 0px));
+}
+
+.is-desktop .detail-view {
   max-width: var(--content-max);
   margin: 0 auto;
 }
 
-/* Desktop: generous spacing, hover affordances, floating pill nav */
-.is-desktop .discover-section,
-.is-desktop .mylist-section,
-.is-desktop .feed-section,
-.is-desktop .profile-section {
-  padding: 0 var(--space-3xl);
+.is-desktop .detail-content {
+  padding-left: max(var(--space-2xl), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--space-2xl), env(safe-area-inset-right, 0px));
 }
 
-/* Align view headers with their sections on desktop */
-.is-desktop .discover-header,
-.is-desktop .mylist-header,
-.is-desktop .feed-header {
-  padding-left: var(--space-3xl);
-  padding-right: var(--space-3xl);
+/* SearchView: internal scroll layout, just needs overflow containment */
+.search-view {
+  overflow-x: hidden;
 }
 
 /* Thin, unobtrusive scrollbars for horizontal rows (relations, recs, tabs) */
@@ -326,31 +353,179 @@ h1, h2, h3, h4, h5, h6 {
   padding-bottom: 96px !important;
 }
 
-/* Mobile: tighter, larger touch targets, full-width bottom nav */
+/* ============================================================
+   Mobile / Android Optimizations
+   ============================================================ */
+
+/* Bottom nav — full-width, gesture-nav safe */
 .is-mobile .bottom-nav {
-  height: var(--nav-height);
+  height: 56px;
+  padding-bottom: var(--safe-area-bottom);
 }
 
 .is-mobile .nav-item {
-  padding: 7px 0;
+  padding: 8px 0;
+  min-height: 44px;
 }
 
+.is-mobile .main-content {
+  padding-bottom: calc(56px + var(--safe-area-bottom));
+}
+
+/* Touch feedback — press scale on interactive cards */
 .is-mobile .anime-card:active {
   transform: scale(0.965);
 }
 
+/* Touch targets — minimum 44px per WCAG / Material guidelines */
 .is-mobile .btn {
   min-height: 46px;
+  font-size: var(--font-size-base);
 }
 
 .is-mobile .filter-btn,
 .is-mobile .control-btn {
-  min-height: 42px;
+  min-height: 44px;
+}
+
+.is-mobile .tab-btn {
+  min-height: 40px;
+  padding: var(--space-sm) var(--space-lg);
+}
+
+/* Detail view — tighter layout for mobile */
+.is-mobile .detail-banner {
+  height: 160px;
+}
+
+.is-mobile .detail-cover {
+  width: 90px;
+  height: 128px;
+}
+
+.is-mobile .detail-title {
+  font-size: var(--font-size-lg);
+}
+
+.is-mobile .detail-meta {
+  gap: var(--space-xs);
+}
+
+.is-mobile .detail-content {
+  padding-top: 0;
+}
+
+/* List controls — stack vertically on narrow screens */
+.is-mobile .control-row {
+  flex-wrap: wrap;
+}
+
+.is-mobile .control-group {
+  min-width: calc(50% - var(--space-xs));
+}
+
+/* Search — larger input for touch */
+.is-mobile .search-input {
+  padding: var(--space-sm) 0;
+  font-size: var(--font-size-md);
+}
+
+.is-mobile .search-input-wrapper {
+  padding: var(--space-sm) var(--space-md);
+}
+
+/* Roles list — full-width items on mobile */
+.is-mobile .role-item {
+  padding: var(--space-md);
+  gap: var(--space-md);
+}
+
+.is-mobile .role-media-img {
+  width: 44px;
+  height: 58px;
+}
+
+/* Relations & recommendations — larger touch targets */
+.is-mobile .relation-item {
+  padding: var(--space-sm) var(--space-md);
+}
+
+.is-mobile .recommendation-item {
+  width: 100px;
+}
+
+.is-mobile .recommendation-poster {
+  width: 100px;
+  height: 140px;
+}
+
+/* Settings — full-width switches */
+.is-mobile .setting-row {
+  padding: var(--space-md) var(--space-xs);
+}
+
+/* Profile — stack layout on mobile */
+.is-mobile .profile-banner {
+  height: 120px;
+}
+
+.is-mobile .profile-avatar {
+  width: 80px;
+  height: 80px;
+}
+
+.is-mobile .profile-stats-bar {
+  gap: var(--space-md);
+  padding: var(--space-lg);
+}
+
+/* Scroll behavior — smooth momentum scrolling on Android */
+.is-mobile .discover-view,
+.is-mobile .mylist-view,
+.is-mobile .feed-view,
+.is-mobile .profile-view {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Reduce whitespace on mobile for density */
+.is-mobile .discover-section {
+  margin-bottom: var(--space-xl);
+}
+
+.is-mobile .detail-section {
+  margin-bottom: var(--space-lg);
+}
+
+/* Characters list — compact on mobile */
+.is-mobile .character-item {
+  padding: var(--space-xs) var(--space-sm);
+}
+
+.is-mobile .character-img {
+  width: 34px;
+  height: 34px;
+}
+
+.is-mobile .va-img {
+  width: 28px;
+  height: 28px;
+}
+
+/* Dropdowns — full-width on mobile */
+.is-mobile .dropdown-menu {
+  position: fixed;
+  left: var(--space-md);
+  right: var(--space-md);
+  bottom: calc(56px + var(--safe-area-bottom));
+  top: auto;
+  max-height: 50vh;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 /* Screen-size adjustments */
 .screen-sm .discover-header {
-  padding: var(--space-lg) var(--space-md) var(--space-md);
+  padding: var(--space-lg) 0 var(--space-md);
 }
 
 .screen-sm .discover-title {

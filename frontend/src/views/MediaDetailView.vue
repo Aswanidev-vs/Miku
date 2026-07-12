@@ -93,6 +93,20 @@ watch(() => route.params.id, (newId) => {
   }
 })
 
+// Sync list status from fetched mediaListEntry (AniList knows your status)
+watch(media, (m) => {
+  const entry = (m as any)?.mediaListEntry
+  if (entry) {
+    listStatus.value = entry.status as ListStatus
+    listProgress.value = entry.progress ?? 0
+    listScore.value = entry.score ?? 0
+  } else if (m) {
+    listStatus.value = null
+    listProgress.value = 0
+    listScore.value = 0
+  }
+}, { immediate: true })
+
 onUnmounted(() => {
   animeStore.clearCurrentMedia()
 })
@@ -480,11 +494,22 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
 
 /* Banner */
 .detail-banner {
-  height: 180px;
+  width: 100%;
+  height: 200px;
   background: linear-gradient(135deg, var(--color-primary-dark), var(--color-accent-dark));
   background-size: cover;
-  background-position: center;
+  background-position: center top;
   position: relative;
+  margin: 0;
+}
+
+.detail-banner::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 60px;
+  background: linear-gradient(to bottom, transparent, var(--bg-deepest));
+  pointer-events: none;
 }
 
 .back-btn {
@@ -504,16 +529,18 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
 .back-btn svg { width: 20px; height: 20px; }
 
 /* Content */
-.detail-content { padding: 0 var(--space-lg) var(--space-xl); }
+.detail-content { padding-top: 0; padding-bottom: var(--space-xl); }
 
 /* Header */
 .detail-header {
   display: flex; gap: var(--space-lg);
-  margin-top: -50px; margin-bottom: var(--space-lg);
+  margin-top: 0; margin-bottom: var(--space-lg);
+  position: relative;
+  z-index: 2;
 }
 
 .detail-cover {
-  width: 120px; height: 170px;
+  width: 110px; height: 155px;
   border-radius: var(--radius-lg);
   object-fit: cover;
   border: 3px solid var(--bg-deepest);
@@ -521,7 +548,7 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
   box-shadow: var(--shadow-lg);
 }
 
-.detail-info { flex: 1; padding-top: 50px; }
+.detail-info { flex: 1; }
 
 .detail-title {
   font-size: var(--font-size-xl);

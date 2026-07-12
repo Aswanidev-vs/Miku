@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores'
 import { useUserStore } from '../stores'
 import { useAnimeStore } from '../stores/anime'
 import { useSettings } from '../composables/useSettings'
+import { clearGqlCache } from '../api/graphql'
 import StatsCard from '../components/profile/StatsCard.vue'
 import FavoriteGenres from '../components/profile/FavoriteGenres.vue'
 import HeatmapCalendar from '../components/profile/HeatmapCalendar.vue'
@@ -42,6 +43,7 @@ async function handleLogin() {
 
 async function handleLogout() {
   animeStore.stopSync()
+  clearGqlCache()
   await authStore.logout()
 }
 </script>
@@ -158,7 +160,7 @@ async function handleLogout() {
       </div>
       <div class="about-row">
         <span class="about-label">Version</span>
-        <span class="about-value">v0.1.0</span>
+        <span class="about-value">v0.7.1</span>
       </div>
       <div class="about-row">
         <span class="about-label">Data</span>

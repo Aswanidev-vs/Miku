@@ -12,7 +12,6 @@ const { gridColumns } = usePlatform()
 const popularAnime = ref<Media[]>([])
 const seasonalAnime = ref<Media[]>([])
 const topManga = ref<Media[]>([])
-const loading = ref(false)
 
 const trendingAnime = computed(() => animeStore.trending)
 
@@ -68,26 +67,25 @@ function getCurrentSeason(): { season: string; year: number } {
   return { season: 'FALL', year }
 }
 
-onMounted(async () => {
-  loading.value = true
-
+onMounted(() => {
   if (animeStore.trending.length === 0) {
     animeStore.fetchTrending()
   }
 
   const { season, year } = getCurrentSeason()
 
-  const [popularRes, seasonalRes, mangaRes] = await Promise.all([
-    gqlQuery(POPULAR_QUERY, { page: 1, perPage: 12 }).catch(() => null),
-    gqlQuery(SEASONAL_QUERY, { season, year }).catch(() => null),
-    gqlQuery(TOP_MANGA_QUERY).catch(() => null),
-  ])
+  // Fire all queries independently — each section appears as its data arrives
+  gqlQuery(POPULAR_QUERY, { page: 1, perPage: 12 })
+    .then((r) => { if (r?.data?.Page?.media) popularAnime.value = r.data.Page.media })
+    .catch(() => {})
 
-  if (popularRes?.data?.Page?.media) popularAnime.value = popularRes.data.Page.media
-  if (seasonalRes?.data?.Page?.media) seasonalAnime.value = seasonalRes.data.Page.media
-  if (mangaRes?.data?.Page?.media) topManga.value = mangaRes.data.Page.media
+  gqlQuery(SEASONAL_QUERY, { season, year })
+    .then((r) => { if (r?.data?.Page?.media) seasonalAnime.value = r.data.Page.media })
+    .catch(() => {})
 
-  loading.value = false
+  gqlQuery(TOP_MANGA_QUERY)
+    .then((r) => { if (r?.data?.Page?.media) topManga.value = r.data.Page.media })
+    .catch(() => {})
 })
 </script>
 
@@ -126,10 +124,6 @@ onMounted(async () => {
       </div>
       <AnimeGrid :items="topManga" :columns="gridColumns" />
     </section>
-
-    <div v-if="loading && trendingAnime.length === 0" class="loading-state">
-      <div class="spinner"></div>
-    </div>
   </div>
 </template>
 
@@ -140,7 +134,7 @@ onMounted(async () => {
 }
 
 .discover-header {
-  padding: var(--space-3xl) var(--space-lg) var(--space-lg);
+  padding: var(--space-3xl) 0 var(--space-lg);
 }
 
 .discover-eyebrow {
@@ -169,7 +163,7 @@ onMounted(async () => {
 }
 
 .discover-section {
-  padding: 0 var(--space-lg);
+  padding: 0;
   margin-bottom: var(--space-3xl);
 }
 
@@ -195,24 +189,5 @@ onMounted(async () => {
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
   box-shadow: 0 0 10px var(--color-primary-glow);
   flex-shrink: 0;
-}
-
-.loading-state {
-  display: flex;
-  justify-content: center;
-  padding: var(--space-4xl);
-}
-
-.spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid var(--border-default);
-  border-top-color: var(--color-primary);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 </style>

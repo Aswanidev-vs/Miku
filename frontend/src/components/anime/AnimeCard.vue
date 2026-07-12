@@ -41,6 +41,7 @@ function statusClass(status?: string): string {
         :src="anime.coverImage.large"
         :alt="anime.title.userPreferred || anime.title.romaji"
         loading="lazy"
+        decoding="async"
       />
       <div v-if="anime.averageScore" class="score-badge">
         {{ anime.averageScore }}
@@ -73,7 +74,6 @@ function statusClass(status?: string): string {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  overflow: hidden;
   transition: transform 200ms var(--ease-out), border-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
   cursor: pointer;
   position: relative;
@@ -108,6 +108,7 @@ function statusClass(status?: string): string {
   aspect-ratio: 3 / 4;
   overflow: hidden;
   background: var(--bg-elevated);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
 .card-image img {
@@ -154,6 +155,7 @@ function statusClass(status?: string): string {
 
 .card-info {
   padding: 9px 9px 10px;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
 }
 
 .card-title {

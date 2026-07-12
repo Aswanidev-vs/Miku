@@ -10,11 +10,14 @@ const router = useRouter()
 const actor = ref<any>(null)
 const roles = ref<{ media: any; character: any }[]>([])
 const loading = ref(false)
+const loadingMore = ref(false)
 const error = ref<string | null>(null)
+const currentPage = ref(1)
+const hasMoreMedia = ref(false)
 
 // Staff info + their media in one query
 const STAFF_QUERY = `
-query ($id: Int!) {
+query ($id: Int!, $page: Int) {
   Staff(id: $id) {
     id
     name { full native }
@@ -25,14 +28,15 @@ query ($id: Int!) {
     yearsActive
     homeTown
     description(asHtml: false)
-    staffMedia(page: 1, perPage: 25, sort: POPULARITY_DESC, type: ANIME) {
+    staffMedia(page: $page, perPage: 50, sort: POPULARITY_DESC, type: ANIME) {
       edges {
         node {
           id
-          title { romaji }
+          title { romaji english userPreferred }
           coverImage { medium }
           format
-          characters(perPage: 50) {
+          status
+          characters(perPage: 50, sort: ROLE) {
             edges {
               node { id name { full } image { medium } }
               voiceActors(language: JAPANESE) { id name { full } }
@@ -40,7 +44,7 @@ query ($id: Int!) {
           }
         }
       }
-      pageInfo { hasNextPage }
+      pageInfo { hasNextPage total }
     }
   }
 }
@@ -56,35 +60,10 @@ onMounted(async () => {
 
   loading.value = true
   error.value = null
+  currentPage.value = 1
 
   try {
-    const res = await gqlQuery(STAFF_QUERY, { id })
-
-    if (res?.data?.Staff) {
-      actor.value = res.data.Staff
-
-      // Extract roles from staffMedia edges
-      const mediaEdges = res.data.Staff.staffMedia?.edges || []
-      const seen = new Set<string>()
-      const allRoles: typeof roles.value = []
-
-      for (const mEdge of mediaEdges) {
-        const m = mEdge.node
-        for (const cEdge of (m.characters?.edges || [])) {
-          const vaIds = (cEdge.voiceActors || []).map((va: any) => va.id)
-          if (vaIds.includes(id)) {
-            const key = `${m.id}-${cEdge.node.id}`
-            if (!seen.has(key)) {
-              seen.add(key)
-              allRoles.push({ media: m, character: cEdge.node })
-            }
-          }
-        }
-      }
-      roles.value = allRoles
-    } else {
-      error.value = 'Voice actor not found'
-    }
+    await fetchStaff(id, 1)
   } catch (e: any) {
     console.error('Voice actor fetch error:', e)
     error.value = e?.message || 'Failed to load voice actor'
@@ -93,10 +72,56 @@ onMounted(async () => {
   }
 })
 
+async function fetchStaff(id: number, page: number) {
+  const res = await gqlQuery(STAFF_QUERY, { id, page })
+
+  if (res?.data?.Staff) {
+    actor.value = res.data.Staff
+
+    const mediaEdges = res.data.Staff.staffMedia?.edges || []
+    const pageInfo = res.data.Staff.staffMedia?.pageInfo
+    hasMoreMedia.value = pageInfo?.hasNextPage ?? false
+    currentPage.value = page
+
+    const seen = new Set<string>()
+    // If loading more, keep existing roles
+    const allRoles = page === 1 ? [] : [...roles.value]
+    for (const r of allRoles) seen.add(`${r.media.id}-${r.character.id}`)
+
+    for (const mEdge of mediaEdges) {
+      const m = mEdge.node
+      for (const cEdge of (m.characters?.edges || [])) {
+        const vaIds = (cEdge.voiceActors || []).map((va: any) => va.id)
+        if (vaIds.includes(id)) {
+          const key = `${m.id}-${cEdge.node.id}`
+          if (!seen.has(key)) {
+            seen.add(key)
+            allRoles.push({ media: m, character: cEdge.node })
+          }
+        }
+      }
+    }
+    roles.value = allRoles
+  }
+}
+
+async function loadMoreRoles() {
+  const id = Number(route.params.id)
+  if (!id || loadingMore.value || !hasMoreMedia.value) return
+  loadingMore.value = true
+  try {
+    await fetchStaff(id, currentPage.value + 1)
+  } finally {
+    loadingMore.value = false
+  }
+}
+
 onUnmounted(() => {
   actor.value = null
   roles.value = []
   error.value = null
+  currentPage.value = 1
+  hasMoreMedia.value = false
 })
 
 function goBack() { router.back() }
@@ -155,12 +180,16 @@ function cleanDescription(desc?: string): string {
             <img v-if="role.media.coverImage" :src="role.media.coverImage.medium" :alt="role.media.title.romaji" class="role-media-img" />
             <div class="role-info">
               <span class="role-character">{{ role.character.name.full }}</span>
-              <span class="role-media-title">{{ role.media.title.romaji }}</span>
+              <span class="role-media-title">{{ role.media.title.userPreferred || role.media.title.romaji }}</span>
               <span v-if="role.media.format" class="role-format">{{ role.media.format.replace('_', ' ').toLowerCase() }}</span>
             </div>
             <img v-if="role.character.image" :src="role.character.image.medium" :alt="role.character.name.full" class="role-char-img" />
           </div>
         </div>
+        <button v-if="hasMoreMedia" class="load-more-btn" @click="loadMoreRoles" :disabled="loadingMore">
+          <span v-if="loadingMore" class="spinner" />
+          <span v-else>Load More</span>
+        </button>
       </div>
 
       <div v-if="!roles.length && !loading" class="va-section">
@@ -229,4 +258,26 @@ function cleanDescription(desc?: string): string {
 
 .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: var(--space-lg); color: var(--text-muted); }
 .btn-back { padding: var(--space-sm) var(--space-lg); border-radius: var(--radius-md); font-size: var(--font-size-sm); border: 1px solid var(--bg-hover); background: var(--bg-surface); color: var(--text-secondary); cursor: pointer; }
+
+.load-more-btn {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  margin-top: var(--space-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  transition: all var(--transition-fast);
+}
+.load-more-btn:hover { border-color: var(--color-primary); color: var(--text-primary); }
+.load-more-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.load-more-btn .spinner { width: 16px; height: 16px; border: 2px solid var(--border-default); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 0.7s linear infinite; }
 </style>

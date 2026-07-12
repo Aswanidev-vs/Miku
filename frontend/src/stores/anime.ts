@@ -149,119 +149,49 @@ query ($userId: Int, $status: MediaListStatus) {
 }
 `
 
-const MEDIA_DETAILS_QUERY = `
+// Fast query: banner, cover, title, meta, list entry — shown immediately
+const MEDIA_DETAILS_FAST = `
 query ($id: Int) {
   Media(id: $id) {
     id
-    title {
-      romaji
-      english
-      native
-      userPreferred
-    }
-    coverImage {
-      large
-      medium
-      color
-    }
+    title { romaji english native userPreferred }
+    coverImage { large medium color }
     bannerImage
-    format
-    status
-    episodes
-    chapters
-    volumes
-    duration
-    averageScore
-    meanScore
-    popularity
-    trending
-    favourites
+    format status episodes chapters volumes duration
+    averageScore meanScore popularity trending favourites
     genres
-    tags {
-      id
-      name
-      description
-      category
-      rank
-      isGeneralSpoiler
-      isMediaSpoiler
-      isAdult
-    }
     description(asHtml: false)
-    startDate {
-      year
-      month
-      day
-    }
-    endDate {
-      year
-      month
-      day
-    }
-    season
-    seasonYear
-    nextAiringEpisode {
-      id
-      episode
-      airingAt
-      timeUntilAiring
-    }
+    startDate { year month day }
+    endDate { year month day }
+    season seasonYear
+    nextAiringEpisode { id episode airingAt timeUntilAiring }
+    mediaListEntry { id status score progress repeat }
+  }
+}
+`
+
+// Slow query: characters, relations, recommendations — loaded after fast
+const MEDIA_DETAILS_SLOW = `
+query ($id: Int) {
+  Media(id: $id) {
+    id
+    tags { id name description category rank isGeneralSpoiler isMediaSpoiler isAdult }
     relations {
       edges {
-        id
-        relationType
-        node {
-          id
-          title {
-            romaji
-          }
-          coverImage {
-            medium
-          }
-          format
-        }
+        id relationType
+        node { id title { romaji } coverImage { medium } format }
       }
     }
     recommendations {
       edges {
-        node {
-          id
-          userRating
-          media {
-            id
-            title {
-              romaji
-            }
-            coverImage {
-              medium
-            }
-          }
-        }
+        node { id userRating media { id title { romaji } coverImage { medium } } }
       }
     }
-    characters {
+    characters(perPage: 50, sort: ROLE) {
       edges {
-        id
-        role
-        node {
-          id
-          name {
-            full
-          }
-          image {
-            medium
-            large
-          }
-        }
-        voiceActors {
-          id
-          name {
-            full
-          }
-          image {
-            medium
-          }
-        }
+        id role
+        node { id name { full } image { medium large } }
+        voiceActors(language: JAPANESE) { id name { full } image { medium } }
       }
     }
   }
@@ -419,11 +349,20 @@ export const useAnimeStore = defineStore('anime', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await gqlQuery(MEDIA_DETAILS_QUERY, { id })
-      if (response?.data?.Media) {
-        const media = response.data.Media as Media
+      // Phase 1: fast critical data — banner, cover, title, meta, list entry
+      const fast = await gqlQuery(MEDIA_DETAILS_FAST, { id })
+      if (fast?.data?.Media) {
+        const media = fast.data.Media as Media
         currentMedia.value = media
-        await supplementRecommendations(media)
+        loading.value = false // content visible now
+        // Phase 2: heavy data — characters, relations, recommendations (fire and forget)
+        gqlQuery(MEDIA_DETAILS_SLOW, { id }).then((slow) => {
+          if (slow?.data?.Media && currentMedia.value?.id === id) {
+            const merged = { ...currentMedia.value, ...slow.data.Media } as Media
+            currentMedia.value = merged
+            supplementRecommendations(merged)
+          }
+        }).catch(() => {})
       }
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch anime details'

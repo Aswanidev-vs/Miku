@@ -134,7 +134,7 @@ function goToMedia(id?: number) {
 }
 
 .feed-header {
-  padding: var(--space-xl) var(--space-lg) var(--space-lg);
+  padding: var(--space-xl) 0 var(--space-lg);
 }
 
 .feed-title {
@@ -150,7 +150,7 @@ function goToMedia(id?: number) {
 }
 
 .activity-list {
-  padding: 0 var(--space-lg);
+  padding: 0;
 }
 
 .activity-item {

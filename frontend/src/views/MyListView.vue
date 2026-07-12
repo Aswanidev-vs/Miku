@@ -110,7 +110,7 @@ watch(isLoggedIn, (val) => {
 }
 
 .mylist-header {
-  padding: var(--space-xl) var(--space-lg) var(--space-lg);
+  padding: var(--space-xl) 0 var(--space-lg);
 }
 
 .mylist-title {
@@ -128,7 +128,7 @@ watch(isLoggedIn, (val) => {
 .tab-bar {
   display: flex;
   gap: var(--space-xs);
-  padding: 0 var(--space-lg);
+  padding: 0;
   margin-bottom: var(--space-lg);
   overflow-x: auto;
 }
@@ -158,7 +158,7 @@ watch(isLoggedIn, (val) => {
 }
 
 .mylist-content {
-  padding: 0 var(--space-lg) var(--space-lg);
+  padding: 0 0 var(--space-lg);
 }
 
 .empty-state {
