@@ -64,6 +64,9 @@ jobs:
           go install github.com/wailsapp/wails/v3/cmd/wails3@latest
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
+      - name: Install svu
+        run: go install github.com/caarlos0/svu/v3@latest
+
       - name: Install frontend dependencies
         run: |
           cd frontend
@@ -84,6 +87,15 @@ jobs:
             echo "type=debug" >> $GITHUB_OUTPUT
           fi
 
+      - name: Get next version
+        id: version
+        run: |
+          NEXT_VERSION=$(svu next)
+          CURRENT_VERSION=$(svu)
+          echo "next=$NEXT_VERSION" >> $GITHUB_OUTPUT
+          echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current: $CURRENT_VERSION -> Next: $NEXT_VERSION"
+
       - name: Build Android APK
         run: |
           wails3 task android:build
@@ -103,18 +115,16 @@ jobs:
           echo "Found APK: $APK_PATH"
 
       - name: Generate version info
-        id: version
+        id: version-info
         run: |
-          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "v0.0.0")
           COMMIT=$(git rev-parse --short HEAD)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "commit=$COMMIT" >> $GITHUB_OUTPUT
-          echo "version_name=${VERSION}+${COMMIT}" >> $GITHUB_OUTPUT
+          echo "version_name=${{ steps.version.outputs.next }}+${COMMIT}" >> $GITHUB_OUTPUT
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: miku-android-${{ steps.build-type.outputs.type }}-${{ steps.version.outputs.commit }}
+          name: miku-android-${{ steps.build-type.outputs.type }}-${{ steps.version-info.outputs.commit }}
           path: ${{ steps.find-apk.outputs.apk_path }}
           retention-days: 30
 
@@ -122,13 +132,14 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softproto/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.version }}
-          name: "Miku ${{ steps.version.outputs.version_name }}"
+          tag_name: ${{ steps.version.outputs.next }}
+          name: "Miku ${{ steps.version-info.outputs.version_name }}"
           body: |
-            ## Miku ${{ steps.version.outputs.version_name }}
+            ## Miku ${{ steps.version-info.outputs.version_name }}
 
             ### What's Changed
-            - Built from commit ${{ steps.version.outputs.commit }}
+            - Built from commit ${{ steps.version-info.outputs.commit }}
+            - Previous version: ${{ steps.version.outputs.current }}
 
             ### Installation
             1. Download the APK below
@@ -151,7 +162,7 @@ jobs:
           script: |
             const fs = require('fs');
             const apkPath = '${{ steps.find-apk.outputs.apk_path }}';
-            const version = '${{ steps.version.outputs.version_name }}';
+            const version = '${{ steps.version-info.outputs.version_name }}';
             const buildType = '${{ steps.build-type.outputs.type }}';
             
             let apkSize = 'Unknown';
