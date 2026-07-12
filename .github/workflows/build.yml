@@ -131,6 +131,8 @@ jobs:
             --title "Miku $TAG_NAME" \
             --generate-notes \
             "$(dirname "$APK_PATH")/$APK_NAME"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   validate:
     name: Validate Code
