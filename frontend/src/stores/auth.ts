@@ -37,6 +37,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = ref(false)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const showCallbackInput = ref(false)
 
   const currentUser = computed(() => user.value)
   const isLoggedIn = computed(() => isAuthenticated.value)
@@ -46,7 +47,11 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     try {
       const url = await window.go.main.OAuth2Service.GetAuthorizationURL()
-      window.open(url, '_blank')
+      // On Android, we can't use window.open properly
+      // Show the callback input for manual code entry
+      showCallbackInput.value = true
+      // Try to open in external browser
+      window.location.href = url
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Login failed'
     } finally {
@@ -60,6 +65,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       await window.go.main.OAuth2Service.HandleCallback(code)
       isAuthenticated.value = true
+      showCallbackInput.value = false
       await fetchUser()
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Callback handling failed'
@@ -97,13 +103,6 @@ export const useAuthStore = defineStore('auth', () => {
                 chaptersRead
                 volumesRead
               }
-            }
-            options {
-              titleLanguage
-              adultContent
-              scoreFormat
-              rowOrder
-              displayCharacters
             }
           }
         }
@@ -157,6 +156,7 @@ export const useAuthStore = defineStore('auth', () => {
     error,
     currentUser,
     isLoggedIn,
+    showCallbackInput,
     login,
     handleCallback,
     fetchUser,

@@ -17,21 +17,32 @@ const loading = computed(() => animeStore.loading)
 
 <template>
   <div class="home-view">
-    <header class="home-header">
-      <h1 class="app-title">Miku</h1>
-      <p class="app-subtitle">AniList Client</p>
+    <header class="home-header safe-area-top">
+      <div class="header-content">
+        <div>
+          <h1 class="app-title">Miku</h1>
+          <p class="app-subtitle">AniList Client</p>
+        </div>
+      </div>
     </header>
 
     <section class="home-section">
       <div class="section-header">
-        <h2>Trending Anime</h2>
+        <h2 class="section-title">Trending Anime</h2>
       </div>
-      <AnimeGrid :items="trendingAnime" :loading="loading" :columns="3" />
+      <div v-if="loading && trendingAnime.length === 0" class="loading-grid">
+        <div v-for="i in 6" :key="i" class="skeleton-card">
+          <div class="skeleton skeleton-image"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text-sm"></div>
+        </div>
+      </div>
+      <AnimeGrid v-else :items="trendingAnime" :columns="3" />
     </section>
 
     <section v-if="!loading && trendingAnime.length > 0" class="home-section">
       <div class="section-header">
-        <h2>Recently Updated</h2>
+        <h2 class="section-title">Recently Updated</h2>
       </div>
       <AnimeGrid :items="trendingAnime.slice(0, 6)" :columns="3" />
     </section>
@@ -47,10 +58,21 @@ const loading = computed(() => animeStore.loading)
 
 .home-header {
   padding: var(--space-xl) var(--space-lg) var(--space-lg);
+  background: var(--bg-deepest);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .app-title {
-  font-size: var(--font-size-2xl);
+  font-size: 28px;
+  font-weight: var(--font-weight-bold);
   background: linear-gradient(135deg, var(--color-primary-light), var(--color-accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -60,11 +82,10 @@ const loading = computed(() => animeStore.loading)
 .app-subtitle {
   font-size: var(--font-size-sm);
   color: var(--text-muted);
-  margin-top: var(--space-xs);
+  margin-top: 2px;
 }
 
 .home-section {
-  flex: 1;
   padding: 0 var(--space-lg);
   margin-bottom: var(--space-xl);
 }
@@ -76,9 +97,41 @@ const loading = computed(() => animeStore.loading)
   margin-bottom: var(--space-md);
 }
 
-.section-header h2 {
+.section-title {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
+}
+
+/* Loading skeleton */
+.loading-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-sm);
+}
+
+.skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.skeleton {
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+}
+
+.skeleton-image {
+  aspect-ratio: 3/4;
+}
+
+.skeleton-text {
+  height: 14px;
+  width: 80%;
+}
+
+.skeleton-text-sm {
+  height: 10px;
+  width: 50%;
 }
 </style>

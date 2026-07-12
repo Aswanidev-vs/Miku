@@ -1,102 +1,85 @@
-/* ============================================
-   Miku AniList Client — Design Tokens
-   ============================================ */
+/* Miku Design Tokens - Native-like feel */
 
 :root {
-  /* ---- Primary Palette ---- */
-  --color-primary: #9c27b0;
-  --color-primary-light: #ba68c8;
-  --color-primary-dark: #7b1fa2;
-  --color-primary-glow: rgba(156, 39, 176, 0.4);
+  /* Primary Palette - Soft Purple */
+  --color-primary: #a855f7;
+  --color-primary-light: #c084fc;
+  --color-primary-dark: #7c3aed;
+  --color-primary-glow: rgba(168, 85, 247, 0.3);
 
-  --color-accent: #ff4081;
-  --color-accent-light: #ff80ab;
-  --color-accent-dark: #c51162;
-  --color-accent-glow: rgba(255, 64, 129, 0.4);
+  /* Accent - Soft Pink */
+  --color-accent: #ec4899;
+  --color-accent-light: #f472b6;
+  --color-accent-dark: #db2777;
 
-  /* ---- Backgrounds ---- */
-  --bg-deepest: #0a0a12;
-  --bg-deep: #12121f;
-  --bg-surface: #1a1a2e;
-  --bg-elevated: #222240;
-  --bg-hover: #2a2a4a;
+  /* Backgrounds - iOS/Android-like dark */
+  --bg-deepest: #000000;
+  --bg-deep: #0a0a0f;
+  --bg-surface: #141418;
+  --bg-elevated: #1c1c24;
+  --bg-hover: #24242e;
 
-  /* ---- Text ---- */
-  --text-primary: #eeeef0;
-  --text-secondary: #a0a0b8;
-  --text-muted: #6a6a82;
+  /* Text */
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
   --text-on-primary: #ffffff;
 
-  /* ---- Status Colors ---- */
-  --status-watching: #00e676;
-  --status-completed: #2196f3;
-  --status-paused: #ff9800;
-  --status-dropped: #f44336;
-  --status-planning: #ab47bc;
+  /* Status */
+  --status-watching: #22c55e;
+  --status-completed: #3b82f6;
+  --status-paused: #f59e0b;
+  --status-dropped: #ef4444;
+  --status-planning: #a855f7;
 
-  /* ---- Semantic ---- */
-  --color-success: #00e676;
-  --color-warning: #ff9800;
-  --color-error: #f44336;
-  --color-info: #2196f3;
-
-  /* ---- Spacing ---- */
+  /* Spacing - iOS-like */
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 12px;
   --space-lg: 16px;
-  --space-xl: 24px;
-  --space-2xl: 32px;
-  --space-3xl: 48px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
 
-  /* ---- Border Radius ---- */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  /* Border Radius - iOS-like */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
   --radius-full: 9999px;
 
-  /* ---- Shadows ---- */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  /* Shadows - Subtle, native feel */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
-  --shadow-glow-primary: 0 0 20px var(--color-primary-glow);
-  --shadow-glow-accent: 0 0 20px var(--color-accent-glow);
+  --shadow-glow: 0 0 20px var(--color-primary-glow);
 
-  /* ---- Typography ---- */
-  --font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  --font-size-xs: 0.7rem;
-  --font-size-sm: 0.8rem;
-  --font-size-base: 0.9rem;
-  --font-size-md: 1rem;
-  --font-size-lg: 1.2rem;
-  --font-size-xl: 1.5rem;
-  --font-size-2xl: 2rem;
+  /* Typography - System fonts like native apps */
+  --font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-md: 17px;
+  --font-size-lg: 20px;
+  --font-size-xl: 24px;
+  --font-size-2xl: 28px;
 
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  --line-height-tight: 1.25;
+  --line-height-tight: 1.2;
   --line-height-normal: 1.5;
 
-  /* ---- Transitions ---- */
-  --transition-fast: 150ms ease;
-  --transition-normal: 250ms ease;
-  --transition-slow: 400ms ease;
+  /* Transitions - Smooth like native */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* ---- Z-Index ---- */
-  --z-base: 1;
-  --z-dropdown: 100;
-  --z-sticky: 200;
-  --z-modal-backdrop: 300;
-  --z-modal: 400;
-  --z-toast: 500;
-  --z-tooltip: 600;
-
-  /* ---- Layout ---- */
-  --nav-height: 60px;
-  --header-height: 56px;
-  --content-max-width: 600px;
+  /* Layout */
+  --nav-height: 56px;
+  --header-height: 44px;
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }

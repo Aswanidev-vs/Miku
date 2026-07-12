@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, ref } from 'vue'
 import { useAuthStore } from '../stores'
 import { useUserStore } from '../stores'
 import StatsCard from '../components/profile/StatsCard.vue'
@@ -12,6 +12,9 @@ const userStore = useUserStore()
 const user = computed(() => authStore.currentUser)
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const loading = computed(() => authStore.loading || userStore.loading)
+
+const callbackCode = ref('')
+const callbackError = ref('')
 
 onMounted(async () => {
   if (isLoggedIn.value && user.value) {
@@ -29,22 +32,65 @@ const stats = computed(() => {
     chapters: s.manga.chaptersRead,
   }
 })
+
+async function submitCallback() {
+  if (!callbackCode.value.trim()) {
+    callbackError.value = 'Please enter the code'
+    return
+  }
+  callbackError.value = ''
+  try {
+    await authStore.handleCallback(callbackCode.value.trim())
+  } catch (e) {
+    callbackError.value = 'Invalid code. Please try again.'
+  }
+}
 </script>
 
 <template>
   <div class="profile-view">
-    <template v-if="loading">
+    <template v-if="loading && !user">
       <div class="loading-state">
-        <div class="spinner" />
-        <span>Loading profile...</span>
+        <div class="spinner"></div>
+        <span>Loading...</span>
       </div>
     </template>
 
     <template v-else-if="!isLoggedIn || !user">
       <div class="login-prompt">
-        <h2>Welcome to Miku</h2>
-        <p>Sign in to view your AniList profile</p>
-        <button class="btn-primary" @click="authStore.login()">Sign In</button>
+        <div class="login-logo">
+          <img src="/logo.png" alt="Miku" width="80" height="80" />
+        </div>
+        <h1 class="login-title">Welcome to Miku</h1>
+        <p class="login-subtitle">Sign in with your AniList account to track your anime and manga</p>
+
+        <button class="btn btn-primary login-btn" @click="authStore.login()" :disabled="loading">
+          <span v-if="loading" class="spinner"></span>
+          <span v-else>Sign In with AniList</span>
+        </button>
+
+        <p class="login-hint">You'll be redirected to AniList to authorize the app</p>
+
+        <!-- Manual callback input for Android -->
+        <div v-if="authStore.showCallbackInput" class="callback-section">
+          <div class="divider">
+            <span>Or enter code manually</span>
+          </div>
+          <p class="callback-hint">After authorizing, copy the code from the URL and paste it below</p>
+          <div class="callback-input-group">
+            <input
+              v-model="callbackCode"
+              type="text"
+              class="input callback-input"
+              placeholder="Paste authorization code"
+              @keyup.enter="submitCallback"
+            />
+            <button class="btn btn-primary callback-btn" @click="submitCallback" :disabled="loading">
+              Submit
+            </button>
+          </div>
+          <p v-if="callbackError" class="callback-error">{{ callbackError }}</p>
+        </div>
       </div>
     </template>
 
@@ -52,16 +98,11 @@ const stats = computed(() => {
       <div class="profile-banner" :style="user.bannerImage ? { backgroundImage: `url(${user.bannerImage})` } : {}" />
 
       <div class="profile-header">
-        <img
-          :src="user.avatar.large"
-          :alt="user.name"
-          class="profile-avatar"
-        />
+        <img :src="user.avatar.large" :alt="user.name" class="profile-avatar" />
         <div class="profile-info">
           <h1 class="profile-name">{{ user.name }}</h1>
           <p v-if="user.about" class="profile-bio">{{ user.about }}</p>
         </div>
-        <button class="btn-logout" @click="authStore.logout()">Sign Out</button>
       </div>
 
       <div class="profile-stats-bar" v-if="stats">
@@ -85,10 +126,12 @@ const stats = computed(() => {
 
       <div class="profile-content">
         <StatsCard :statistics="user.statistics" />
-
         <HeatmapCalendar :activities="userStore.activities" />
-
         <FavoriteGenres v-if="user.favourites" :favorites="user.favourites" />
+
+        <button class="btn btn-secondary logout-btn" @click="authStore.logout()">
+          Sign Out
+        </button>
       </div>
     </template>
   </div>
@@ -102,6 +145,7 @@ const stats = computed(() => {
   background: var(--bg-deepest);
 }
 
+/* Loading */
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -112,54 +156,108 @@ const stats = computed(() => {
   color: var(--text-secondary);
 }
 
-.spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--bg-hover);
-  border-top-color: var(--color-primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
+/* Login Prompt */
 .login-prompt {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   flex: 1;
-  gap: var(--space-md);
+  padding: var(--space-3xl) var(--space-xl);
   text-align: center;
-  padding: var(--space-3xl);
 }
 
-.login-prompt h2 {
+.login-logo {
+  margin-bottom: var(--space-xl);
+}
+
+.login-logo img {
+  border-radius: var(--radius-xl);
+}
+
+.login-title {
   font-size: var(--font-size-2xl);
-  color: var(--text-primary);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-sm);
 }
 
-.login-prompt p {
+.login-subtitle {
+  font-size: var(--font-size-base);
   color: var(--text-secondary);
+  margin-bottom: var(--space-2xl);
+  max-width: 280px;
 }
 
-.btn-primary {
-  padding: var(--space-sm) var(--space-xl);
-  background: var(--color-primary);
-  color: var(--text-on-primary);
-  border-radius: var(--radius-full);
-  font-weight: var(--font-weight-semibold);
-  transition: background var(--transition-fast);
+.login-btn {
+  width: 100%;
+  max-width: 280px;
+  padding: var(--space-lg) var(--space-xl);
+  font-size: var(--font-size-md);
 }
 
-.btn-primary:hover {
-  background: var(--color-primary-dark);
+.login-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-top: var(--space-md);
 }
 
+/* Callback Section */
+.callback-section {
+  width: 100%;
+  max-width: 280px;
+  margin-top: var(--space-2xl);
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--bg-hover);
+}
+
+.divider span {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.callback-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-bottom: var(--space-md);
+}
+
+.callback-input-group {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.callback-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.callback-btn {
+  flex-shrink: 0;
+}
+
+.callback-error {
+  font-size: var(--font-size-xs);
+  color: var(--status-dropped);
+  margin-top: var(--space-sm);
+}
+
+/* Profile */
 .profile-banner {
-  height: 120px;
+  height: 140px;
   background: linear-gradient(135deg, var(--color-primary-dark), var(--color-accent-dark));
   background-size: cover;
   background-position: center;
@@ -167,82 +265,53 @@ const stats = computed(() => {
 
 .profile-header {
   display: flex;
-  align-items: flex-end;
-  gap: var(--space-lg);
+  flex-direction: column;
+  align-items: center;
   padding: 0 var(--space-xl);
-  margin-top: -32px;
-  position: relative;
+  margin-top: -40px;
+  text-align: center;
 }
 
 .profile-avatar {
-  width: 80px;
-  height: 80px;
+  width: 96px;
+  height: 96px;
   border-radius: var(--radius-full);
-  border: 3px solid var(--bg-deepest);
+  border: 4px solid var(--bg-deepest);
   object-fit: cover;
-  flex-shrink: 0;
   background: var(--bg-surface);
 }
 
 .profile-info {
-  flex: 1;
-  min-width: 0;
-  padding-bottom: var(--space-sm);
+  margin-top: var(--space-md);
 }
 
 .profile-name {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
-  color: var(--text-primary);
 }
 
 .profile-bio {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
   margin-top: var(--space-xs);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.btn-logout {
-  padding: var(--space-xs) var(--space-lg);
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  transition: background var(--transition-fast), color var(--transition-fast);
-  flex-shrink: 0;
-  margin-bottom: var(--space-sm);
-}
-
-.btn-logout:hover {
-  background: var(--color-error);
-  color: var(--text-on-primary);
+  max-width: 280px;
 }
 
 .profile-stats-bar {
   display: flex;
-  gap: var(--space-sm);
-  padding: var(--space-lg) var(--space-xl);
-  overflow-x: auto;
+  justify-content: center;
+  gap: var(--space-lg);
+  padding: var(--space-xl);
 }
 
 .stat-pill {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--space-sm) var(--space-lg);
-  background: var(--bg-surface);
-  border-radius: var(--radius-md);
-  min-width: 72px;
-  flex-shrink: 0;
 }
 
 .stat-num {
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
   color: var(--text-primary);
 }
@@ -257,5 +326,10 @@ const stats = computed(() => {
   flex-direction: column;
   gap: var(--space-lg);
   padding: 0 var(--space-xl) var(--space-xl);
+}
+
+.logout-btn {
+  width: 100%;
+  margin-top: var(--space-lg);
 }
 </style>

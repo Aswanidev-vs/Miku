@@ -22,7 +22,7 @@ function navigateTo(routeName: string) {
 </script>
 
 <template>
-  <nav class="bottom-nav">
+  <nav class="bottom-nav safe-area-bottom">
     <button
       v-for="tab in tabs"
       :key="tab.route"
@@ -75,14 +75,15 @@ function navigateTo(routeName: string) {
   left: 0;
   right: 0;
   height: var(--nav-height);
-  background: var(--bg-deep);
-  border-top: 1px solid var(--bg-hover);
+  background: rgba(10, 10, 15, 0.95);
+  border-top: 0.5px solid rgba(255, 255, 255, 0.1);
   display: flex;
   justify-content: space-around;
   align-items: center;
-  padding: 0 var(--space-sm);
-  z-index: var(--z-sticky);
-  backdrop-filter: blur(10px);
+  padding: 0 var(--space-xs);
+  z-index: 100;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .nav-item {
@@ -91,53 +92,45 @@ function navigateTo(routeName: string) {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: var(--space-xs) var(--space-sm);
+  padding: 6px 0;
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
-  min-width: 48px;
+  flex: 1;
   color: var(--text-muted);
   position: relative;
+  min-width: 0;
 }
 
-.nav-item:hover {
-  color: var(--text-secondary);
-  background: var(--bg-hover);
+.nav-item:active {
+  transform: scale(0.9);
 }
 
 .nav-item.active {
   color: var(--color-primary);
 }
 
-.nav-item.active::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 20px;
-  height: 2px;
-  background: var(--color-primary);
-  border-radius: var(--radius-full);
+.nav-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.nav-icon {
+.nav-icon svg {
   width: 22px;
   height: 22px;
 }
 
-.nav-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
 .nav-item.active .nav-icon svg {
   stroke: var(--color-primary);
-  filter: drop-shadow(0 0 4px var(--color-primary-glow));
+  filter: drop-shadow(0 0 6px var(--color-primary-glow));
 }
 
 .nav-label {
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   font-weight: var(--font-weight-medium);
   line-height: 1;
+  letter-spacing: 0.01em;
 }
 </style>
