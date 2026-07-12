@@ -3,7 +3,10 @@ import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
 import { useAnimeStore } from '../stores/anime'
 import { useAuthStore } from '../stores/auth'
 import { usePlatform } from '../composables/usePlatform'
+import { usePullToRefresh } from '../composables/usePullToRefresh'
+import { clearGqlCache } from '../api/graphql'
 import AnimeGrid from '../components/anime/AnimeGrid.vue'
+import PullToRefresh from '../components/common/PullToRefresh.vue'
 import type { Media, ListStatus } from '../types'
 
 const animeStore = useAnimeStore()
@@ -34,6 +37,15 @@ const tabs: { label: string; value: ListStatus }[] = [
   { label: 'Dropped', value: 'DROPPED' },
 ]
 
+async function refreshMyList() {
+  clearGqlCache()
+  if (isLoggedIn.value && user.value) {
+    animeStore.startSync(user.value.id)
+  }
+}
+
+const { containerRef, pullingDown, refreshing } = usePullToRefresh(refreshMyList)
+
 onMounted(() => {
   if (isLoggedIn.value && user.value) {
     animeStore.startSync(user.value.id)
@@ -54,11 +66,12 @@ watch(isLoggedIn, (val) => {
 </script>
 
 <template>
-  <div class="mylist-view">
-    <header class="mylist-header safe-area-top">
-      <h1 class="mylist-title">My List</h1>
-      <p class="mylist-subtitle">Your anime collection</p>
-    </header>
+  <PullToRefresh :pulling-down="pullingDown" :refreshing="refreshing">
+    <div ref="containerRef" class="mylist-view">
+      <header class="mylist-header safe-area-top">
+        <h1 class="mylist-title">My List</h1>
+        <p class="mylist-subtitle">Your anime collection</p>
+      </header>
 
     <!-- Not logged in -->
     <template v-if="!isLoggedIn">
@@ -101,7 +114,8 @@ watch(isLoggedIn, (val) => {
         </template>
       </div>
     </template>
-  </div>
+    </div>
+  </PullToRefresh>
 </template>
 
 <style scoped>

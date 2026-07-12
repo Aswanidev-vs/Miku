@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
 import { RouterView } from 'vue-router'
 import { Events } from '@wailsio/runtime'
 import { useAuthStore } from './stores'
@@ -36,6 +36,9 @@ watch([os, isDesktop, isMobile, screenSmall, screenMedium, screenLarge], () => {
   if (screenLarge.value) root.classList.add('screen-lg')
 }, { immediate: true })
 
+// Poll for pending OAuth callback (Android Chrome Custom Tab may not fire events)
+let pollTimer: ReturnType<typeof setInterval> | null = null
+
 onMounted(() => {
   authStore.checkAuth().catch(err => {
     console.error('Initial auth check failed:', err)
@@ -54,6 +57,33 @@ onMounted(() => {
   Events.On('common:WindowFocus', () => {
     checkPendingCode()
   })
+
+  // Poll fallback: check for pending code every 3s for 60s after login starts
+  // This handles Android Chrome Custom Tab where events may not fire
+  watch(() => authStore.loading, (isLoading) => {
+    if (isLoading && !authStore.isLoggedIn) {
+      if (pollTimer) clearInterval(pollTimer)
+      let attempts = 0
+      pollTimer = setInterval(async () => {
+        attempts++
+        await checkPendingCode()
+        if (authStore.isLoggedIn || attempts > 20) {
+          if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+        }
+      }, 3000)
+    }
+  })
+
+  // When auth state changes, ensure dependent data is refreshed
+  watch(() => authStore.isLoggedIn, (loggedIn) => {
+    if (loggedIn) {
+      console.log('[Miku App] User authenticated, refreshing data...')
+    }
+  })
+})
+
+onUnmounted(() => {
+  if (pollTimer) clearInterval(pollTimer)
 })
 </script>
 
@@ -74,12 +104,15 @@ onMounted(() => {
 .app-container {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100%;
+  overflow: hidden;
 }
 
 .main-content {
   flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   padding-bottom: var(--nav-height);
 }
 </style>

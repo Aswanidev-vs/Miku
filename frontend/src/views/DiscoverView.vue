@@ -2,8 +2,11 @@
 import { onMounted, ref, computed } from 'vue'
 import { useAnimeStore } from '../stores/anime'
 import { usePlatform } from '../composables/usePlatform'
+import { usePullToRefresh } from '../composables/usePullToRefresh'
+import { clearGqlCache } from '../api/graphql'
 import { gqlQuery } from '../api/graphql'
 import AnimeGrid from '../components/anime/AnimeGrid.vue'
+import PullToRefresh from '../components/common/PullToRefresh.vue'
 import type { Media } from '../types'
 
 const animeStore = useAnimeStore()
@@ -67,14 +70,13 @@ function getCurrentSeason(): { season: string; year: number } {
   return { season: 'FALL', year }
 }
 
-onMounted(() => {
+function loadDiscoverData() {
   if (animeStore.trending.length === 0) {
     animeStore.fetchTrending()
   }
 
   const { season, year } = getCurrentSeason()
 
-  // Fire all queries independently — each section appears as its data arrives
   gqlQuery(POPULAR_QUERY, { page: 1, perPage: 12 })
     .then((r) => { if (r?.data?.Page?.media) popularAnime.value = r.data.Page.media })
     .catch(() => {})
@@ -86,45 +88,59 @@ onMounted(() => {
   gqlQuery(TOP_MANGA_QUERY)
     .then((r) => { if (r?.data?.Page?.media) topManga.value = r.data.Page.media })
     .catch(() => {})
+}
+
+async function refreshDiscover() {
+  clearGqlCache()
+  animeStore.fetchTrending(1, 20)
+  loadDiscoverData()
+}
+
+const { containerRef, pullingDown, refreshing } = usePullToRefresh(refreshDiscover)
+
+onMounted(() => {
+  loadDiscoverData()
 })
 </script>
 
 <template>
-  <div class="discover-view">
-    <header class="discover-header safe-area-top">
-      <p class="discover-eyebrow">Miku · AniList</p>
-      <h1 class="discover-title">Discover</h1>
-      <p class="discover-sub">Hand-picked seasons, trends & hidden gems.</p>
-    </header>
+  <PullToRefresh :pulling-down="pullingDown" :refreshing="refreshing">
+    <div ref="containerRef" class="discover-view">
+      <header class="discover-header safe-area-top">
+        <p class="discover-eyebrow">Miku · AniList</p>
+        <h1 class="discover-title">Discover</h1>
+        <p class="discover-sub">Hand-picked seasons, trends & hidden gems.</p>
+      </header>
 
-    <section v-if="trendingAnime.length > 0" class="discover-section">
-      <div class="section-header">
-        <h2 class="section-title"><span class="title-dot"></span>Trending Now</h2>
-      </div>
-      <AnimeGrid :items="trendingAnime.slice(0, 12)" :columns="gridColumns" />
-    </section>
+      <section v-if="trendingAnime.length > 0" class="discover-section">
+        <div class="section-header">
+          <h2 class="section-title"><span class="title-dot"></span>Trending Now</h2>
+        </div>
+        <AnimeGrid :items="trendingAnime.slice(0, 12)" :columns="gridColumns" />
+      </section>
 
-    <section v-if="popularAnime.length > 0" class="discover-section">
-      <div class="section-header">
-        <h2 class="section-title"><span class="title-dot"></span>Most Popular</h2>
-      </div>
-      <AnimeGrid :items="popularAnime" :columns="gridColumns" />
-    </section>
+      <section v-if="popularAnime.length > 0" class="discover-section">
+        <div class="section-header">
+          <h2 class="section-title"><span class="title-dot"></span>Most Popular</h2>
+        </div>
+        <AnimeGrid :items="popularAnime" :columns="gridColumns" />
+      </section>
 
-    <section v-if="seasonalAnime.length > 0" class="discover-section">
-      <div class="section-header">
-        <h2 class="section-title"><span class="title-dot"></span>This Season</h2>
-      </div>
-      <AnimeGrid :items="seasonalAnime" :columns="gridColumns" />
-    </section>
+      <section v-if="seasonalAnime.length > 0" class="discover-section">
+        <div class="section-header">
+          <h2 class="section-title"><span class="title-dot"></span>This Season</h2>
+        </div>
+        <AnimeGrid :items="seasonalAnime" :columns="gridColumns" />
+      </section>
 
-    <section v-if="topManga.length > 0" class="discover-section">
-      <div class="section-header">
-        <h2 class="section-title"><span class="title-dot"></span>Top Manga</h2>
-      </div>
-      <AnimeGrid :items="topManga" :columns="gridColumns" />
-    </section>
-  </div>
+      <section v-if="topManga.length > 0" class="discover-section">
+        <div class="section-header">
+          <h2 class="section-title"><span class="title-dot"></span>Top Manga</h2>
+        </div>
+        <AnimeGrid :items="topManga" :columns="gridColumns" />
+      </section>
+    </div>
+  </PullToRefresh>
 </template>
 
 <style scoped>
