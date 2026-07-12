@@ -1,11 +1,16 @@
 package com.wails.app;
 
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.util.Log;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import com.wails.app.BuildConfig;
+import androidx.browser.customtabs.CustomTabsIntent;
+import androidx.core.content.ContextCompat;
 
 /**
  * WailsJSBridge provides the JavaScript interface that allows the web frontend
@@ -113,6 +118,34 @@ public class WailsJSBridge {
     @JavascriptInterface
     public boolean isDebug() {
         return BuildConfig.DEBUG;
+    }
+
+    /**
+     * Open a URL in Chrome Custom Tab
+     * Called from JavaScript: wails.openURL(url)
+     *
+     * @param url The URL to open
+     */
+    @JavascriptInterface
+    public void openURL(String url) {
+        try {
+            Context context = webView.getContext();
+            CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
+            builder.setShowTitle(true);
+            builder.setToolbarColor(ContextCompat.getColor(context, android.R.color.black));
+            builder.setSecondaryToolbarColor(ContextCompat.getColor(context, android.R.color.black));
+            CustomTabsIntent customTabsIntent = builder.build();
+            customTabsIntent.launchUrl(context, Uri.parse(url));
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to open URL in Custom Tab", e);
+            // Fallback to regular intent
+            try {
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                webView.getContext().startActivity(intent);
+            } catch (Exception e2) {
+                Log.e(TAG, "Failed to open URL with intent", e2);
+            }
+        }
     }
 
     /**

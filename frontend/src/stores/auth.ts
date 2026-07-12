@@ -4,6 +4,9 @@ import type { User } from '../types'
 
 declare global {
   interface Window {
+    wails: {
+      openURL(url: string): void
+    }
     go: {
       main: {
         OAuth2Service: {
@@ -49,11 +52,16 @@ export const useAuthStore = defineStore('auth', () => {
       const url = await window.go.main.OAuth2Service.GetAuthorizationURL()
       // Always show manual code entry as fallback
       showCallbackInput.value = true
-      // Try to open in new tab (works on desktop)
-      try {
-        window.open(url, '_blank')
-      } catch {
-        // On Android, window.open may fail - user can copy URL manually
+      // Use native Chrome Custom Tab on Android
+      if (window.wails?.openURL) {
+        window.wails.openURL(url)
+      } else {
+        // Fallback for desktop
+        try {
+          window.open(url, '_blank')
+        } catch {
+          // User can copy URL manually
+        }
       }
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Login failed'
