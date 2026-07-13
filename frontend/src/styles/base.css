@@ -279,7 +279,7 @@ h1, h2, h3, h4, h5, h6 {
 .settings-view,
 .profile-view,
 .va-view {
-  overflow-x: hidden;
+  overflow-x: clip;
   touch-action: pan-y;
   padding-left: max(var(--space-lg), env(safe-area-inset-left, 0px));
   padding-right: max(var(--space-lg), env(safe-area-inset-right, 0px));
@@ -299,7 +299,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Detail view: banner is full-bleed, content is padded */
 .detail-view {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .detail-content {
@@ -319,7 +319,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* SearchView: internal scroll layout, just needs overflow containment */
 .search-view {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Thin, unobtrusive scrollbars for horizontal rows (relations, recs, tabs) */
@@ -489,7 +489,7 @@ h1, h2, h3, h4, h5, h6 {
 .is-mobile .settings-view,
 .is-mobile .profile-view {
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: auto;
   touch-action: pan-y;
 }
 

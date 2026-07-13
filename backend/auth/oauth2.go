@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -68,8 +69,11 @@ func (s *OAuth2Service) GetAuthorizationURL() string {
 	params.Set("client_id", s.config.ClientID)
 	params.Set("redirect_uri", s.config.RedirectURI)
 	params.Set("response_type", "code")
-	params.Set("prompt", "login")
 
+	// No prompt=login: returning users keep their AniList session and are
+	// redirected back immediately instead of being forced through the
+	// credential screen on every login (avoids the slow "already authorized"
+	// consent stall on Android relogins).
 	return fmt.Sprintf("%s?%s", AniListAuthURL, params.Encode())
 }
 
@@ -242,10 +246,16 @@ func (s *OAuth2Service) handleHTTPCallback(w http.ResponseWriter, r *http.Reques
 	log.Printf("[OAuth] Received authorization code via localhost callback, length: %d", len(code))
 	s.SetPendingCode(code)
 
-	// Show a user-friendly page
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprint(w, `<!DOCTYPE html>
-<html><head><title>Miku - Authorized</title><style>
+	// Show a user-friendly page. On Android, auto-return to the app via the
+	// deep link so the user doesn't have to manually switch back — the pending
+	// code is already captured server-side and picked up on WindowFocus.
+	isAndroid := strings.Contains(strings.ToLower(r.UserAgent()), "android")
+	autoReturn := ""
+	if isAndroid {
+		autoReturn = `<script>setTimeout(function(){location.href="miku://callback";},700);</script>`
+	}
+	page := fmt.Sprintf(`<!DOCTYPE html>
+<html><head><title>Miku - Authorized</title>%s<style>
 body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#0a0a12;color:#fff}
 .box{text-align:center;padding:3rem}
 h1{font-size:1.5rem;margin-bottom:0.5rem}
@@ -253,8 +263,11 @@ p{color:#a0a0b0;font-size:0.9rem}
 </style></head><body>
 <div class="box">
 <h1>&#10003; Authorized</h1>
-<p>You can close this tab and return to Miku.</p>
-</div></body></html>`)
+<p>Returning to Miku...</p>
+</div></body></html>`, autoReturn)
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprint(w, page)
 
 	// Shut down server after responding
 	go s.StopCallbackServer()

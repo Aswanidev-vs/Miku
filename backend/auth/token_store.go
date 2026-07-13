@@ -33,17 +33,18 @@ func NewTokenStore() (*TokenStore, error) {
 	// Platform-specific config directory handling
 	switch runtime.GOOS {
 	case "android":
-		// Android process working directories normally live in durable app
-		// internal storage. Avoid os.TempDir(): it can be wiped after process kill.
-		if wd, wdErr := os.Getwd(); wdErr == nil {
+		// Persist the token in the app's private, durable files directory so the
+		// login survives the process being killed (app removed from recent apps).
+		// os.TempDir() maps to the app cache on Android, which the OS may clear
+		// on process death — that was signing users out unexpectedly.
+		candidates := []string{
+			"/data/data/com.wails.app/files",
+			"/data/user/0/com.wails.app/files",
+		}
+		if wd, wdErr := os.Getwd(); wdErr == nil && wd != "" && isWritableDir(wd) {
 			configDir = wd
 		}
 		if configDir == "" || !isWritableDir(configDir) {
-			candidates := []string{
-				"/data/data/com.wails.app/files",
-				"/data/user/0/com.wails.app/files",
-				"/sdcard/Android/data/com.wails.app/files",
-			}
 			for _, candidate := range candidates {
 				if isWritableDir(candidate) {
 					configDir = candidate
@@ -52,7 +53,10 @@ func NewTokenStore() (*TokenStore, error) {
 			}
 		}
 		if configDir == "" {
-			configDir = os.TempDir()
+			// Final fallback: scoped external storage (still app-private/durable).
+			if isWritableDir("/sdcard/Android/data/com.wails.app/files") {
+				configDir = "/sdcard/Android/data/com.wails.app/files"
+			}
 		}
 	case "ios":
 		configDir, err = os.UserHomeDir()
