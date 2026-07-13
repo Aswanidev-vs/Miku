@@ -17,9 +17,11 @@ android {
         versionCode 1
         versionName "1.0"
 
-        // Configure supported ABIs
+        // Physical devices are arm64-v8a. x86_64 is only needed for the Android
+        // Emulator, so it's restricted to debug builds (see buildTypes) to keep
+        // release/device APKs from shipping the redundant native library.
         ndk {
-            abiFilters 'arm64-v8a', 'x86_64'
+            abiFilters 'arm64-v8a'
         }
     }
 
@@ -42,12 +44,23 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig hasKeystore ? signingConfigs.release : signingConfigs.debug
         }
         debug {
             debuggable true
+            // x86_64 kept here so the app still runs in the Android Emulator;
+            // release builds drop it (inherited from defaultConfig above).
+            ndk {
+                abiFilters 'arm64-v8a', 'x86_64'
+            }
+            // Keep Go debug symbols only for debug builds so the emulator
+            // .so is debuggable; release builds are stripped (Go -w -s + NDK).
+            packagingOptions {
+                doNotStrip '*/arm64-v8a/libwails.so'
+                doNotStrip '*/x86_64/libwails.so'
+            }
         }
     }
 
@@ -66,12 +79,8 @@ android {
         }
     }
 
-    // Packaging options
-    packagingOptions {
-        // Don't strip Go symbols in debug builds
-        doNotStrip '*/arm64-v8a/libwails.so'
-        doNotStrip '*/x86_64/libwails.so'
-    }
+    // (doNotStrip is now scoped to the debug buildType above so release
+    // native libraries are stripped for smaller APKs.)
 }
 
 dependencies {

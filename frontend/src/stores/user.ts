@@ -63,46 +63,85 @@ query ($name: String) {
 }
 `
 
+// Shared activity node selection — reused by both the single-user and the
+// following feed queries so the two never drift apart.
+const ACTIVITY_NODE_FIELDS = `
+  ... on ListActivity {
+    id
+    type
+    status
+    progress
+    createdAt
+    user {
+      id
+      name
+      avatar {
+        medium
+      }
+    }
+    media {
+      id
+      title {
+        romaji
+      }
+      coverImage {
+        medium
+      }
+    }
+  }
+  ... on TextActivity {
+    id
+    type
+    text
+    createdAt
+    user {
+      id
+      name
+      avatar {
+        medium
+      }
+    }
+  }
+`
+
 const ACTIVITY_FEED_QUERY = `
 query ($userId: Int, $page: Int, $perPage: Int) {
   Page(page: $page, perPage: $perPage) {
     activities(userId: $userId, sort: ID_DESC) {
-      ... on ListActivity {
-        id
-        type
-        status
-        progress
-        createdAt
-        user {
-          id
-          name
-          avatar {
-            medium
-          }
-        }
-        media {
-          id
-          title {
-            romaji
-          }
-          coverImage {
-            medium
-          }
-        }
-      }
-      ... on TextActivity {
-        id
-        type
-        text
-        createdAt
-        user {
-          id
-          name
-          avatar {
-            medium
-          }
-        }
-      }
+      ${ACTIVITY_NODE_FIELDS}
+    }
+    pageInfo {
+      total
+      perPage
+      currentPage
+      lastPage
+      hasNextPage
+    }
+  }
+}
+`
+
+// User IDs that `userId` follows — used to build the "Following" feed
+const FOLLOWING_IDS_QUERY = `
+query ($userId: Int, $page: Int, $perPage: Int) {
+  Page(page: $page, perPage: $perPage) {
+    pageInfo {
+      hasNextPage
+    }
+    following(userId: $userId) {
+      id
+    }
+  }
+}
+`
+
+// Combined feed: the user's own activity plus everyone they follow (AniList
+// "Following" feed style), sorted globally by recency.
+const ACTIVITY_FEED_FOLLOWING_QUERY = `
+query ($userIds: [Int], $page: Int, $perPage: Int) {
+  Page(page: $page, perPage: $perPage) {
+    activities(userId_in: $userIds, sort: ID_DESC) {
+      ${ACTIVITY_NODE_FIELDS}
     }
     pageInfo {
       total
@@ -140,6 +179,27 @@ mutation ($id: Int) {
   }
 }
 `
+
+/**
+ * Collect the AniList user IDs that `userId` follows. Capped so the resulting
+ * `userId_in` filter stays a sane size even for accounts following thousands
+ * of people.
+ */
+async function fetchFollowingIds(userId: number, cap = 200): Promise<number[]> {
+  const ids: number[] = []
+  let page = 1
+  const perPage = 100
+  while (ids.length < cap) {
+    const response = await gqlQuery(FOLLOWING_IDS_QUERY, { userId, page, perPage })
+    const following = response?.data?.Page?.following ?? []
+    for (const f of following) {
+      if (f?.id && !ids.includes(f.id)) ids.push(f.id)
+    }
+    if (!response?.data?.Page?.pageInfo?.hasNextPage || following.length === 0) break
+    page++
+  }
+  return ids.slice(0, cap)
+}
 
 export const useUserStore = defineStore('user', () => {
   const profile = ref<User | null>(null)
@@ -184,6 +244,28 @@ export const useUserStore = defineStore('user', () => {
       }
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch activities'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function fetchFollowingActivities(userId: number, page = 1, perPage = 20) {
+    loading.value = true
+    error.value = null
+    try {
+      const followingIds = await fetchFollowingIds(userId)
+      const ids = Array.from(new Set([userId, ...followingIds]))
+      const response = await gqlQuery(ACTIVITY_FEED_FOLLOWING_QUERY, {
+        userIds: ids,
+        page,
+        perPage,
+      })
+      if (response?.data?.Page) {
+        activities.value = response.data.Page.activities
+        activityPageInfo.value = response.data.Page.pageInfo
+      }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to fetch feed'
     } finally {
       loading.value = false
     }
@@ -246,6 +328,7 @@ export const useUserStore = defineStore('user', () => {
     activityPageInfo,
     fetchProfile,
     fetchActivities,
+    fetchFollowingActivities,
     postActivity,
     deleteActivity,
     clearProfile,

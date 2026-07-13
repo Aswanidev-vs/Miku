@@ -3,6 +3,8 @@ import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { useUserStore } from '../stores/user'
 import { useAuthStore } from '../stores/auth'
 import { useRouter } from 'vue-router'
+import { Browser } from '@wailsio/runtime'
+import type { TextActivity, ListActivity } from '../types'
 
 const userStore = useUserStore()
 const authStore = useAuthStore()
@@ -51,7 +53,7 @@ function setupObserver() {
 
 onMounted(() => {
   if (isLoggedIn.value && user.value) {
-    userStore.fetchActivities(user.value.id, 1, PAGE_SIZE)
+    userStore.fetchFollowingActivities(user.value.id, 1, PAGE_SIZE)
   }
   setupObserver()
 })
@@ -78,13 +80,26 @@ function goToMedia(id?: number) {
     router.push({ name: 'media-detail', params: { id } })
   }
 }
+
+// Tap a user's avatar: your own goes to the in-app profile, friends open their
+// AniList profile in the system browser (no per-user profile route exists yet).
+function goToUser(activity: TextActivity | ListActivity) {
+  const u = activity.user
+  if (!u?.name) return
+  if (user.value && u.id === user.value.id) {
+    router.push({ name: 'profile' })
+  } else {
+    const url = `https://anilist.co/user/${encodeURIComponent(u.name)}`
+    Browser.OpenURL(url).catch(() => window.open(url, '_blank'))
+  }
+}
 </script>
 
 <template>
   <div class="feed-view">
     <header class="feed-header safe-area-top">
       <h1 class="feed-title">Feed</h1>
-      <p class="feed-subtitle">Your activity feed</p>
+      <p class="feed-subtitle">Your activity and your friends'</p>
     </header>
 
     <!-- Not logged in -->
@@ -111,7 +126,7 @@ function goToMedia(id?: number) {
         >
           <!-- List Activity -->
           <template v-if="'media' in activity && activity.media">
-            <div class="activity-avatar" @click="activity.user?.id && router.push({ name: 'profile' })">
+            <div class="activity-avatar" @click="goToUser(activity)">
               <img
                 v-if="activity.user?.avatar"
                 :src="activity.user.avatar.medium"
@@ -146,7 +161,7 @@ function goToMedia(id?: number) {
 
           <!-- Text Activity -->
           <template v-else-if="'text' in activity">
-            <div class="activity-avatar">
+            <div class="activity-avatar" @click="goToUser(activity)">
               <img
                 v-if="activity.user?.avatar"
                 :src="activity.user.avatar.medium"

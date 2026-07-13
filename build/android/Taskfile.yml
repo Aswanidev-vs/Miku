@@ -36,7 +36,7 @@ tasks:
     prompt: This will check and install Android development dependencies. Continue?
 
   build:
-    summary: Creates a debug build of the application for Android
+    summary: Creates a production (symbol-stripped) build of the application for Android
     deps:
       - task: common:go:mod:tidy
       - task: generate:android:overlay
@@ -54,7 +54,7 @@ tasks:
     vars:
       BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production,android -trimpath -buildvcs=false -ldflags="-w -s"{{else}}-tags android,debug -buildvcs=false -gcflags=all="-l"{{end}}'
     env:
-      PRODUCTION: '{{.PRODUCTION | default "false"}}'
+      PRODUCTION: '{{.PRODUCTION | default "true"}}'
 
   compile:go:shared:
     summary: Compile Go code to shared library (.so)
@@ -128,7 +128,7 @@ tasks:
       - task: build
         vars:
           PRODUCTION: "true"
-          ARCH: '{{.ARCH | default .HOST_ARCH}}'
+          ARCH: '{{.ARCH | default "arm64"}}'
     cmds:
       - task: assemble:apk:release
 
@@ -152,7 +152,7 @@ tasks:
       - task: build
         vars:
           PRODUCTION: "true"
-          ARCH: '{{.ARCH | default .HOST_ARCH}}'
+          ARCH: '{{.ARCH | default "arm64"}}'
     cmds:
       - task: assemble:aab:release
 
