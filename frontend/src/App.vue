@@ -57,12 +57,23 @@ watch([os, isDesktop, isMobile, screenSmall, screenMedium, screenLarge], () => {
 let pollTimer: ReturnType<typeof setInterval> | null = null
 let pollStopTimer: ReturnType<typeof setTimeout> | null = null
 
+// Native DOM handlers — reliable on Android even when Wails Events
+// don't fire on resume from Chrome Custom Tab (the polling interval
+// is throttled while the app is backgrounded).
+function onFocus() { checkPendingCode() }
+function onVisibilityChange() {
+  if (document.visibilityState === 'visible') checkPendingCode()
+}
+
 onMounted(async () => {
   await loadWailsRuntime()
 
   authStore.checkAuth().catch(err => {
     console.error('Initial auth check failed:', err)
   })
+
+  window.addEventListener('focus', onFocus)
+  document.addEventListener('visibilitychange', onVisibilityChange)
 
   if (Events) {
     Events.On('oauth:callback', (eventData: any) => {
@@ -85,15 +96,16 @@ onMounted(async () => {
     if (inProgress && !authStore.isLoggedIn) {
       if (pollTimer) clearInterval(pollTimer)
       if (pollStopTimer) clearTimeout(pollStopTimer)
-      let attempts = 0
-      pollTimer = setInterval(async () => {
-        attempts++
+      // Check immediately on watch fire (don't wait for the first interval tick)
+      const attempt = async () => {
         await checkPendingCode()
         if (authStore.isLoggedIn) {
           if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
           if (pollStopTimer) { clearTimeout(pollStopTimer); pollStopTimer = null }
         }
-      }, 350)
+      }
+      attempt()
+      pollTimer = setInterval(attempt, 200)
       pollStopTimer = setTimeout(() => {
         if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
       }, 120_000)
@@ -104,6 +116,8 @@ onMounted(async () => {
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
   if (pollStopTimer) clearTimeout(pollStopTimer)
+  window.removeEventListener('focus', onFocus)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 </script>
 

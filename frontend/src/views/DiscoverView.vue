@@ -108,8 +108,9 @@ async function loadPopular() {
     const r = await gqlQuery(QUERIES.popular, { page: 1, perPage: 12 })
     if (r?.data?.Page?.media) popularAnime.value = r.data.Page.media
     popularLoaded.value = true
-  } catch {
-    popularLoaded.value = false // allow retry on next intersect
+  } catch (err) {
+    console.warn('[Discover] Popular section failed to load:', err)
+    popularLoaded.value = false
   }
 }
 
@@ -120,7 +121,8 @@ async function loadSeasonal() {
     const r = await gqlQuery(QUERIES.seasonal, { season, year, page: 1, perPage: 12 })
     if (r?.data?.Page?.media) seasonalAnime.value = r.data.Page.media
     seasonalLoaded.value = true
-  } catch {
+  } catch (err) {
+    console.warn('[Discover] Seasonal section failed to load:', err)
     seasonalLoaded.value = false
   }
 }
@@ -131,7 +133,8 @@ async function loadManga() {
     const r = await gqlQuery(QUERIES.manga, { page: 1, perPage: 12 })
     if (r?.data?.Page?.media) topManga.value = r.data.Page.media
     mangaLoaded.value = true
-  } catch {
+  } catch (err) {
+    console.warn('[Discover] Manga section failed to load:', err)
     mangaLoaded.value = false
   }
 }
