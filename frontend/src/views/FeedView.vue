@@ -53,9 +53,7 @@ onMounted(() => {
   if (isLoggedIn.value && user.value) {
     userStore.fetchActivities(user.value.id, 1, PAGE_SIZE)
   }
-  import('vue').then(({ nextTick }) => {
-    nextTick(() => setupObserver())
-  })
+  setupObserver()
 })
 
 onUnmounted(() => {

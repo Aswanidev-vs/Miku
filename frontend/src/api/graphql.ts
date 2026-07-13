@@ -1,4 +1,16 @@
-import * as OAuth2Service from '../../bindings/github.com/Aswanidev-vs/Miku/backend/auth/oauth2service'
+// Lazy-loaded Wails binding — avoids crash if runtime isn't ready at module load time
+let OAuth2Service: any = null
+let authLoaded = false
+
+async function ensureAuth() {
+  if (authLoaded) return
+  try {
+    OAuth2Service = await import('../../bindings/github.com/Aswanidev-vs/Miku/backend/auth/oauth2service')
+  } catch (e) {
+    console.warn('[Miku GraphQL] OAuth2 bindings not available:', e)
+  }
+  authLoaded = true
+}
 
 const ANILIST_GRAPHQL_URL = 'https://graphql.anilist.co'
 
@@ -41,6 +53,9 @@ let cachedToken: string | null = null
 let tokenPromise: Promise<string | null> | null = null
 
 async function getAuthHeader(): Promise<Record<string, string>> {
+  await ensureAuth()
+  if (!OAuth2Service) return {}
+
   // Debounce rapid token lookups (multiple parallel queries at page load)
   if (!tokenPromise) {
     tokenPromise = OAuth2Service.GetToken()

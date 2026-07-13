@@ -1,16 +1,33 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, watch } from 'vue'
 import { RouterView } from 'vue-router'
-import { Events } from '@wailsio/runtime'
 import { useAuthStore } from './stores'
 import { usePlatform } from './composables/usePlatform'
-import * as OAuth2Service from '../bindings/github.com/Aswanidev-vs/Miku/backend/auth/oauth2service'
 import BottomNav from './components/layout/BottomNav.vue'
 
 const authStore = useAuthStore()
 const { os, isDesktop, isMobile, screenSmall, screenMedium, screenLarge } = usePlatform()
 
+// Lazy-load Wails runtime imports to avoid crash if runtime isn't ready
+let Events: any = null
+let OAuth2Service: any = null
+
+async function loadWailsRuntime() {
+  try {
+    const wailsRuntime = await import('@wailsio/runtime')
+    Events = wailsRuntime.Events
+  } catch (e) {
+    console.warn('[Miku] Wails runtime not available:', e)
+  }
+  try {
+    OAuth2Service = await import('../bindings/github.com/Aswanidev-vs/Miku/backend/auth/oauth2service')
+  } catch (e) {
+    console.warn('[Miku] OAuth2 bindings not available:', e)
+  }
+}
+
 async function checkPendingCode() {
+  if (!OAuth2Service) return
   try {
     const code = await OAuth2Service.GetPendingCode()
     if (code) {
@@ -36,31 +53,34 @@ watch([os, isDesktop, isMobile, screenSmall, screenMedium, screenLarge], () => {
   if (screenLarge.value) root.classList.add('screen-lg')
 }, { immediate: true })
 
-// Poll for pending OAuth callback (Android Chrome Custom Tab may not fire Wails events)
+// Poll for pending OAuth callback
 let pollTimer: ReturnType<typeof setInterval> | null = null
 let pollStopTimer: ReturnType<typeof setTimeout> | null = null
 
-onMounted(() => {
+onMounted(async () => {
+  await loadWailsRuntime()
+
   authStore.checkAuth().catch(err => {
     console.error('Initial auth check failed:', err)
   })
 
-  Events.On('oauth:callback', (eventData: any) => {
-    const code = eventData?.data?.code ?? eventData?.code
-    console.log('[Miku App] OAuth callback received, code length:', code?.length)
-    if (code) {
-      authStore.handleCallback(code).catch((err: unknown) => {
-        console.error('[Miku App] handleCallback failed:', err)
-      })
-    }
-  })
+  if (Events) {
+    Events.On('oauth:callback', (eventData: any) => {
+      const code = eventData?.data?.code ?? eventData?.code
+      console.log('[Miku App] OAuth callback received, code length:', code?.length)
+      if (code) {
+        authStore.handleCallback(code).catch((err: unknown) => {
+          console.error('[Miku App] handleCallback failed:', err)
+        })
+      }
+    })
 
-  Events.On('common:WindowFocus', () => {
-    checkPendingCode()
-  })
+    Events.On('common:WindowFocus', () => {
+      checkPendingCode()
+    })
+  }
 
-  // Start polling when login begins — checks every 2s for up to 120s
-  // This covers Android Chrome Custom Tab where events may not fire
+  // Start polling when login begins
   watch(() => authStore.loading, (isLoading) => {
     if (isLoading && !authStore.isLoggedIn) {
       if (pollTimer) clearInterval(pollTimer)
