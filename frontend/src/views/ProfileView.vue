@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed, watch } from 'vue'
+import { onMounted, onUnmounted, computed, ref, watch } from 'vue'
 import { useAuthStore } from '../stores'
 import { useUserStore } from '../stores'
 import { useAnimeStore } from '../stores/anime'
@@ -30,11 +30,21 @@ watch(
   }
 )
 
+// Deferred loading: stats/heatmap/genres mount after settings section renders
+const showStats = ref(false)
+let statsTimer: ReturnType<typeof setTimeout> | null = null
+
 onMounted(async () => {
   if (isLoggedIn.value && user.value) {
-    await userStore.fetchActivities(user.value.id, 1, 50)
+    userStore.fetchActivities(user.value.id, 1, 50)
     if (settings.value.autoSync) animeStore.startSync(user.value.id)
   }
+  // Defer heavy stats section by 300ms so account + settings appear instantly
+  statsTimer = setTimeout(() => { showStats.value = true }, 300)
+})
+
+onUnmounted(() => {
+  if (statsTimer) clearTimeout(statsTimer)
 })
 
 async function handleLogin() {
@@ -141,8 +151,8 @@ async function handleLogout() {
       </div>
     </section>
 
-    <!-- Profile (when signed in) -->
-    <template v-if="isLoggedIn && user">
+    <!-- Profile (when signed in) — deferred: mounts 300ms after settings for faster initial paint -->
+    <template v-if="isLoggedIn && user && showStats">
       <section v-if="user.statistics" class="settings-group">
         <h3 class="group-title">Your Stats</h3>
         <StatsCard :statistics="user.statistics" />
@@ -160,7 +170,7 @@ async function handleLogout() {
       </div>
       <div class="about-row">
         <span class="about-label">Version</span>
-        <span class="about-value">v0.8.0</span>
+        <span class="about-value">v0.8.1</span>
       </div>
       <div class="about-row">
         <span class="about-label">Data</span>

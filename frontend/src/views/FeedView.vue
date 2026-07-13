@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed } from 'vue'
+import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { useUserStore } from '../stores/user'
 import { useAuthStore } from '../stores/auth'
 import { useRouter } from 'vue-router'
@@ -13,10 +13,53 @@ const user = computed(() => authStore.currentUser)
 const activities = computed(() => userStore.activities)
 const loading = computed(() => userStore.loading)
 
+// Lazy loading: show 10 initially, load more on scroll
+const visibleCount = ref(10)
+const loadingMore = ref(false)
+const BATCH_SIZE = 10
+const PAGE_SIZE = 30
+
+const visibleActivities = computed(() => activities.value.slice(0, visibleCount.value))
+const hasMore = computed(() => visibleCount.value < activities.value.length)
+
+// Sentinel + observer for infinite scroll
+const sentinelRef = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | null = null
+
+function loadMore() {
+  if (loadingMore.value || !hasMore.value) return
+  loadingMore.value = true
+  // Simulate progressive load — items are already fetched, just reveal more
+  setTimeout(() => {
+    visibleCount.value = Math.min(visibleCount.value + BATCH_SIZE, activities.value.length)
+    loadingMore.value = false
+  }, 200)
+}
+
+function setupObserver() {
+  if (!sentinelRef.value) return
+  observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting && hasMore.value && !loadingMore.value) {
+        loadMore()
+      }
+    },
+    { rootMargin: '300px' }
+  )
+  observer.observe(sentinelRef.value)
+}
+
 onMounted(() => {
   if (isLoggedIn.value && user.value) {
-    userStore.fetchActivities(user.value.id, 1, 30)
+    userStore.fetchActivities(user.value.id, 1, PAGE_SIZE)
   }
+  import('vue').then(({ nextTick }) => {
+    nextTick(() => setupObserver())
+  })
+})
+
+onUnmounted(() => {
+  observer?.disconnect()
 })
 
 function formatTime(unix: number): string {
@@ -62,9 +105,9 @@ function goToMedia(id?: number) {
       </div>
 
       <!-- Activities -->
-      <div v-else-if="activities.length > 0" class="activity-list">
+      <div v-else-if="visibleActivities.length > 0" class="activity-list">
         <div
-          v-for="activity in activities"
+          v-for="activity in visibleActivities"
           :key="activity.id"
           class="activity-item"
         >
@@ -75,6 +118,8 @@ function goToMedia(id?: number) {
                 v-if="activity.user?.avatar"
                 :src="activity.user.avatar.medium"
                 :alt="activity.user.name"
+                loading="lazy"
+                decoding="async"
               />
             </div>
             <div class="activity-body">
@@ -95,6 +140,8 @@ function goToMedia(id?: number) {
               :src="activity.media.coverImage.medium"
               :alt="activity.media.title?.romaji"
               class="activity-cover"
+              loading="lazy"
+              decoding="async"
               @click="goToMedia(activity.media?.id)"
             />
           </template>
@@ -106,6 +153,8 @@ function goToMedia(id?: number) {
                 v-if="activity.user?.avatar"
                 :src="activity.user.avatar.medium"
                 :alt="activity.user.name"
+                loading="lazy"
+                decoding="async"
               />
             </div>
             <div class="activity-body">
@@ -116,6 +165,13 @@ function goToMedia(id?: number) {
               <span class="activity-time">{{ formatTime(activity.createdAt) }}</span>
             </div>
           </template>
+        </div>
+
+        <!-- Load more sentinel -->
+        <div ref="sentinelRef" class="load-more-sentinel">
+          <div v-if="loadingMore" class="loading-more">
+            <div class="spinner"></div>
+          </div>
         </div>
       </div>
 
@@ -138,6 +194,7 @@ function goToMedia(id?: number) {
 }
 
 .feed-title {
+  font-family: var(--font-heading);
   font-size: 28px;
   font-weight: var(--font-weight-bold);
   color: var(--text-primary);
@@ -231,6 +288,30 @@ function goToMedia(id?: number) {
   cursor: pointer;
 }
 
+.load-more-sentinel {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-lg);
+}
+
+.loading-more {
+  display: flex;
+  justify-content: center;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--bg-surface);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -257,18 +338,5 @@ function goToMedia(id?: number) {
   display: flex;
   justify-content: center;
   padding: var(--space-2xl);
-}
-
-.spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--bg-surface);
-  border-top-color: var(--color-primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 </style>

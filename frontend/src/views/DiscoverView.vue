@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed } from 'vue'
+import { onMounted, onUnmounted, ref, computed, nextTick } from 'vue'
 import { useAnimeStore } from '../stores/anime'
 import { usePlatform } from '../composables/usePlatform'
 import { usePullToRefresh } from '../composables/usePullToRefresh'
@@ -12,53 +12,78 @@ import type { Media } from '../types'
 const animeStore = useAnimeStore()
 const { gridColumns } = usePlatform()
 
+// Section data
 const popularAnime = ref<Media[]>([])
 const seasonalAnime = ref<Media[]>([])
 const topManga = ref<Media[]>([])
-
 const trendingAnime = computed(() => animeStore.trending)
 
-const POPULAR_QUERY = `
-query ($page: Int, $perPage: Int) {
-  Page(page: $page, perPage: $perPage) {
-    media(sort: POPULARITY_DESC, type: ANIME) {
-      id
-      title { romaji english native userPreferred }
-      coverImage { large medium color }
-      format status episodes averageScore
-      genres nextAiringEpisode { episode }
-    }
-  }
-}
-`
+// Pagination state for each section
+const popularPage = ref(1)
+const seasonalPage = ref(1)
+const mangaPage = ref(1)
+const loadingMore = ref(false)
+const allLoaded = ref(false)
+const MAX_PAGES = 3 // each section loads up to 3 pages (36 items)
 
-const SEASONAL_QUERY = `
-query ($season: Season, $year: Int) {
-  Page(page: 1, perPage: 12) {
-    media(season: $season, seasonYear: $year, sort: POPULARITY_DESC, type: ANIME) {
-      id
-      title { romaji english native userPreferred }
-      coverImage { large medium color }
-      format status episodes averageScore
-      genres nextAiringEpisode { episode }
+const QUERIES = {
+  trending: `
+    query ($page: Int, $perPage: Int) {
+      Page(page: $page, perPage: $perPage) {
+        media(sort: TRENDING_DESC, type: ANIME) {
+          id
+          title { romaji english native userPreferred }
+          coverImage { large medium color }
+          format status episodes averageScore
+          genres nextAiringEpisode { episode }
+        }
+        pageInfo { hasNextPage }
+      }
     }
-  }
-}
-`
-
-const TOP_MANGA_QUERY = `
-query {
-  Page(page: 1, perPage: 12) {
-    media(sort: SCORE_DESC, type: MANGA) {
-      id
-      title { romaji english native userPreferred }
-      coverImage { large medium color }
-      format status chapters volumes averageScore
-      genres
+  `,
+  popular: `
+    query ($page: Int, $perPage: Int) {
+      Page(page: $page, perPage: $perPage) {
+        media(sort: POPULARITY_DESC, type: ANIME) {
+          id
+          title { romaji english native userPreferred }
+          coverImage { large medium color }
+          format status episodes averageScore
+          genres nextAiringEpisode { episode }
+        }
+        pageInfo { hasNextPage }
+      }
     }
-  }
+  `,
+  seasonal: `
+    query ($season: Season, $year: Int, $page: Int, $perPage: Int) {
+      Page(page: $page, perPage: $perPage) {
+        media(season: $season, seasonYear: $year, sort: POPULARITY_DESC, type: ANIME) {
+          id
+          title { romaji english native userPreferred }
+          coverImage { large medium color }
+          format status episodes averageScore
+          genres nextAiringEpisode { episode }
+        }
+        pageInfo { hasNextPage }
+      }
+    }
+  `,
+  manga: `
+    query ($page: Int, $perPage: Int) {
+      Page(page: $page, perPage: $perPage) {
+        media(sort: SCORE_DESC, type: MANGA) {
+          id
+          title { romaji english native userPreferred }
+          coverImage { large medium color }
+          format status chapters volumes averageScore
+          genres
+        }
+        pageInfo { hasNextPage }
+      }
+    }
+  `,
 }
-`
 
 function getCurrentSeason(): { season: string; year: number } {
   const now = new Date()
@@ -70,42 +95,141 @@ function getCurrentSeason(): { season: string; year: number } {
   return { season: 'FALL', year }
 }
 
-function loadDiscoverData() {
+// Initial load — fire all queries independently
+function loadInitialData() {
   if (animeStore.trending.length === 0) {
-    animeStore.fetchTrending()
+    animeStore.fetchTrending(1, 12)
   }
 
   const { season, year } = getCurrentSeason()
 
-  gqlQuery(POPULAR_QUERY, { page: 1, perPage: 12 })
+  gqlQuery(QUERIES.popular, { page: 1, perPage: 12 })
     .then((r) => { if (r?.data?.Page?.media) popularAnime.value = r.data.Page.media })
     .catch(() => {})
 
-  gqlQuery(SEASONAL_QUERY, { season, year })
+  gqlQuery(QUERIES.seasonal, { season, year, page: 1, perPage: 12 })
     .then((r) => { if (r?.data?.Page?.media) seasonalAnime.value = r.data.Page.media })
     .catch(() => {})
 
-  gqlQuery(TOP_MANGA_QUERY)
+  gqlQuery(QUERIES.manga, { page: 1, perPage: 12 })
     .then((r) => { if (r?.data?.Page?.media) topManga.value = r.data.Page.media })
     .catch(() => {})
 }
 
+// Load more for a specific section
+async function loadMorePopular() {
+  if (popularPage.value >= MAX_PAGES) return
+  const nextPage = popularPage.value + 1
+  try {
+    const r = await gqlQuery(QUERIES.popular, { page: nextPage, perPage: 12 })
+    if (r?.data?.Page?.media?.length) {
+      popularAnime.value = [...popularAnime.value, ...r.data.Page.media]
+      popularPage.value = nextPage
+    }
+  } catch { /* ignore */ }
+}
+
+async function loadMoreSeasonal() {
+  if (seasonalPage.value >= MAX_PAGES) return
+  const nextPage = seasonalPage.value + 1
+  const { season, year } = getCurrentSeason()
+  try {
+    const r = await gqlQuery(QUERIES.seasonal, { season, year, page: nextPage, perPage: 12 })
+    if (r?.data?.Page?.media?.length) {
+      seasonalAnime.value = [...seasonalAnime.value, ...r.data.Page.media]
+      seasonalPage.value = nextPage
+    }
+  } catch { /* ignore */ }
+}
+
+async function loadMoreManga() {
+  if (mangaPage.value >= MAX_PAGES) return
+  const nextPage = mangaPage.value + 1
+  try {
+    const r = await gqlQuery(QUERIES.manga, { page: nextPage, perPage: 12 })
+    if (r?.data?.Page?.media?.length) {
+      topManga.value = [...topManga.value, ...r.data.Page.media]
+      mangaPage.value = nextPage
+    }
+  } catch { /* ignore */ }
+}
+
+// Load more for the NEXT section in sequence
+let nextSectionIndex = 0
+const sectionLoaders = [loadMorePopular, loadMoreSeasonal, loadMoreManga]
+
+async function loadMore() {
+  if (loadingMore.value || allLoaded.value) return
+  loadingMore.value = true
+
+  try {
+    // Cycle through sections: popular → seasonal → manga → popular → ...
+    const maxCycles = sectionLoaders.length * MAX_PAGES
+    for (let i = 0; i < sectionLoaders.length; i++) {
+      const idx = (nextSectionIndex + i) % sectionLoaders.length
+      const loader = sectionLoaders[idx]
+      const pageRef = [popularPage, seasonalPage, mangaPage][idx]
+      if (pageRef.value < MAX_PAGES) {
+        await loader()
+        nextSectionIndex = (idx + 1) % sectionLoaders.length
+        break
+      }
+    }
+
+    // Check if all sections are fully loaded
+    if (
+      popularPage.value >= MAX_PAGES &&
+      seasonalPage.value >= MAX_PAGES &&
+      mangaPage.value >= MAX_PAGES
+    ) {
+      allLoaded.value = true
+    }
+  } finally {
+    loadingMore.value = false
+  }
+}
+
+// Refresh — reset everything
 async function refreshDiscover() {
   clearGqlCache()
-  animeStore.fetchTrending(1, 20)
-  loadDiscoverData()
+  animeStore.fetchTrending(1, 12)
+  popularPage.value = 1
+  seasonalPage.value = 1
+  mangaPage.value = 1
+  nextSectionIndex = 0
+  allLoaded.value = false
+  loadInitialData()
 }
 
 const { pullingDown, refreshing, showRefreshBtn, manualRefresh, setupListeners, removeListeners } = usePullToRefresh(refreshDiscover)
 const viewRef = ref<HTMLElement | null>(null)
 
+// IntersectionObserver for infinite scroll
+let observer: IntersectionObserver | null = null
+const sentinelRef = ref<HTMLElement | null>(null)
+
+function setupInfiniteScroll() {
+  if (!sentinelRef.value) return
+  observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting && !loadingMore.value && !allLoaded.value) {
+        loadMore()
+      }
+    },
+    { rootMargin: '200px' } // trigger 200px before reaching the bottom
+  )
+  observer.observe(sentinelRef.value)
+}
+
 onMounted(() => {
-  loadDiscoverData()
+  loadInitialData()
   if (viewRef.value) setupListeners(viewRef.value)
+  nextTick(() => setupInfiniteScroll())
 })
 
 onUnmounted(() => {
   if (viewRef.value) removeListeners(viewRef.value)
+  observer?.disconnect()
 })
 </script>
 
@@ -145,6 +269,15 @@ onUnmounted(() => {
         </div>
         <AnimeGrid :items="topManga" :columns="gridColumns" />
       </section>
+
+      <!-- Infinite scroll sentinel + loading indicator -->
+      <div ref="sentinelRef" class="load-more-sentinel">
+        <div v-if="loadingMore" class="loading-more">
+          <div class="spinner"></div>
+          <span>Loading more...</span>
+        </div>
+        <p v-else-if="allLoaded" class="all-loaded">You've seen it all ✨</p>
+      </div>
     </div>
   </PullToRefresh>
 </template>
@@ -211,5 +344,38 @@ onUnmounted(() => {
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
   box-shadow: 0 0 10px var(--color-primary-glow);
   flex-shrink: 0;
+}
+
+.load-more-sentinel {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-2xl) 0;
+}
+
+.loading-more {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.loading-more .spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-default);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.all-loaded {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  text-align: center;
 }
 </style>
