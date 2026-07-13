@@ -122,17 +122,11 @@ onUnmounted(() => {
 
 <style scoped>
 .app-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .main-content {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
   padding-bottom: var(--nav-height);
 }
 </style>

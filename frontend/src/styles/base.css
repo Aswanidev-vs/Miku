@@ -15,8 +15,6 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  height: 100%;
-  overflow: hidden;
 }
 
 body {
@@ -25,10 +23,6 @@ body {
   line-height: var(--line-height-normal);
   color: var(--text-primary);
   background: var(--bg-deepest);
-  height: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
-  overflow: hidden;
   -webkit-user-select: none;
   user-select: none;
   position: relative;
@@ -119,10 +113,6 @@ h1, h2, h3, h4, h5, h6 {
 
 /* App Container */
 #app {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
 }
 
 /* Safe areas */
@@ -350,6 +340,12 @@ h1, h2, h3, h4, h5, h6 {
 
 .is-desktop .main-content {
   padding-bottom: 96px !important;
+}
+
+/* Desktop: centered content area */
+.is-desktop .main-content {
+  max-width: var(--content-max);
+  margin: 0 auto;
 }
 
 /* ============================================================

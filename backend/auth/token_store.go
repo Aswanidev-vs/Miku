@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -30,18 +31,26 @@ func NewTokenStore() (*TokenStore, error) {
 	var configDir string
 	var err error
 
-	// Platform-specific config directory handling
 	switch runtime.GOOS {
 	case "android":
-		// On Android, use the app's internal storage
-		configDir = "/data/data/com.wails.app/files"
-		// Try alternative paths if the primary doesn't work
-		if _, statErr := os.Stat(configDir); statErr != nil {
-			configDir = "/sdcard/Android/data/com.wails.app/files"
-			if _, statErr2 := os.Stat(configDir); statErr2 != nil {
-				// Fallback to temp directory
-				configDir = os.TempDir()
+		// Try multiple paths to find the app's writable storage
+		candidates := []string{
+			"/data/data/com.wails.app/files",
+			"/sdcard/Android/data/com.wails.app/files",
+			"/data/local/tmp",
+			os.TempDir(),
+		}
+		for _, dir := range candidates {
+			testPath := filepath.Join(dir, "miku_test")
+			if f, writeErr := os.Create(testPath); writeErr == nil {
+				f.Close()
+				os.Remove(testPath)
+				configDir = dir
+				break
 			}
+		}
+		if configDir == "" {
+			configDir = os.TempDir()
 		}
 	case "ios":
 		configDir, err = os.UserHomeDir()
@@ -52,15 +61,12 @@ func NewTokenStore() (*TokenStore, error) {
 	default:
 		configDir, err = os.UserConfigDir()
 		if err != nil {
-			// Fallback to temp directory
 			configDir = os.TempDir()
 		}
 	}
 
 	appDir := filepath.Join(configDir, "miku")
-	// Try to create directory, but don't fail if we can't
 	if mkdirErr := os.MkdirAll(appDir, 0700); mkdirErr != nil {
-		// If we can't create the directory, use temp directory
 		appDir = filepath.Join(os.TempDir(), "miku")
 		os.MkdirAll(appDir, 0700)
 	}
@@ -118,10 +124,23 @@ func (ts *TokenStore) Save(token *TokenData) error {
 		return err
 	}
 
-	// Try to write, but don't fail on Android if file system is read-only
 	if err := os.WriteFile(ts.filePath, data, 0600); err != nil {
-		// Store in memory only if file write fails
-		return nil
+		// On Android, try alternate writable paths
+		if runtime.GOOS == "android" {
+			altPaths := []string{
+				"/data/local/tmp/miku",
+				filepath.Join(os.TempDir(), "miku"),
+			}
+			for _, dir := range altPaths {
+				os.MkdirAll(dir, 0700)
+				altPath := filepath.Join(dir, tokenFileName)
+				if writeErr := os.WriteFile(altPath, data, 0600); writeErr == nil {
+					ts.filePath = altPath // Update path for future loads
+					return nil
+				}
+			}
+		}
+		log.Printf("[TokenStore] Warning: could not persist token to disk: %v", err)
 	}
 
 	return nil

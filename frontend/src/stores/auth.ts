@@ -1,8 +1,23 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { Browser, Events } from '@wailsio/runtime'
-import * as OAuth2Service from '../../bindings/github.com/Aswanidev-vs/Miku/backend/auth/oauth2service'
 import type { User } from '../types'
+
+// Lazy-load Wails runtime — avoids crash on Android when runtime isn't ready
+let Browser: any = null
+let Events: any = null
+let OAuth2Service: any = null
+
+async function ensureWails() {
+  if (OAuth2Service) return
+  try {
+    const runtime = await import('@wailsio/runtime')
+    Browser = runtime.Browser
+    Events = runtime.Events
+  } catch { /* desktop mode — not needed */ }
+  try {
+    OAuth2Service = await import('../../bindings/github.com/Aswanidev-vs/Miku/backend/auth/oauth2service')
+  } catch { /* bindings not available */ }
+}
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -20,8 +35,9 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     error.value = null
     try {
+      await ensureWails()
+
       // Register DOM event listener as backup for Android Chrome Custom Tab deep link
-      // Java's handleDeepLink dispatches 'oauth-callback' CustomEvent via window
       const domHandler = (e: Event) => {
         const detail = (e as CustomEvent).detail
         if (detail) {
@@ -32,29 +48,23 @@ export const useAuthStore = defineStore('auth', () => {
       }
       window.addEventListener('oauth-callback', domHandler)
 
-      // Start localhost callback server before generating the URL
       await OAuth2Service.StartCallbackServer()
 
       const url = await OAuth2Service.GetAuthorizationURL()
 
       if (!url || !url.includes('client_id=')) {
-        throw new Error('Failed to generate authorization URL. Please check that ANILIST_CLIENT_ID is configured.')
+        throw new Error('Failed to generate authorization URL.')
       }
 
-      // Open URL via Wails runtime (opens system browser / Chrome Custom Tab on Android)
-      try {
-        await Browser.OpenURL(url)
-      } catch {
-        // Fallback for desktop if OpenURL fails
+      if (Browser) {
+        try { await Browser.OpenURL(url) } catch { window.open(url, '_blank') }
+      } else {
         window.open(url, '_blank')
       }
 
-      // Clean up DOM listener after 120s if it never fires
       setTimeout(() => window.removeEventListener('oauth-callback', domHandler), 120_000)
     } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Login failed'
-      error.value = errorMessage
-      console.error('Login error:', errorMessage)
+      error.value = e instanceof Error ? e.message : 'Login failed'
     } finally {
       loading.value = false
     }
@@ -64,16 +74,17 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     error.value = null
     try {
-      // Always exchange the authorization code for a token via the backend.
-      // AniList auth codes can be hundreds of chars, so length-based heuristics fail.
+      await ensureWails()
       await OAuth2Service.HandleCallback(tokenOrCode)
+      // Set authenticated IMMEDIATELY — don't wait for fetchUser
       isAuthenticated.value = true
       showCallbackInput.value = false
-      await fetchUser()
+      // Backup token to localStorage (survives Android app kill where file write may fail)
+      backupTokenToStorage()
+      // Fire fetchUser in background — UI updates instantly
+      fetchUser().catch(() => {})
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Authentication failed'
-      console.error('[Miku] handleCallback error:', msg)
-      error.value = msg
+      error.value = e instanceof Error ? e.message : 'Authentication failed'
     } finally {
       loading.value = false
     }
@@ -83,37 +94,19 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     error.value = null
     try {
-      // NOTE: GraphQLClient is not bound as a Wails service.
-      // For now, use the AniList GraphQL API directly from frontend via fetch.
+      await ensureWails()
       const token = await OAuth2Service.GetToken()
-      if (!token) {
-        throw new Error('No auth token available')
-      }
+      if (!token) throw new Error('No auth token available')
 
       const query = `
         query {
           Viewer {
-            id
-            name
-            about(asHtml: false)
-            avatar {
-              large
-              medium
-            }
+            id name about(asHtml: false)
+            avatar { large medium }
             bannerImage
             statistics {
-              anime {
-                count
-                meanScore
-                minutesWatched
-                episodesWatched
-              }
-              manga {
-                count
-                meanScore
-                chaptersRead
-                volumesRead
-              }
+              anime { count meanScore minutesWatched episodesWatched }
+              manga { count meanScore chaptersRead volumesRead }
             }
           }
         }
@@ -130,7 +123,6 @@ export const useAuthStore = defineStore('auth', () => {
       })
 
       const data = await response.json()
-
       if (data?.data?.Viewer) {
         user.value = data.data.Viewer
       }
@@ -141,25 +133,52 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function logout() {
-    loading.value = true
-    error.value = null
-    try {
-      await OAuth2Service.Logout()
-      user.value = null
-      isAuthenticated.value = false
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Logout failed'
-    } finally {
-      loading.value = false
+const TOKEN_STORAGE_KEY = 'miku_anilist_token'
+
+function backupTokenToStorage() {
+  try {
+    OAuth2Service.GetToken().then((token: any) => {
+      if (token && token.access_token) {
+        localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(token))
+      }
+    }).catch(() => {})
+  } catch { /* ignore */ }
+}
+
+function getCachedToken(): string | null {
+  try {
+    const raw = localStorage.getItem(TOKEN_STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (parsed.access_token) return raw
     }
-  }
+  } catch { /* ignore */ }
+  return null
+}
+
+function clearTokenStorage() {
+  try { localStorage.removeItem(TOKEN_STORAGE_KEY) } catch { /* ignore */ }
+}
 
   async function checkAuth() {
     loading.value = true
     error.value = null
     try {
-      const authenticated = await OAuth2Service.IsAuthenticated()
+      await ensureWails()
+      let authenticated = await OAuth2Service.IsAuthenticated()
+
+      // On Android, file-based storage may fail. Try restoring from localStorage.
+      if (!authenticated) {
+        const cached = getCachedToken()
+        if (cached) {
+          try {
+            const tokenData = JSON.parse(cached)
+            await OAuth2Service.SaveToken(tokenData.access_token)
+            authenticated = await OAuth2Service.IsAuthenticated()
+          } catch { /* ignore */ }
+        }
+      }
+
       isAuthenticated.value = authenticated
       if (authenticated) {
         await fetchUser()
@@ -167,6 +186,22 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Auth check failed'
       isAuthenticated.value = false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function logout() {
+    loading.value = true
+    error.value = null
+    try {
+      await ensureWails()
+      await OAuth2Service.Logout()
+      clearTokenStorage()
+      user.value = null
+      isAuthenticated.value = false
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Logout failed'
     } finally {
       loading.value = false
     }

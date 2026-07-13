@@ -2,6 +2,7 @@ package com.wails.app;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.util.Log;
 import java.util.concurrent.ExecutorService;
@@ -168,6 +169,41 @@ public class WailsJSBridge {
         }
 
         webView.post(() -> webView.evaluateJavascript(js, null));
+    }
+
+    private static final String PREFS_NAME = "miku_prefs";
+    private static final String KEY_TOKEN = "anilist_token";
+
+    /**
+     * Save a string value to SharedPreferences.
+     * Used by Go backend to persist the OAuth token.
+     */
+    @JavascriptInterface
+    public void savePrefs(String key, String value) {
+        SharedPreferences prefs = webView.getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        prefs.edit().putString(key, value).apply();
+        if (DEBUG) Log.d(TAG, "Saved prefs key=" + key + " len=" + (value != null ? value.length() : 0));
+    }
+
+    /**
+     * Read a string value from SharedPreferences.
+     * Returns empty string if not found.
+     */
+    @JavascriptInterface
+    public String loadPrefs(String key) {
+        SharedPreferences prefs = webView.getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String value = prefs.getString(key, "");
+        if (DEBUG) Log.d(TAG, "Loaded prefs key=" + key + " len=" + value.length());
+        return value;
+    }
+
+    /**
+     * Get the app's internal files directory path.
+     * Used by Go backend as the primary token storage location.
+     */
+    @JavascriptInterface
+    public String getFilesDir() {
+        return webView.getContext().getFilesDir().getAbsolutePath();
     }
 
     private String escapeJsString(String str) {
