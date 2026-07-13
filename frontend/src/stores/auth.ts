@@ -88,6 +88,8 @@ export const useAuthStore = defineStore('auth', () => {
       // Always exchange the authorization code for a token via the backend.
       // AniList auth codes can be hundreds of chars, so length-based heuristics fail.
       await OAuth2Service.HandleCallback(tokenOrCode)
+      // Clear the pending code after successful exchange so it can't be reused
+      await OAuth2Service.ConsumePendingCode()
       clearAuthTokenCache()
       clearGqlCache()
       isAuthenticated.value = true

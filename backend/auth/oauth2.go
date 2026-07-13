@@ -168,16 +168,24 @@ func (s *OAuth2Service) SetPendingCode(code string) {
 	log.Printf("[OAuth] SetPendingCode: stored code length %d", len(code))
 }
 
-// GetPendingCode returns and clears any pending authorization code.
+// GetPendingCode returns the pending authorization code without clearing it.
+// Use ConsumePendingCode after successful token exchange to clear it.
 func (s *OAuth2Service) GetPendingCode() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	code := s.pendingCode
-	s.pendingCode = ""
 	if code != "" {
 		log.Printf("[OAuth] GetPendingCode: returning code length %d", len(code))
 	}
 	return code
+}
+
+// ConsumePendingCode clears the pending authorization code after successful use.
+func (s *OAuth2Service) ConsumePendingCode() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.pendingCode = ""
+	log.Printf("[OAuth] ConsumePendingCode: cleared pending code")
 }
 
 // StartCallbackServer starts a temporary HTTP server to receive the OAuth callback.
