@@ -105,7 +105,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  overflow: clip;
+  overflow: hidden;
 }
 
 .main-content {
