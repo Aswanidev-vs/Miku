@@ -103,11 +103,15 @@ function getCurrentSeason(): { season: string; year: number } {
 // Lazy initial loaders — fetch a section's first page only when it scrolls into view.
 async function loadPopular() {
   if (popularLoaded.value) return
-  const { season, year } = getCurrentSeason()
   try {
     const r = await gqlQuery(QUERIES.popular, { page: 1, perPage: 12 })
-    if (r?.data?.Page?.media) popularAnime.value = r.data.Page.media
-    popularLoaded.value = true
+    if (r?.data?.Page?.media?.length) {
+      popularAnime.value = r.data.Page.media
+      popularLoaded.value = true
+    } else {
+      console.warn('[Discover] Popular query returned empty results')
+      popularLoaded.value = false
+    }
   } catch (err) {
     console.warn('[Discover] Popular section failed to load:', err)
     popularLoaded.value = false
@@ -119,8 +123,14 @@ async function loadSeasonal() {
   const { season, year } = getCurrentSeason()
   try {
     const r = await gqlQuery(QUERIES.seasonal, { season, year, page: 1, perPage: 12 })
-    if (r?.data?.Page?.media) seasonalAnime.value = r.data.Page.media
-    seasonalLoaded.value = true
+    if (r?.data?.Page?.media?.length) {
+      seasonalAnime.value = r.data.Page.media
+      seasonalLoaded.value = true
+    } else {
+      // Empty array returned — no anime for this season/year, don't mark as loaded so it can retry
+      console.warn('[Discover] Seasonal query returned empty results for', { season, year })
+      seasonalLoaded.value = false
+    }
   } catch (err) {
     console.warn('[Discover] Seasonal section failed to load:', err)
     seasonalLoaded.value = false
@@ -131,8 +141,13 @@ async function loadManga() {
   if (mangaLoaded.value) return
   try {
     const r = await gqlQuery(QUERIES.manga, { page: 1, perPage: 12 })
-    if (r?.data?.Page?.media) topManga.value = r.data.Page.media
-    mangaLoaded.value = true
+    if (r?.data?.Page?.media?.length) {
+      topManga.value = r.data.Page.media
+      mangaLoaded.value = true
+    } else {
+      console.warn('[Discover] Manga query returned empty results')
+      mangaLoaded.value = false
+    }
   } catch (err) {
     console.warn('[Discover] Manga section failed to load:', err)
     mangaLoaded.value = false
@@ -244,6 +259,8 @@ function setupLazySections() {
     { ref: seasonalSectionRef, loaded: seasonalLoaded, load: loadSeasonal },
     { ref: mangaSectionRef, loaded: mangaLoaded, load: loadManga },
   ]
+  // Find the scroll container (.main-content) to use as IntersectionObserver root
+  const scrollContainer = document.querySelector('.main-content') as HTMLElement | null
   const obs = new IntersectionObserver(
     (entries) => {
       for (const e of entries) {
@@ -259,7 +276,10 @@ function setupLazySections() {
         })
       }
     },
-    { rootMargin: '300px' } // start loading just before it scrolls into view
+    {
+      root: scrollContainer, // observe against the actual scroll container
+      rootMargin: '300px',
+    }
   )
   for (const s of sections) {
     if (s.ref.value) obs.observe(s.ref.value)
@@ -273,13 +293,14 @@ const sentinelRef = ref<HTMLElement | null>(null)
 
 function setupInfiniteScroll() {
   if (!sentinelRef.value) return
+  const scrollContainer = document.querySelector('.main-content') as HTMLElement | null
   observer = new IntersectionObserver(
     (entries) => {
       if (entries[0].isIntersecting && !loadingMore.value && !allLoaded.value) {
         loadMore()
       }
     },
-    { rootMargin: '200px' } // trigger 200px before reaching the bottom
+    { root: scrollContainer, rootMargin: '200px' }
   )
   observer.observe(sentinelRef.value)
 }

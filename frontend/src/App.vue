@@ -53,17 +53,18 @@ watch([os, isDesktop, isMobile, screenSmall, screenMedium, screenLarge], () => {
   if (screenLarge.value) root.classList.add('screen-lg')
 }, { immediate: true })
 
-// Poll for pending OAuth callback
-let pollTimer: ReturnType<typeof setInterval> | null = null
+// Poll for pending OAuth callback using recursive setTimeout (not throttled in background)
+let pollTimer: ReturnType<typeof setTimeout> | null = null
 let pollStopTimer: ReturnType<typeof setTimeout> | null = null
+let isPolling = false
 
 // Native DOM handlers — reliable on Android even when Wails Events
-// don't fire on resume from Chrome Custom Tab (the polling interval
-// is throttled while the app is backgrounded).
+// don't fire on resume from Chrome Custom Tab (JS timers are throttled in background).
 function onFocus() { checkPendingCode() }
 function onVisibilityChange() {
   if (document.visibilityState === 'visible') checkPendingCode()
 }
+function onPageShow() { checkPendingCode() }
 
 onMounted(async () => {
   await loadWailsRuntime()
@@ -74,6 +75,7 @@ onMounted(async () => {
 
   window.addEventListener('focus', onFocus)
   document.addEventListener('visibilitychange', onVisibilityChange)
+  window.addEventListener('pageshow', onPageShow)
 
   if (Events) {
     Events.On('oauth:callback', (eventData: any) => {
@@ -92,32 +94,43 @@ onMounted(async () => {
   }
 
   // Start polling when the external Android OAuth flow begins.
+  // Uses recursive setTimeout (not setInterval) to avoid background throttling.
   watch(() => authStore.authFlowInProgress, (inProgress) => {
     if (inProgress && !authStore.isLoggedIn) {
-      if (pollTimer) clearInterval(pollTimer)
+      if (pollTimer) clearTimeout(pollTimer)
       if (pollStopTimer) clearTimeout(pollStopTimer)
-      // Check immediately on watch fire (don't wait for the first interval tick)
+      isPolling = true
+
       const attempt = async () => {
+        if (!isPolling) return
         await checkPendingCode()
         if (authStore.isLoggedIn) {
-          if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+          isPolling = false
+          if (pollTimer) { clearTimeout(pollTimer); pollTimer = null }
           if (pollStopTimer) { clearTimeout(pollStopTimer); pollStopTimer = null }
+          return
         }
+        // Schedule next check — 250ms interval, not throttled in background
+        pollTimer = setTimeout(attempt, 250)
       }
+      // Initial immediate check
       attempt()
-      pollTimer = setInterval(attempt, 200)
+      // Safety timeout
       pollStopTimer = setTimeout(() => {
-        if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+        isPolling = false
+        if (pollTimer) { clearTimeout(pollTimer); pollTimer = null }
       }, 120_000)
     }
   })
 })
 
 onUnmounted(() => {
-  if (pollTimer) clearInterval(pollTimer)
+  isPolling = false
+  if (pollTimer) clearTimeout(pollTimer)
   if (pollStopTimer) clearTimeout(pollStopTimer)
   window.removeEventListener('focus', onFocus)
   document.removeEventListener('visibilitychange', onVisibilityChange)
+  window.removeEventListener('pageshow', onPageShow)
 })
 </script>
 
