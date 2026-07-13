@@ -80,9 +80,9 @@ onMounted(async () => {
     })
   }
 
-  // Start polling when login begins
-  watch(() => authStore.loading, (isLoading) => {
-    if (isLoading && !authStore.isLoggedIn) {
+  // Start polling when the external Android OAuth flow begins.
+  watch(() => authStore.authFlowInProgress, (inProgress) => {
+    if (inProgress && !authStore.isLoggedIn) {
       if (pollTimer) clearInterval(pollTimer)
       if (pollStopTimer) clearTimeout(pollStopTimer)
       let attempts = 0
@@ -93,7 +93,7 @@ onMounted(async () => {
           if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
           if (pollStopTimer) { clearTimeout(pollStopTimer); pollStopTimer = null }
         }
-      }, 2000)
+      }, 350)
       pollStopTimer = setTimeout(() => {
         if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
       }, 120_000)
@@ -122,17 +122,18 @@ onUnmounted(() => {
 
 <style scoped>
 .app-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
   overflow: hidden;
 }
 
 .main-content {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
+  position: absolute;
+  inset: 0;
+  overflow-x: hidden;
+  overflow-y: scroll;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   touch-action: pan-y;

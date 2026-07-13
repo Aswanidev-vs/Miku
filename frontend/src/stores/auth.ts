@@ -11,6 +11,7 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const showCallbackInput = ref(false)
+  const authFlowInProgress = ref(false)
 
   const currentUser = computed(() => user.value)
   const isLoggedIn = computed(() => isAuthenticated.value)
@@ -21,6 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login() {
     loading.value = true
+    authFlowInProgress.value = true
     error.value = null
     try {
       // Register DOM event listener as backup for Android Chrome Custom Tab deep link
@@ -55,6 +57,7 @@ export const useAuthStore = defineStore('auth', () => {
       // Clean up DOM listener after 120s if it never fires
       setTimeout(() => window.removeEventListener('oauth-callback', domHandler), 120_000)
     } catch (e) {
+      authFlowInProgress.value = false
       const errorMessage = e instanceof Error ? e.message : 'Login failed'
       error.value = errorMessage
       console.error('Login error:', errorMessage)
@@ -90,10 +93,12 @@ export const useAuthStore = defineStore('auth', () => {
       isAuthenticated.value = true
       showCallbackInput.value = false
       await fetchUser()
+      authFlowInProgress.value = false
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Authentication failed'
       console.error('[Miku] handleCallback error:', msg)
       error.value = msg
+      authFlowInProgress.value = false
     } finally {
       loading.value = false
     }
@@ -172,6 +177,7 @@ export const useAuthStore = defineStore('auth', () => {
       lastCallbackAt = 0
       user.value = null
       isAuthenticated.value = false
+      authFlowInProgress.value = false
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Logout failed'
     } finally {
@@ -195,6 +201,7 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Auth check failed'
       isAuthenticated.value = false
+      authFlowInProgress.value = false
     } finally {
       loading.value = false
     }
@@ -205,6 +212,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     loading,
     error,
+    authFlowInProgress,
     currentUser,
     isLoggedIn,
     showCallbackInput,

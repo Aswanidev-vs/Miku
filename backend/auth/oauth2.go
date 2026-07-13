@@ -68,6 +68,7 @@ func (s *OAuth2Service) GetAuthorizationURL() string {
 	params.Set("client_id", s.config.ClientID)
 	params.Set("redirect_uri", s.config.RedirectURI)
 	params.Set("response_type", "code")
+	params.Set("prompt", "login")
 
 	return fmt.Sprintf("%s?%s", AniListAuthURL, params.Encode())
 }

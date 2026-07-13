@@ -22,6 +22,7 @@ import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.util.Base64;
 import android.util.Log;
+import android.view.View;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -79,6 +80,8 @@ public class MainActivity extends AppCompatActivity {
     private BroadcastReceiver powerSaveReceiver;
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback networkCallback;
+    private String pendingOAuthCode;
+    private boolean pageReady = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -123,10 +126,8 @@ public class MainActivity extends AppCompatActivity {
                         String[] kv = pair.split("=");
                         if (kv.length == 2 && "access_token".equals(kv[0])) {
                             String token = kv[1];
-                            if (DEBUG) Log.d(TAG, "Access token extracted, emitting via bridge");
-                            // Use bridge.emitEvent — works reliably on Android (unlike executeJavaScript)
-                            String json = String.format("{\"code\":\"%s\"}", token.replace("\"", "\\\""));
-                            bridge.emitEvent("oauth:callback", json);
+                            if (DEBUG) Log.d(TAG, "Access token extracted, queuing for bridge");
+                            queueOAuthCode(token);
                             return;
                         }
                     }
@@ -135,9 +136,8 @@ public class MainActivity extends AppCompatActivity {
                 // Authorization code grant: miku://callback?code=xxx
                 String code = uri.getQueryParameter("code");
                 if (code != null && !code.isEmpty()) {
-                    if (DEBUG) Log.d(TAG, "Authorization code found, emitting via bridge");
-                    String json = String.format("{\"code\":\"%s\"}", code.replace("\"", "\\\""));
-                    bridge.emitEvent("oauth:callback", json);
+                    if (DEBUG) Log.d(TAG, "Authorization code found, queuing for bridge");
+                    queueOAuthCode(code);
                 } else {
                     if (DEBUG) Log.w(TAG, "No access_token or code found in deep link");
                 }
@@ -149,10 +149,31 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void queueOAuthCode(String code) {
+        pendingOAuthCode = code;
+        deliverPendingOAuthCode();
+    }
+
+    private void deliverPendingOAuthCode() {
+        if (!pageReady || pendingOAuthCode == null || pendingOAuthCode.isEmpty() || bridge == null) {
+            return;
+        }
+        String code = pendingOAuthCode;
+        pendingOAuthCode = null;
+        String json = String.format("{\"code\":\"%s\"}", code.replace("\"", "\\\""));
+        bridge.emitEvent("oauth:callback", json);
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     private void setupWebView() {
         webView = findViewById(R.id.webview);
         bridge.setWebView(webView);
+        webView.setVerticalScrollBarEnabled(false);
+        webView.setHorizontalScrollBarEnabled(false);
+        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            webView.setNestedScrollingEnabled(true);
+        }
 
         // Configure WebView settings
         WebSettings settings = webView.getSettings();
@@ -242,6 +263,8 @@ public class MainActivity extends AppCompatActivity {
                 super.onPageFinished(view, url);
                 if (DEBUG) Log.d(TAG, "Page loaded: " + url);
                 bridge.onPageFinished(url);
+                pageReady = true;
+                deliverPendingOAuthCode();
                 // Now that JS listeners are mounted, push a snapshot of the
                 // current battery / network / theme so the UI starts populated.
                 emitSystemSnapshot();
@@ -822,6 +845,7 @@ public class MainActivity extends AppCompatActivity {
             bridge.onResume();
             // Emit WindowFocus so the frontend can check for pending OAuth codes
             bridge.emitEvent("common:WindowFocus", "{}");
+            deliverPendingOAuthCode();
         }
     }
 

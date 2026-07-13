@@ -16,7 +16,7 @@ const { settings, toggle } = useSettings()
 
 const user = computed(() => authStore.currentUser)
 const isLoggedIn = computed(() => authStore.isLoggedIn)
-const loading = computed(() => authStore.loading || userStore.loading)
+const loading = computed(() => authStore.loading || authStore.authFlowInProgress || userStore.loading)
 
 // Auto-sync toggle -> start/stop the 60s polling loop
 watch(
@@ -170,7 +170,7 @@ async function handleLogout() {
       </div>
       <div class="about-row">
         <span class="about-label">Version</span>
-        <span class="about-value">v0.8.3</span>
+        <span class="about-value">v0.8.4</span>
       </div>
       <div class="about-row">
         <span class="about-label">Data</span>
