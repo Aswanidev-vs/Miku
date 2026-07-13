@@ -69,9 +69,17 @@ function onPageShow() { checkPendingCode() }
 onMounted(async () => {
   await loadWailsRuntime()
 
-  authStore.checkAuth().catch(err => {
+  await authStore.checkAuth().catch(err => {
     console.error('Initial auth check failed:', err)
   })
+
+  // If the OAuth callback completed while the app was backgrounded (Chrome
+  // Custom Tab open) and Android recreated the WebView on return, no poll is
+  // running — yet the pending code still lives in backend memory. Exchange it
+  // now so the user isn't forced to tap "Sign in" a second time.
+  if (!authStore.isLoggedIn) {
+    await checkPendingCode()
+  }
 
   window.addEventListener('focus', onFocus)
   document.addEventListener('visibilitychange', onVisibilityChange)

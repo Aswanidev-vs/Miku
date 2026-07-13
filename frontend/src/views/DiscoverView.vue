@@ -61,7 +61,7 @@ const QUERIES = {
     }
   `,
   seasonal: `
-    query ($season: Season, $year: Int, $page: Int, $perPage: Int) {
+    query ($season: MediaSeason, $year: Int, $page: Int, $perPage: Int) {
       Page(page: $page, perPage: $perPage) {
         media(season: $season, seasonYear: $year, sort: POPULARITY_DESC, type: ANIME) {
           id
