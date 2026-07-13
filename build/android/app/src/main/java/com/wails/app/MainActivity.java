@@ -80,8 +80,6 @@ public class MainActivity extends AppCompatActivity {
     private BroadcastReceiver powerSaveReceiver;
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback networkCallback;
-    private String pendingOAuthCode;
-    private boolean pageReady = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -98,71 +96,15 @@ public class MainActivity extends AppCompatActivity {
         // Load the application
         loadApplication();
 
-        // Handle deep link intent (OAuth2 callback)
-        handleDeepLink(getIntent());
+
     }
 
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        handleDeepLink(intent);
     }
 
-    private void handleDeepLink(Intent intent) {
-        if (intent != null && intent.getData() != null) {
-            Uri uri = intent.getData();
-            if (DEBUG) Log.d(TAG, "Received deep link: " + uri.toString());
-
-            if ("miku".equals(uri.getScheme()) && "callback".equals(uri.getHost())) {
-                if (DEBUG) Log.d(TAG, "Deep link scheme and host match");
-
-                // Implicit grant returns token in fragment: miku://callback#access_token=xxx
-                String fragment = uri.getFragment();
-                if (fragment != null) {
-                    if (DEBUG) Log.d(TAG, "Fragment found: " + fragment);
-                    String[] pairs = fragment.split("&");
-                    for (String pair : pairs) {
-                        String[] kv = pair.split("=");
-                        if (kv.length == 2 && "access_token".equals(kv[0])) {
-                            String token = kv[1];
-                            if (DEBUG) Log.d(TAG, "Access token extracted, queuing for bridge");
-                            queueOAuthCode(token);
-                            return;
-                        }
-                    }
-                }
-
-                // Authorization code grant: miku://callback?code=xxx
-                String code = uri.getQueryParameter("code");
-                if (code != null && !code.isEmpty()) {
-                    if (DEBUG) Log.d(TAG, "Authorization code found, queuing for bridge");
-                    queueOAuthCode(code);
-                } else {
-                    if (DEBUG) Log.w(TAG, "No access_token or code found in deep link");
-                }
-            } else {
-                if (DEBUG) Log.w(TAG, "Deep link scheme/host mismatch: scheme=" + uri.getScheme() + ", host=" + uri.getHost());
-            }
-        } else {
-            if (DEBUG) Log.w(TAG, "Deep link intent or data is null");
-        }
-    }
-
-    private void queueOAuthCode(String code) {
-        pendingOAuthCode = code;
-        deliverPendingOAuthCode();
-    }
-
-    private void deliverPendingOAuthCode() {
-        if (!pageReady || pendingOAuthCode == null || pendingOAuthCode.isEmpty() || bridge == null) {
-            return;
-        }
-        String code = pendingOAuthCode;
-        pendingOAuthCode = null;
-        String json = String.format("{\"code\":\"%s\"}", code.replace("\"", "\\\""));
-        bridge.emitEvent("oauth:callback", json);
-    }
 
     @SuppressLint("SetJavaScriptEnabled")
     private void setupWebView() {
@@ -263,8 +205,6 @@ public class MainActivity extends AppCompatActivity {
                 super.onPageFinished(view, url);
                 if (DEBUG) Log.d(TAG, "Page loaded: " + url);
                 bridge.onPageFinished(url);
-                pageReady = true;
-                deliverPendingOAuthCode();
                 // Now that JS listeners are mounted, push a snapshot of the
                 // current battery / network / theme so the UI starts populated.
                 emitSystemSnapshot();
@@ -845,7 +785,6 @@ public class MainActivity extends AppCompatActivity {
             bridge.onResume();
             // Emit WindowFocus so the frontend can check for pending OAuth codes
             bridge.emitEvent("common:WindowFocus", "{}");
-            deliverPendingOAuthCode();
         }
     }
 
