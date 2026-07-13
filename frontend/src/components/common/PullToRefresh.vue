@@ -4,7 +4,12 @@ import { computed } from 'vue'
 const props = defineProps<{
   pullingDown: number
   refreshing: boolean
+  showRefreshBtn?: boolean
   threshold?: number
+}>()
+
+const emit = defineEmits<{
+  refresh: []
 }>()
 
 const indicatorOpacity = computed(() => {
@@ -16,15 +21,11 @@ const indicatorTranslate = computed(() => {
   if (props.refreshing) return 0
   return Math.min(props.pullingDown - 30, 40)
 })
-
-const spinnerRotation = computed(() => {
-  if (props.refreshing) return 'auto'
-  return `${(props.pullingDown / (props.threshold || 80)) * 360}deg`
-})
 </script>
 
 <template>
   <div class="ptr-wrapper">
+    <!-- Mobile: pull-down indicator -->
     <div
       class="ptr-indicator"
       :style="{
@@ -39,6 +40,20 @@ const spinnerRotation = computed(() => {
       </div>
       <span class="ptr-text">{{ refreshing ? 'Refreshing...' : 'Pull to refresh' }}</span>
     </div>
+
+    <!-- Desktop: floating refresh button (visible when at top) -->
+    <button
+      v-if="showRefreshBtn && !refreshing"
+      class="ptr-desktop-btn"
+      @click="emit('refresh')"
+      aria-label="Refresh"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12a9 9 0 1 1-6.22-8.56" />
+        <polyline points="21 3 21 9 15 9" />
+      </svg>
+    </button>
+
     <slot />
   </div>
 </template>
@@ -87,5 +102,41 @@ const spinnerRotation = computed(() => {
   font-size: var(--font-size-xs);
   color: var(--text-muted);
   font-family: var(--font-body);
+}
+
+/* Desktop refresh button — top-right corner */
+.ptr-desktop-btn {
+  display: none;
+}
+
+.is-desktop .ptr-desktop-btn {
+  display: flex;
+  position: fixed;
+  top: var(--space-lg);
+  right: var(--space-2xl);
+  z-index: var(--z-dropdown);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+}
+
+.is-desktop .ptr-desktop-btn:hover {
+  background: var(--bg-elevated);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  transform: rotate(90deg);
+}
+
+.is-desktop .ptr-desktop-btn svg {
+  width: 18px;
+  height: 18px;
 }
 </style>

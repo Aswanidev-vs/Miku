@@ -20,8 +20,19 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     error.value = null
     try {
+      // Register DOM event listener as backup for Android Chrome Custom Tab deep link
+      // Java's handleDeepLink dispatches 'oauth-callback' CustomEvent via window
+      const domHandler = (e: Event) => {
+        const detail = (e as CustomEvent).detail
+        if (detail) {
+          console.log('[Miku Auth] DOM oauth-callback received, length:', detail.length)
+          handleCallback(detail).catch(() => {})
+        }
+        window.removeEventListener('oauth-callback', domHandler)
+      }
+      window.addEventListener('oauth-callback', domHandler)
+
       // Start localhost callback server before generating the URL
-      // (this updates the redirect URI to match the actual port)
       await OAuth2Service.StartCallbackServer()
 
       const url = await OAuth2Service.GetAuthorizationURL()
@@ -37,6 +48,9 @@ export const useAuthStore = defineStore('auth', () => {
         // Fallback for desktop if OpenURL fails
         window.open(url, '_blank')
       }
+
+      // Clean up DOM listener after 120s if it never fires
+      setTimeout(() => window.removeEventListener('oauth-callback', domHandler), 120_000)
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : 'Login failed'
       error.value = errorMessage

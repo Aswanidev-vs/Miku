@@ -110,41 +110,34 @@ public class MainActivity extends AppCompatActivity {
         if (intent != null && intent.getData() != null) {
             Uri uri = intent.getData();
             if (DEBUG) Log.d(TAG, "Received deep link: " + uri.toString());
-            
+
             if ("miku".equals(uri.getScheme()) && "callback".equals(uri.getHost())) {
                 if (DEBUG) Log.d(TAG, "Deep link scheme and host match");
-                
+
                 // Implicit grant returns token in fragment: miku://callback#access_token=xxx
                 String fragment = uri.getFragment();
                 if (fragment != null) {
                     if (DEBUG) Log.d(TAG, "Fragment found: " + fragment);
-                    // Parse fragment as query string
                     String[] pairs = fragment.split("&");
                     for (String pair : pairs) {
                         String[] kv = pair.split("=");
                         if (kv.length == 2 && "access_token".equals(kv[0])) {
                             String token = kv[1];
-                            if (DEBUG) Log.d(TAG, "Access token extracted, sending to JavaScript");
-                            // Send the token to JavaScript
-                            String js = String.format(
-                                "window.dispatchEvent(new CustomEvent('oauth-callback', { detail: '%s' }))",
-                                token.replace("'", "\\'")
-                            );
-                            executeJavaScript(js);
+                            if (DEBUG) Log.d(TAG, "Access token extracted, emitting via bridge");
+                            // Use bridge.emitEvent — works reliably on Android (unlike executeJavaScript)
+                            String json = String.format("{\"code\":\"%s\"}", token.replace("\"", "\\\""));
+                            bridge.emitEvent("oauth:callback", json);
                             return;
                         }
                     }
                 }
 
-                // Fallback: check for code parameter (authorization code grant)
+                // Authorization code grant: miku://callback?code=xxx
                 String code = uri.getQueryParameter("code");
                 if (code != null && !code.isEmpty()) {
-                    if (DEBUG) Log.d(TAG, "Authorization code found, sending to JavaScript");
-                    String js = String.format(
-                        "window.dispatchEvent(new CustomEvent('oauth-callback', { detail: '%s' }))",
-                        code.replace("'", "\\'")
-                    );
-                    executeJavaScript(js);
+                    if (DEBUG) Log.d(TAG, "Authorization code found, emitting via bridge");
+                    String json = String.format("{\"code\":\"%s\"}", code.replace("\"", "\\\""));
+                    bridge.emitEvent("oauth:callback", json);
                 } else {
                     if (DEBUG) Log.w(TAG, "No access_token or code found in deep link");
                 }
@@ -827,6 +820,8 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         if (bridge != null) {
             bridge.onResume();
+            // Emit WindowFocus so the frontend can check for pending OAuth codes
+            bridge.emitEvent("common:WindowFocus", "{}");
         }
     }
 

@@ -12,8 +12,6 @@ import (
 	"net/url"
 	"sync"
 	"time"
-
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 const (
@@ -242,15 +240,6 @@ func (s *OAuth2Service) handleHTTPCallback(w http.ResponseWriter, r *http.Reques
 
 	log.Printf("[OAuth] Received authorization code via localhost callback, length: %d", len(code))
 	s.SetPendingCode(code)
-
-	// Emit event to frontend so it can pick up the code immediately
-	app := application.Get()
-	if app != nil {
-		app.Event.Emit("oauth:callback", map[string]interface{}{
-			"code": code,
-		})
-		log.Printf("[OAuth] Emitted oauth:callback event to frontend")
-	}
 
 	// Show a user-friendly page
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

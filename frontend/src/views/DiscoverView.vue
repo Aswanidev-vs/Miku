@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { useAnimeStore } from '../stores/anime'
 import { usePlatform } from '../composables/usePlatform'
 import { usePullToRefresh } from '../composables/usePullToRefresh'
@@ -96,16 +96,22 @@ async function refreshDiscover() {
   loadDiscoverData()
 }
 
-const { containerRef, pullingDown, refreshing } = usePullToRefresh(refreshDiscover)
+const { pullingDown, refreshing, showRefreshBtn, manualRefresh, setupListeners, removeListeners } = usePullToRefresh(refreshDiscover)
+const viewRef = ref<HTMLElement | null>(null)
 
 onMounted(() => {
   loadDiscoverData()
+  if (viewRef.value) setupListeners(viewRef.value)
+})
+
+onUnmounted(() => {
+  if (viewRef.value) removeListeners(viewRef.value)
 })
 </script>
 
 <template>
-  <PullToRefresh :pulling-down="pullingDown" :refreshing="refreshing">
-    <div ref="containerRef" class="discover-view">
+  <PullToRefresh :pulling-down="pullingDown" :refreshing="refreshing" :show-refresh-btn="showRefreshBtn" @refresh="manualRefresh">
+    <div ref="viewRef" class="discover-view">
       <header class="discover-header safe-area-top">
         <p class="discover-eyebrow">Miku · AniList</p>
         <h1 class="discover-title">Discover</h1>

@@ -44,16 +44,19 @@ async function refreshMyList() {
   }
 }
 
-const { containerRef, pullingDown, refreshing } = usePullToRefresh(refreshMyList)
+const { pullingDown, refreshing, showRefreshBtn, manualRefresh, setupListeners, removeListeners } = usePullToRefresh(refreshMyList)
+const viewRef = ref<HTMLElement | null>(null)
 
 onMounted(() => {
   if (isLoggedIn.value && user.value) {
     animeStore.startSync(user.value.id)
   }
+  if (viewRef.value) setupListeners(viewRef.value)
 })
 
 onUnmounted(() => {
   animeStore.stopSync()
+  if (viewRef.value) removeListeners(viewRef.value)
 })
 
 watch(isLoggedIn, (val) => {
@@ -66,8 +69,8 @@ watch(isLoggedIn, (val) => {
 </script>
 
 <template>
-  <PullToRefresh :pulling-down="pullingDown" :refreshing="refreshing">
-    <div ref="containerRef" class="mylist-view">
+  <PullToRefresh :pulling-down="pullingDown" :refreshing="refreshing" :show-refresh-btn="showRefreshBtn" @refresh="manualRefresh">
+    <div ref="viewRef" class="mylist-view">
       <header class="mylist-header safe-area-top">
         <h1 class="mylist-title">My List</h1>
         <p class="mylist-subtitle">Your anime collection</p>

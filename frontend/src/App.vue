@@ -36,8 +36,9 @@ watch([os, isDesktop, isMobile, screenSmall, screenMedium, screenLarge], () => {
   if (screenLarge.value) root.classList.add('screen-lg')
 }, { immediate: true })
 
-// Poll for pending OAuth callback (Android Chrome Custom Tab may not fire events)
+// Poll for pending OAuth callback (Android Chrome Custom Tab may not fire Wails events)
 let pollTimer: ReturnType<typeof setInterval> | null = null
+let pollStopTimer: ReturnType<typeof setTimeout> | null = null
 
 onMounted(() => {
   authStore.checkAuth().catch(err => {
@@ -58,32 +59,31 @@ onMounted(() => {
     checkPendingCode()
   })
 
-  // Poll fallback: check for pending code every 3s for 60s after login starts
-  // This handles Android Chrome Custom Tab where events may not fire
+  // Start polling when login begins — checks every 2s for up to 120s
+  // This covers Android Chrome Custom Tab where events may not fire
   watch(() => authStore.loading, (isLoading) => {
     if (isLoading && !authStore.isLoggedIn) {
       if (pollTimer) clearInterval(pollTimer)
+      if (pollStopTimer) clearTimeout(pollStopTimer)
       let attempts = 0
       pollTimer = setInterval(async () => {
         attempts++
         await checkPendingCode()
-        if (authStore.isLoggedIn || attempts > 20) {
+        if (authStore.isLoggedIn) {
           if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+          if (pollStopTimer) { clearTimeout(pollStopTimer); pollStopTimer = null }
         }
-      }, 3000)
-    }
-  })
-
-  // When auth state changes, ensure dependent data is refreshed
-  watch(() => authStore.isLoggedIn, (loggedIn) => {
-    if (loggedIn) {
-      console.log('[Miku App] User authenticated, refreshing data...')
+      }, 2000)
+      pollStopTimer = setTimeout(() => {
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+      }, 120_000)
     }
   })
 })
 
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
+  if (pollStopTimer) clearTimeout(pollStopTimer)
 })
 </script>
 
@@ -105,7 +105,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .main-content {
