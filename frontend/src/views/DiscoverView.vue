@@ -18,13 +18,18 @@ const seasonalAnime = ref<Media[]>([])
 const topManga = ref<Media[]>([])
 const trendingAnime = computed(() => animeStore.trending)
 
-// Pagination state for each section
+// Pagination state for each section (used by "load more")
 const popularPage = ref(1)
 const seasonalPage = ref(1)
 const mangaPage = ref(1)
 const loadingMore = ref(false)
 const allLoaded = ref(false)
 const MAX_PAGES = 3 // each section loads up to 3 pages (36 items)
+
+// Whether a section's first page has been lazy-loaded yet
+const popularLoaded = ref(false)
+const seasonalLoaded = ref(false)
+const mangaLoaded = ref(false)
 
 const QUERIES = {
   trending: `
@@ -95,28 +100,43 @@ function getCurrentSeason(): { season: string; year: number } {
   return { season: 'FALL', year }
 }
 
-// Initial load — fire all queries independently
-function loadInitialData() {
-  if (animeStore.trending.length === 0) {
-    animeStore.fetchTrending(1, 12)
-  }
-
+// Lazy initial loaders — fetch a section's first page only when it scrolls into view.
+async function loadPopular() {
+  if (popularLoaded.value) return
   const { season, year } = getCurrentSeason()
-
-  gqlQuery(QUERIES.popular, { page: 1, perPage: 12 })
-    .then((r) => { if (r?.data?.Page?.media) popularAnime.value = r.data.Page.media })
-    .catch(() => {})
-
-  gqlQuery(QUERIES.seasonal, { season, year, page: 1, perPage: 12 })
-    .then((r) => { if (r?.data?.Page?.media) seasonalAnime.value = r.data.Page.media })
-    .catch(() => {})
-
-  gqlQuery(QUERIES.manga, { page: 1, perPage: 12 })
-    .then((r) => { if (r?.data?.Page?.media) topManga.value = r.data.Page.media })
-    .catch(() => {})
+  try {
+    const r = await gqlQuery(QUERIES.popular, { page: 1, perPage: 12 })
+    if (r?.data?.Page?.media) popularAnime.value = r.data.Page.media
+    popularLoaded.value = true
+  } catch {
+    popularLoaded.value = false // allow retry on next intersect
+  }
 }
 
-// Load more for a specific section
+async function loadSeasonal() {
+  if (seasonalLoaded.value) return
+  const { season, year } = getCurrentSeason()
+  try {
+    const r = await gqlQuery(QUERIES.seasonal, { season, year, page: 1, perPage: 12 })
+    if (r?.data?.Page?.media) seasonalAnime.value = r.data.Page.media
+    seasonalLoaded.value = true
+  } catch {
+    seasonalLoaded.value = false
+  }
+}
+
+async function loadManga() {
+  if (mangaLoaded.value) return
+  try {
+    const r = await gqlQuery(QUERIES.manga, { page: 1, perPage: 12 })
+    if (r?.data?.Page?.media) topManga.value = r.data.Page.media
+    mangaLoaded.value = true
+  } catch {
+    mangaLoaded.value = false
+  }
+}
+
+// Load more pages for a specific section (triggered by the bottom sentinel)
 async function loadMorePopular() {
   if (popularPage.value >= MAX_PAGES) return
   const nextPage = popularPage.value + 1
@@ -163,7 +183,6 @@ async function loadMore() {
   loadingMore.value = true
 
   try {
-    // Cycle through sections: popular → seasonal → manga → popular → ...
     const maxCycles = sectionLoaders.length * MAX_PAGES
     for (let i = 0; i < sectionLoaders.length; i++) {
       const idx = (nextSectionIndex + i) % sectionLoaders.length
@@ -176,7 +195,6 @@ async function loadMore() {
       }
     }
 
-    // Check if all sections are fully loaded
     if (
       popularPage.value >= MAX_PAGES &&
       seasonalPage.value >= MAX_PAGES &&
@@ -189,7 +207,7 @@ async function loadMore() {
   }
 }
 
-// Refresh — reset everything
+// Refresh — reset everything and re-arm lazy loading
 async function refreshDiscover() {
   clearGqlCache()
   animeStore.fetchTrending(1, 12)
@@ -198,13 +216,55 @@ async function refreshDiscover() {
   mangaPage.value = 1
   nextSectionIndex = 0
   allLoaded.value = false
-  loadInitialData()
+  popularAnime.value = []
+  seasonalAnime.value = []
+  topManga.value = []
+  popularLoaded.value = false
+  seasonalLoaded.value = false
+  mangaLoaded.value = false
+  lazyObserver?.disconnect()
+  nextTick(setupLazySections)
 }
 
 const { pullingDown, refreshing, showRefreshBtn, manualRefresh, setupListeners, removeListeners } = usePullToRefresh(refreshDiscover)
 const viewRef = ref<HTMLElement | null>(null)
 
-// IntersectionObserver for infinite scroll
+// IntersectionObserver for lazy section loading
+const popularSectionRef = ref<HTMLElement | null>(null)
+const seasonalSectionRef = ref<HTMLElement | null>(null)
+const mangaSectionRef = ref<HTMLElement | null>(null)
+let lazyObserver: IntersectionObserver | null = null
+
+function setupLazySections() {
+  const sections = [
+    { ref: popularSectionRef, loaded: popularLoaded, load: loadPopular },
+    { ref: seasonalSectionRef, loaded: seasonalLoaded, load: loadSeasonal },
+    { ref: mangaSectionRef, loaded: mangaLoaded, load: loadManga },
+  ]
+  const obs = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue
+        const s = sections.find((x) => x.ref.value === e.target)
+        if (!s) continue
+        if (s.loaded.value) {
+          obs.unobserve(e.target)
+          continue
+        }
+        s.load().then(() => {
+          if (s.loaded.value) obs.unobserve(e.target)
+        })
+      }
+    },
+    { rootMargin: '300px' } // start loading just before it scrolls into view
+  )
+  for (const s of sections) {
+    if (s.ref.value) obs.observe(s.ref.value)
+  }
+  lazyObserver = obs
+}
+
+// IntersectionObserver for infinite scroll (load more pages)
 let observer: IntersectionObserver | null = null
 const sentinelRef = ref<HTMLElement | null>(null)
 
@@ -222,14 +282,21 @@ function setupInfiniteScroll() {
 }
 
 onMounted(() => {
-  loadInitialData()
+  // Trending is the hero — load it eagerly so the top of the page fills immediately.
+  if (animeStore.trending.length === 0) {
+    animeStore.fetchTrending(1, 12)
+  }
   if (viewRef.value) setupListeners(viewRef.value)
-  nextTick(() => setupInfiniteScroll())
+  nextTick(() => {
+    setupLazySections()
+    setupInfiniteScroll()
+  })
 })
 
 onUnmounted(() => {
   if (viewRef.value) removeListeners(viewRef.value)
   observer?.disconnect()
+  lazyObserver?.disconnect()
 })
 </script>
 
@@ -249,25 +316,31 @@ onUnmounted(() => {
         <AnimeGrid :items="trendingAnime.slice(0, 12)" :columns="gridColumns" />
       </section>
 
-      <section v-if="popularAnime.length > 0" class="discover-section">
+      <section ref="popularSectionRef" class="discover-section">
         <div class="section-header">
           <h2 class="section-title"><span class="title-dot"></span>Most Popular</h2>
         </div>
-        <AnimeGrid :items="popularAnime" :columns="gridColumns" />
+        <AnimeGrid v-if="popularAnime.length > 0" :items="popularAnime" :columns="gridColumns" />
+        <AnimeGrid v-else-if="!popularLoaded" :items="[]" :loading="true" :columns="gridColumns" />
+        <p v-else class="section-empty">Nothing found.</p>
       </section>
 
-      <section v-if="seasonalAnime.length > 0" class="discover-section">
+      <section ref="seasonalSectionRef" class="discover-section">
         <div class="section-header">
           <h2 class="section-title"><span class="title-dot"></span>This Season</h2>
         </div>
-        <AnimeGrid :items="seasonalAnime" :columns="gridColumns" />
+        <AnimeGrid v-if="seasonalAnime.length > 0" :items="seasonalAnime" :columns="gridColumns" />
+        <AnimeGrid v-else-if="!seasonalLoaded" :items="[]" :loading="true" :columns="gridColumns" />
+        <p v-else class="section-empty">Nothing found.</p>
       </section>
 
-      <section v-if="topManga.length > 0" class="discover-section">
+      <section ref="mangaSectionRef" class="discover-section">
         <div class="section-header">
           <h2 class="section-title"><span class="title-dot"></span>Top Manga</h2>
         </div>
-        <AnimeGrid :items="topManga" :columns="gridColumns" />
+        <AnimeGrid v-if="topManga.length > 0" :items="topManga" :columns="gridColumns" />
+        <AnimeGrid v-else-if="!mangaLoaded" :items="[]" :loading="true" :columns="gridColumns" />
+        <p v-else class="section-empty">Nothing found.</p>
       </section>
 
       <!-- Infinite scroll sentinel + loading indicator -->
@@ -344,6 +417,12 @@ onUnmounted(() => {
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
   box-shadow: 0 0 10px var(--color-primary-glow);
   flex-shrink: 0;
+}
+
+.section-empty {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  padding: var(--space-lg) 0;
 }
 
 .load-more-sentinel {

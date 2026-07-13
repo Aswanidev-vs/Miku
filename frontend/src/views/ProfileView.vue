@@ -170,7 +170,7 @@ async function handleLogout() {
       </div>
       <div class="about-row">
         <span class="about-label">Version</span>
-        <span class="about-value">v0.8.5</span>
+        <span class="about-value">v0.8.6</span>
       </div>
       <div class="about-row">
         <span class="about-label">Data</span>
