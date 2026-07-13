@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -246,11 +247,18 @@ func (s *OAuth2Service) handleHTTPCallback(w http.ResponseWriter, r *http.Reques
 	s.SetPendingCode(code)
 
 	// Show a user-friendly page. The authorization code has already been
-	// captured server-side; the app polls for it and returns to the
-	// foreground automatically. localhost:43219/callback stays the redirect.
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprint(w, `<!DOCTYPE html>
-<html><head><title>Miku - Authorized</title><style>
+	// captured server-side. On Android we then auto-return the app to
+	// the foreground via the miku:// deep link, so the user doesn't
+	// have to manually switch back. The AniList redirect URI stays
+	// http://localhost:43219/callback (unchanged) — this only fires
+	// from within that already-served page, after the code is captured.
+	isAndroid := strings.Contains(strings.ToLower(r.UserAgent()), "android")
+	autoReturn := ""
+	if isAndroid {
+		autoReturn = `<script>setTimeout(function(){location.href="miku://callback";},800);</script>`
+	}
+	page := fmt.Sprintf(`<!DOCTYPE html>
+<html><head><title>Miku - Authorized</title>%s<style>
 body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#0a0a12;color:#fff}
 .box{text-align:center;padding:3rem}
 h1{font-size:1.5rem;margin-bottom:0.5rem}
@@ -258,8 +266,11 @@ p{color:#a0a0b0;font-size:0.9rem}
 </style></head><body>
 <div class="box">
 <h1>&#10003; Authorized</h1>
-<p>You can close this tab and return to Miku.</p>
-</div></body></html>`)
+<p>Returning to Miku...</p>
+</div></body></html>`, autoReturn)
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprint(w, page)
 
 	// Shut down server after responding
 	go s.StopCallbackServer()
