@@ -122,6 +122,7 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -275,9 +276,11 @@ h1, h2, h3, h4, h5, h6 {
 .discover-view,
 .mylist-view,
 .feed-view,
+.settings-view,
 .profile-view,
 .va-view {
   overflow-x: hidden;
+  touch-action: pan-y;
   padding-left: max(var(--space-lg), env(safe-area-inset-left, 0px));
   padding-right: max(var(--space-lg), env(safe-area-inset-right, 0px));
 }
@@ -285,6 +288,7 @@ h1, h2, h3, h4, h5, h6 {
 .is-desktop .discover-view,
 .is-desktop .mylist-view,
 .is-desktop .feed-view,
+.is-desktop .settings-view,
 .is-desktop .profile-view,
 .is-desktop .va-view {
   max-width: var(--content-max);
@@ -482,9 +486,11 @@ h1, h2, h3, h4, h5, h6 {
 .is-mobile .discover-view,
 .is-mobile .mylist-view,
 .is-mobile .feed-view,
+.is-mobile .settings-view,
 .is-mobile .profile-view {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
+  touch-action: pan-y;
 }
 
 /* Reduce whitespace on mobile for density */

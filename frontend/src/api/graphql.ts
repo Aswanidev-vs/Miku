@@ -48,6 +48,11 @@ export function clearGqlCache() {
   cache.clear()
 }
 
+export function clearAuthTokenCache() {
+  cachedToken = null
+  tokenPromise = null
+}
+
 // ---- Auth header (cached per-session to avoid repeated backend calls) ----
 let cachedToken: string | null = null
 let tokenPromise: Promise<string | null> | null = null

@@ -33,15 +33,26 @@ func NewTokenStore() (*TokenStore, error) {
 	// Platform-specific config directory handling
 	switch runtime.GOOS {
 	case "android":
-		// On Android, use the app's internal storage
-		configDir = "/data/data/com.wails.app/files"
-		// Try alternative paths if the primary doesn't work
-		if _, statErr := os.Stat(configDir); statErr != nil {
-			configDir = "/sdcard/Android/data/com.wails.app/files"
-			if _, statErr2 := os.Stat(configDir); statErr2 != nil {
-				// Fallback to temp directory
-				configDir = os.TempDir()
+		// Android process working directories normally live in durable app
+		// internal storage. Avoid os.TempDir(): it can be wiped after process kill.
+		if wd, wdErr := os.Getwd(); wdErr == nil {
+			configDir = wd
+		}
+		if configDir == "" || !isWritableDir(configDir) {
+			candidates := []string{
+				"/data/data/com.wails.app/files",
+				"/data/user/0/com.wails.app/files",
+				"/sdcard/Android/data/com.wails.app/files",
 			}
+			for _, candidate := range candidates {
+				if isWritableDir(candidate) {
+					configDir = candidate
+					break
+				}
+			}
+		}
+		if configDir == "" {
+			configDir = os.TempDir()
 		}
 	case "ios":
 		configDir, err = os.UserHomeDir()
@@ -71,6 +82,23 @@ func NewTokenStore() (*TokenStore, error) {
 	ts.load()
 
 	return ts, nil
+}
+
+func isWritableDir(path string) bool {
+	if path == "" {
+		return false
+	}
+	if err := os.MkdirAll(path, 0700); err != nil {
+		return false
+	}
+	probe, err := os.CreateTemp(path, ".miku-write-test-*")
+	if err != nil {
+		return false
+	}
+	name := probe.Name()
+	probe.Close()
+	os.Remove(name)
+	return true
 }
 
 func (ts *TokenStore) load() {

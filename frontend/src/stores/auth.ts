@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { Browser, Events } from '@wailsio/runtime'
+import { Browser } from '@wailsio/runtime'
 import * as OAuth2Service from '../../bindings/github.com/Aswanidev-vs/Miku/backend/auth/oauth2service'
+import { clearAuthTokenCache, clearGqlCache } from '../api/graphql'
 import type { User } from '../types'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -14,7 +15,9 @@ export const useAuthStore = defineStore('auth', () => {
   const currentUser = computed(() => user.value)
   const isLoggedIn = computed(() => isAuthenticated.value)
 
-
+  let callbackInFlight: Promise<void> | null = null
+  let lastCallbackValue = ''
+  let lastCallbackAt = 0
 
   async function login() {
     loading.value = true
@@ -61,12 +64,29 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function handleCallback(tokenOrCode: string) {
+    const now = Date.now()
+    if (callbackInFlight) return callbackInFlight
+    if (tokenOrCode === lastCallbackValue && now - lastCallbackAt < 15_000) return
+    lastCallbackValue = tokenOrCode
+    lastCallbackAt = now
+
+    callbackInFlight = doHandleCallback(tokenOrCode)
+    try {
+      await callbackInFlight
+    } finally {
+      callbackInFlight = null
+    }
+  }
+
+  async function doHandleCallback(tokenOrCode: string) {
     loading.value = true
     error.value = null
     try {
       // Always exchange the authorization code for a token via the backend.
       // AniList auth codes can be hundreds of chars, so length-based heuristics fail.
       await OAuth2Service.HandleCallback(tokenOrCode)
+      clearAuthTokenCache()
+      clearGqlCache()
       isAuthenticated.value = true
       showCallbackInput.value = false
       await fetchUser()
@@ -146,6 +166,10 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     try {
       await OAuth2Service.Logout()
+      clearAuthTokenCache()
+      clearGqlCache()
+      lastCallbackValue = ''
+      lastCallbackAt = 0
       user.value = null
       isAuthenticated.value = false
     } catch (e) {
@@ -163,6 +187,10 @@ export const useAuthStore = defineStore('auth', () => {
       isAuthenticated.value = authenticated
       if (authenticated) {
         await fetchUser()
+      } else {
+        clearAuthTokenCache()
+        clearGqlCache()
+        user.value = null
       }
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Auth check failed'
