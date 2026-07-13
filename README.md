@@ -30,7 +30,7 @@ Miku is a feature-rich AniList client that delivers a premium anime and manga tr
 - **Advanced Search** — Full-text search with anime/manga type filter
 - **Personal Lists** — Manage your anime lists (Watching, Planning, Completed, Dropped, Paused)
 - **List Management** — Add/update anime to your list directly from detail pages (status, score, progress)
-- **Activity Feed** — See your AniList activity feed
+- **Activity Feed** — Following-style feed showing your own activity plus the activity of everyone you follow on AniList (like the AniList site). Tap a friend's avatar to open their AniList profile
 - **Profile & Stats** — View your profile with detailed statistics, favourite genres, and activity heatmap
 
 ### Detail Pages
@@ -140,8 +140,16 @@ The compiled binary will be placed in the `build` directory.
 ### Notes
 
 - The app includes a `network_security_config.xml` that allows cleartext HTTP to `localhost` for the OAuth callback
-- The `miku://` deep link intent filter is registered in `AndroidManifest.xml` as a fallback
-- Chrome Custom Tabs handle the OAuth redirect to `http://localhost:43219/callback`
+- OAuth on Android uses Chrome Custom Tabs redirecting to `http://localhost:43219/callback` (there is no custom-scheme deep link — Chrome Custom Tabs cannot navigate to custom-scheme URLs)
+- Debug builds keep the `x86_64` ABI so the app also runs in the Android Emulator; release/device APKs are `arm64-v8a` only
+
+### Build Size Optimizations
+
+The installed size is dominated by the Go `libwails.so` native library, so release builds are tuned to minimize it:
+
+- **arm64-v8a only for release** — `x86_64` is restricted to debug builds. Every real device is arm64, so release APKs stop shipping the redundant x86_64 `.so`.
+- **Stripped symbols by default** — Android builds run with `PRODUCTION=true`, linking Go with `-ldflags="-w -s"` (no debug info), shrinking `libwails.so` by roughly 40–50%.
+- **R8 shrinking without obfuscation** — Release builds enable R8 minification for dead-code removal while keeping `-dontobfuscate`, so the Go↔Java JNI bridge methods are never renamed. `-dontwarn` rules cover annotation classes (`javax.annotation.*`, checkerframework, errorprone) pulled in transitively by `androidx.security-crypto` (Tink/Guava) that aren't present at runtime, keeping the release build green.
 
 ### Build Commands
 
@@ -158,10 +166,8 @@ wails3 task android:run
 
 ### Output
 
-The APK will be generated at:
-```
-build/android/app/build/outputs/apk/debug/app-debug.apk
-```
+- **Debug APK**: `build/android/app/build/outputs/apk/debug/app-debug.apk`
+- **Release APK**: `build/android/app/build/outputs/apk/release/app-release.apk` (also copied to `bin/miku.apk`)
 
 ## AniList API Setup
 
