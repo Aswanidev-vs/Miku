@@ -19,3 +19,13 @@
 # Extra safety margin: disable renaming app-wide. R8 still shrinks
 # (dead-code removal) for the size win; only obfuscation is skipped.
 -dontobfuscate
+
+# R8 full mode (AGP default) hard-fails when kept/retained code references a
+# class that isn't on the runtime classpath. androidx.security-crypto pulls in
+# Google Tink, which references these annotation libraries at compile time only
+# (they have SOURCE/CLASS retention and are stripped from the build). They are
+# never needed at runtime, so suppressing the warning is safe and keeps the
+# release build green while R8 still shrinks everything else.
+-dontwarn javax.annotation.**
+-dontwarn org.checkerframework.**
+-dontwarn com.google.errorprone.annotations.**
