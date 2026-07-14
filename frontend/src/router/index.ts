@@ -39,6 +39,11 @@ const router = createRouter({
       component: () => import('../views/VoiceActorView.vue'),
     },
     {
+      path: '/character/:id',
+      name: 'character',
+      component: () => import('../views/CharacterView.vue'),
+    },
+    {
       path: '/settings',
       name: 'settings',
       component: () => import('../views/SettingsView.vue'),

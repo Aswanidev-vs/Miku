@@ -115,6 +115,11 @@ function goBack() {
   router.back()
 }
 
+function goToCharacter(edge: { node?: { id?: number } }) {
+  const id = edge?.node?.id
+  if (id) router.push({ name: 'character', params: { id } })
+}
+
 function statusLabel(status?: string): string {
   if (!status) return ''
   return status.replace(/_/g, ' ').toLowerCase()
@@ -380,7 +385,7 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
             <span class="toggle-label">{{ showAllCharacters ? 'show less' : `show all (${media.characters.edges.length})` }}</span>
           </h3>
           <div class="character-list">
-            <div v-for="edge in visibleCharacters" :key="edge.id" class="character-item">
+            <div v-for="edge in visibleCharacters" :key="edge.id" class="character-item" @click="goToCharacter(edge)">
               <img
                 v-if="edge.node.image"
                 :src="edge.node.image.large || edge.node.image.medium"

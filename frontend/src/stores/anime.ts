@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Media, MediaListCollection, PageInfo } from '../types'
+import type { Media, MediaListCollection, PageInfo, CharacterEdge } from '../types'
 import { gqlQuery, gqlMutate } from '../api/graphql'
 
 const TRENDING_ANIME_QUERY = `
@@ -188,6 +188,24 @@ query ($id: Int) {
       }
     }
     characters(perPage: 50, sort: ROLE) {
+      pageInfo { currentPage hasNextPage }
+      edges {
+        id role
+        node { id name { full } image { medium large } }
+        voiceActors(language: JAPANESE) { id name { full } image { medium } }
+      }
+    }
+  }
+}
+`
+
+// The slow detail query only fetches the first 50 characters; popular shows
+// (e.g. Slime S4 has 500) need the remaining pages appended.
+const MEDIA_CHARACTERS_PAGE_QUERY = `
+query ($id: Int!, $page: Int, $perPage: Int) {
+  Media(id: $id) {
+    characters(page: $page, perPage: $perPage, sort: ROLE) {
+      pageInfo { currentPage hasNextPage }
       edges {
         id role
         node { id name { full } image { medium large } }
@@ -361,6 +379,7 @@ export const useAnimeStore = defineStore('anime', () => {
             const merged = { ...currentMedia.value, ...slow.data.Media } as Media
             currentMedia.value = merged
             supplementRecommendations(merged)
+            fetchRemainingCharacters(id, merged).catch(() => {})
           }
         }).catch(() => {})
       }
@@ -368,6 +387,36 @@ export const useAnimeStore = defineStore('anime', () => {
       error.value = e instanceof Error ? e.message : 'Failed to fetch anime details'
     } finally {
       loading.value = false
+    }
+  }
+
+  // Append character pages beyond the first 50 fetched by MEDIA_DETAILS_SLOW.
+  async function fetchRemainingCharacters(id: number, media: Media) {
+    if (!media.characters?.pageInfo?.hasNextPage) return
+    const edges: CharacterEdge[] = [...(media.characters.edges ?? [])]
+    const seen = new Set(edges.map((e) => e.id))
+    let page = (media.characters.pageInfo.currentPage ?? 1) + 1
+    const MAX_PAGES = 50 // hard cap (~2500 characters) to bound the request loop
+    while (page <= MAX_PAGES) {
+      const res = await gqlQuery(MEDIA_CHARACTERS_PAGE_QUERY, { id, page, perPage: 50 })
+      const conn = res?.data?.Media?.characters
+      const newEdges = (conn?.edges ?? []) as CharacterEdge[]
+      if (!newEdges.length) break
+      for (const e of newEdges) {
+        if (!seen.has(e.id)) {
+          seen.add(e.id)
+          edges.push(e)
+        }
+      }
+      if (!conn?.pageInfo?.hasNextPage) break
+      page++
+    }
+    if (currentMedia.value?.id === id && currentMedia.value.characters) {
+      currentMedia.value.characters = {
+        ...currentMedia.value.characters,
+        edges,
+        pageInfo: { ...currentMedia.value.characters.pageInfo, hasNextPage: false },
+      }
     }
   }
 
