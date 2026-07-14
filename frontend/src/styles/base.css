@@ -517,16 +517,16 @@ h1, h2, h3, h4, h5, h6 {
   height: 28px;
 }
 
-/* Dropdowns — full-width bottom sheet on mobile.
+/* Dropdowns on mobile.
+   Use absolute (anchored below the button) rather than fixed: on Android
+   WebView `position: fixed` inside an overflow-clipped scroll container anchors
+   to the tall page element instead of the viewport, pushing the menu off-screen.
    z-index must beat the bottom nav (--z-sticky = 100). */
 .is-mobile .dropdown-menu {
-  position: fixed;
-  left: var(--space-md);
-  right: var(--space-md);
-  bottom: calc(56px + var(--safe-area-bottom));
-  top: auto;
+  top: 100%;
+  left: 0;
+  right: 0;
   max-height: 50vh;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   z-index: var(--z-modal);
 }
 
