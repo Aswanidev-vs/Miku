@@ -123,7 +123,7 @@ query ($userId: Int, $page: Int, $perPage: Int) {
 
 // User IDs that `userId` follows — used to build the "Following" feed
 const FOLLOWING_IDS_QUERY = `
-query ($userId: Int, $page: Int, $perPage: Int) {
+query ($userId: Int!, $page: Int, $perPage: Int) {
   Page(page: $page, perPage: $perPage) {
     pageInfo {
       hasNextPage
