@@ -517,7 +517,8 @@ h1, h2, h3, h4, h5, h6 {
   height: 28px;
 }
 
-/* Dropdowns — full-width on mobile */
+/* Dropdowns — full-width bottom sheet on mobile.
+   z-index must beat the bottom nav (--z-sticky = 100). */
 .is-mobile .dropdown-menu {
   position: fixed;
   left: var(--space-md);
@@ -526,6 +527,7 @@ h1, h2, h3, h4, h5, h6 {
   top: auto;
   max-height: 50vh;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  z-index: var(--z-modal);
 }
 
 /* Screen-size adjustments */
