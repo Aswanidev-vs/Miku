@@ -14,7 +14,7 @@
     "axios": "^1.7.0",
     "dexie": "^4.4.4",
     "pinia": "^4.0.2",
-    "vue": "^3.2.45",
+    "vue": "^3.5.40",
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
