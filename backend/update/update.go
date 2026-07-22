@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -234,8 +235,10 @@ func (s *UpdateService) InstallUpdate(apkPath string) error {
 		return openFile(apkPath)
 	case "darwin":
 		return openFile(apkPath)
+	case "linux":
+		return openFile(apkPath)
 	default:
-		return fmt.Errorf("auto-install not supported on %s", runtime.GOOS)
+		return fmt.Errorf("auto-install not supported on %s — please install manually", runtime.GOOS)
 	}
 }
 
@@ -255,7 +258,6 @@ func openFile(path string) error {
 		args = []string{path}
 	}
 
-	_ = cmd
-	_ = args
-	return nil
+	execCmd := exec.Command(cmd, args...)
+	return execCmd.Start()
 }

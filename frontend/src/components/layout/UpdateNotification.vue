@@ -5,6 +5,7 @@ import { usePlatform } from '../../composables/usePlatform'
 
 const {
   checking, downloading, downloadProgress,
+  downloaded, downloadTotal, downloadSpeed,
   hasUpdate, updateInfo, downloadedApkPath,
   error, checked,
   checkForUpdate, downloadUpdate, installUpdate, dismissUpdate,
@@ -53,8 +54,17 @@ async function handleDownload() {
 
 function formatSize(bytes: number): string {
   if (bytes <= 0) return ''
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   const mb = bytes / (1024 * 1024)
   return `${mb.toFixed(1)} MB`
+}
+
+function formatSpeed(bytesPerSecond: number): string {
+  if (bytesPerSecond <= 0) return ''
+  if (bytesPerSecond < 1024) return `${bytesPerSecond.toFixed(0)} B/s`
+  if (bytesPerSecond < 1024 * 1024) return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`
+  return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`
 }
 </script>
 
@@ -106,7 +116,13 @@ function formatSize(bytes: number): string {
                 <div class="progress-bar">
                   <div class="progress-fill" :style="{ width: downloadProgress + '%' }" />
                 </div>
-                <span class="progress-text">{{ downloadProgress }}%</span>
+                <div class="progress-info">
+                  <span class="progress-text">{{ downloadProgress }}%</span>
+                  <span v-if="downloadSpeed > 0" class="progress-speed">{{ formatSpeed(downloadSpeed) }}</span>
+                </div>
+                <div v-if="downloadTotal > 0" class="progress-size">
+                  {{ formatSize(downloaded) }} / {{ formatSize(downloadTotal) }}
+                </div>
               </div>
 
               <div v-if="error" class="error-msg">{{ error }}</div>
@@ -327,13 +343,13 @@ function formatSize(bytes: number): string {
 
 .progress-section {
   display: flex;
-  align-items: center;
-  gap: var(--space-sm);
+  flex-direction: column;
+  gap: var(--space-xs);
   margin-bottom: var(--space-lg);
 }
 
 .progress-bar {
-  flex: 1;
+  width: 100%;
   height: 6px;
   background: var(--bg-active);
   border-radius: var(--radius-full);
@@ -344,15 +360,33 @@ function formatSize(bytes: number): string {
   height: 100%;
   background: var(--color-primary);
   border-radius: var(--radius-full);
-  transition: width 200ms var(--ease-out);
+  transition: width 100ms linear;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .progress-text {
   font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-weight: var(--font-weight-semibold);
+}
+
+.progress-speed {
+  font-size: var(--font-size-xs);
   color: var(--text-muted);
   font-family: var(--font-mono);
-  min-width: 36px;
-  text-align: right;
+}
+
+.progress-size {
+  font-size: var(--font-size-2xs);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  text-align: center;
 }
 
 .error-msg {
@@ -425,7 +459,8 @@ function formatSize(bytes: number): string {
 }
 
 .is-mobile .update-panel {
-  align-items: flex-end;
+  align-items: stretch;
+  justify-content: flex-end;
   padding: 0;
 }
 
@@ -433,6 +468,9 @@ function formatSize(bytes: number): string {
   width: 100%;
   max-width: none;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  margin-bottom: 0;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 /* Up to date state */

@@ -14,7 +14,11 @@ const authStore = useAuthStore()
 const userStore = useUserStore()
 const animeStore = useAnimeStore()
 const { settings, toggle } = useSettings()
-const { currentVersion, hasUpdate, latestVersion } = useUpdate()
+const { currentVersion, hasUpdate, latestVersion, fetchCurrentVersion } = useUpdate()
+
+onMounted(() => {
+  fetchCurrentVersion()
+})
 
 const user = computed(() => authStore.currentUser)
 const isLoggedIn = computed(() => authStore.isLoggedIn)

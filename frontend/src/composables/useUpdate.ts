@@ -31,14 +31,29 @@ const downloading = ref(false)
 const downloadProgress = ref(0)
 const downloadTotal = ref(0)
 const downloaded = ref(0)
+const downloadSpeed = ref(0)
 const updateInfo = ref<UpdateInfo | null>(null)
+const currentVersionFromBackend = ref<string>('')
 const error = ref<string | null>(null)
 const downloadedApkPath = ref<string | null>(null)
 
 export function useUpdate() {
   const hasUpdate = computed(() => updateInfo.value?.available ?? false)
-  const currentVersion = computed(() => updateInfo.value?.currentVersion ?? '')
+  const currentVersion = computed(() => updateInfo.value?.currentVersion || currentVersionFromBackend.value || '')
   const latestVersion = computed(() => updateInfo.value?.latestVersion ?? '')
+
+  async function fetchCurrentVersion(): Promise<string> {
+    await ensureLoaded()
+    if (!UpdateService) return ''
+    try {
+      const ver = await UpdateService.GetCurrentVersion() as string
+      currentVersionFromBackend.value = ver
+      return ver
+    } catch (e) {
+      console.warn('[Miku] Failed to get current version:', e)
+      return ''
+    }
+  }
 
   async function checkForUpdate(): Promise<UpdateInfo | null> {
     await ensureLoaded()
@@ -48,6 +63,9 @@ export function useUpdate() {
     checked.value = false
     error.value = null
     try {
+      // Fetch current version first (always works, even offline)
+      await fetchCurrentVersion()
+      // Then check for updates (requires network)
       const info = (await UpdateService.CheckForUpdate()) as UpdateInfo
       updateInfo.value = info
       checked.value = true
@@ -70,20 +88,36 @@ export function useUpdate() {
 
     downloading.value = true
     downloadProgress.value = 0
+    downloaded.value = 0
+    downloadSpeed.value = 0
     error.value = null
+
+    let lastBytes = 0
+    let lastTime = Date.now()
+
     try {
       const path = await UpdateService.DownloadUpdate(
         info.downloadUrl,
         (dl: number, total: number) => {
+          const now = Date.now()
+          const elapsed = (now - lastTime) / 1000
+          if (elapsed > 0.1) {
+            const bytesDiff = dl - lastBytes
+            downloadSpeed.value = bytesDiff / elapsed
+            lastBytes = dl
+            lastTime = now
+          }
           downloaded.value = dl
           downloadTotal.value = total
           downloadProgress.value = total > 0 ? Math.round((dl / total) * 100) : 0
         }
       )
       downloadedApkPath.value = path
+      downloadSpeed.value = 0
       return path
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Download failed'
+      downloadSpeed.value = 0
       return null
     } finally {
       downloading.value = false
@@ -131,6 +165,7 @@ export function useUpdate() {
     downloadProgress,
     downloadTotal,
     downloaded,
+    downloadSpeed,
     updateInfo,
     error,
     downloadedApkPath,
@@ -138,6 +173,7 @@ export function useUpdate() {
     currentVersion,
     latestVersion,
     checkForUpdate,
+    fetchCurrentVersion,
     downloadUpdate,
     installUpdate,
     dismissUpdate,
