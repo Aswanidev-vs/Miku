@@ -166,11 +166,11 @@ function formatSize(bytes: number): string {
 .update-trigger {
   position: fixed;
   top: var(--space-lg);
-  right: calc(var(--space-2xl) + 52px);
+  right: var(--space-lg);
   z-index: var(--z-sticky);
   width: 40px;
   height: 40px;
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-full);
@@ -184,7 +184,7 @@ function formatSize(bytes: number): string {
 }
 
 .is-desktop .update-trigger {
-  display: flex;
+  right: calc(var(--space-2xl) + 52px);
 }
 
 .update-trigger:hover {
