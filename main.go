@@ -8,8 +8,12 @@ import (
 
 	"github.com/Aswanidev-vs/Miku/backend/auth"
 	"github.com/Aswanidev-vs/Miku/backend/platform"
+	"github.com/Aswanidev-vs/Miku/backend/update"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
+
+// Version is the current app version. Bump before each release build.
+const Version = "0.9.0"
 
 //go:embed all:frontend/dist
 var assets embed.FS
@@ -69,6 +73,20 @@ func main() {
 		services = append(services, application.NewService(oauthService))
 	}
 	services = append(services, application.NewService(&platform.PlatformService{}))
+
+	// Update service — checks GitHub Releases for new versions
+	updateService, err := update.NewUpdateService(update.Config{
+		CurrentVersion: Version,
+		RepoOwner:      "Aswanidev-vs",
+		RepoName:       "Miku",
+	})
+	if err != nil {
+		log.Printf("Update service error (non-fatal): %v", err)
+	}
+	if updateService != nil {
+		services = append(services, application.NewService(updateService))
+		updateService.CleanupDownloads()
+	}
 
 	var mainWindow *application.WebviewWindow
 

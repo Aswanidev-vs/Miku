@@ -44,3 +44,4 @@ coverage.out
 
 # Wails build output
 build/bin/
+refer/

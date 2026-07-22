@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores'
 import { useUserStore } from '../stores'
 import { useAnimeStore } from '../stores/anime'
 import { useSettings } from '../composables/useSettings'
+import { useUpdate } from '../composables/useUpdate'
 import { clearGqlCache } from '../api/graphql'
 import StatsCard from '../components/profile/StatsCard.vue'
 import FavoriteGenres from '../components/profile/FavoriteGenres.vue'
@@ -13,6 +14,7 @@ const authStore = useAuthStore()
 const userStore = useUserStore()
 const animeStore = useAnimeStore()
 const { settings, toggle } = useSettings()
+const { currentVersion, hasUpdate, latestVersion } = useUpdate()
 
 const user = computed(() => authStore.currentUser)
 const isLoggedIn = computed(() => authStore.isLoggedIn)
@@ -170,7 +172,12 @@ async function handleLogout() {
       </div>
       <div class="about-row">
         <span class="about-label">Version</span>
-        <span class="about-value">v0.8.14</span>
+        <span class="about-value">
+          v{{ currentVersion }}
+          <span v-if="hasUpdate" class="update-indicator">
+            → v{{ latestVersion }} available
+          </span>
+        </span>
       </div>
       <div class="about-row">
         <span class="about-label">Data</span>
@@ -403,6 +410,15 @@ async function handleLogout() {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.update-indicator {
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
 }
 
 /* Spinner */
