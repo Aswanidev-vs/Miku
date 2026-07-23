@@ -7,6 +7,7 @@ import { clearGqlCache } from '../api/graphql'
 import { gqlQuery } from '../api/graphql'
 import AnimeGrid from '../components/anime/AnimeGrid.vue'
 import PullToRefresh from '../components/common/PullToRefresh.vue'
+import UpdateNotification from '../components/layout/UpdateNotification.vue'
 import type { Media } from '../types'
 
 const animeStore = useAnimeStore()
@@ -327,6 +328,7 @@ onUnmounted(() => {
 <template>
   <PullToRefresh :pulling-down="pullingDown" :refreshing="refreshing" :show-refresh-btn="showRefreshBtn" @refresh="manualRefresh">
     <div ref="viewRef" class="discover-view">
+      <UpdateNotification />
       <header class="discover-header safe-area-top">
         <p class="discover-eyebrow">Miku · AniList</p>
         <h1 class="discover-title">Discover</h1>

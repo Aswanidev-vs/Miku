@@ -4,7 +4,6 @@ import { RouterView } from 'vue-router'
 import { useAuthStore } from './stores'
 import { usePlatform } from './composables/usePlatform'
 import BottomNav from './components/layout/BottomNav.vue'
-import UpdateNotification from './components/layout/UpdateNotification.vue'
 
 const authStore = useAuthStore()
 const { os, isDesktop, isMobile, screenSmall, screenMedium, screenLarge } = usePlatform()
@@ -153,7 +152,6 @@ onUnmounted(() => {
       </RouterView>
     </main>
     <BottomNav />
-    <UpdateNotification />
   </div>
 </template>
 

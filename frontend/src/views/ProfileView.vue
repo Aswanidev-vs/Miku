@@ -18,6 +18,9 @@ const { currentVersion, hasUpdate, latestVersion, fetchCurrentVersion } = useUpd
 
 onMounted(() => {
   fetchCurrentVersion()
+  if (isLoggedIn.value && user.value) {
+    userStore.fetchAllActivitiesForHeatmap(user.value.id)
+  }
 })
 
 const user = computed(() => authStore.currentUser)
@@ -162,7 +165,7 @@ async function handleLogout() {
       <section v-if="user.statistics" class="settings-group">
         <h3 class="group-title">Your Stats</h3>
         <StatsCard :statistics="user.statistics" />
-        <HeatmapCalendar :activities="userStore.activities" />
+        <HeatmapCalendar :activities="userStore.heatmapActivities" />
         <FavoriteGenres v-if="user.favourites" :favorites="user.favourites" />
       </section>
     </template>

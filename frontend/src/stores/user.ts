@@ -204,6 +204,7 @@ async function fetchFollowingIds(userId: number, cap = 200): Promise<number[]> {
 export const useUserStore = defineStore('user', () => {
   const profile = ref<User | null>(null)
   const activities = ref<(TextActivity | ListActivity)[]>([])
+  const heatmapActivities = ref<(TextActivity | ListActivity)[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
   const activityPageInfo = ref<{
@@ -247,6 +248,41 @@ export const useUserStore = defineStore('user', () => {
     } finally {
       loading.value = false
     }
+  }
+
+  // Fetch all activities for the heatmap (past year)
+  async function fetchAllActivitiesForHeatmap(userId: number) {
+    const allActivities: any[] = []
+    let page = 1
+    const perPage = 50
+    const oneYearAgo = Date.now() / 1000 - 365 * 24 * 60 * 60
+
+    try {
+      while (page <= 20) { // Max 20 pages = 1000 activities
+        const response = await gqlQuery(ACTIVITY_FEED_QUERY, {
+          userId,
+          page,
+          perPage,
+        })
+        const items = response?.data?.Page?.activities ?? []
+        if (items.length === 0) break
+
+        for (const item of items) {
+          if (item.createdAt >= oneYearAgo) {
+            allActivities.push(item)
+          } else {
+            // Reached activities older than 1 year
+            page = 999 // break outer loop
+            break
+          }
+        }
+        page++
+      }
+    } catch {
+      // Ignore errors, use what we have
+    }
+
+    heatmapActivities.value = allActivities
   }
 
   async function fetchFollowingActivities(userId: number, page = 1, perPage = 20) {
@@ -323,12 +359,14 @@ export const useUserStore = defineStore('user', () => {
   return {
     profile,
     activities,
+    heatmapActivities,
     loading,
     error,
     activityPageInfo,
     fetchProfile,
     fetchActivities,
     fetchFollowingActivities,
+    fetchAllActivitiesForHeatmap,
     postActivity,
     deleteActivity,
     clearProfile,
