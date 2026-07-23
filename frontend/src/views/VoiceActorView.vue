@@ -173,9 +173,16 @@ onUnmounted(() => {
 
 function goBack() { router.back() }
 function goToMedia(id: number) { router.push({ name: 'media-detail', params: { id } }) }
-function cleanDescription(desc?: string): string {
+
+function parseDescription(desc?: string): string {
   if (!desc) return ''
-  return desc.replace(/<[^>]+>/g, '').replace(/\n{3,}/g, '\n\n').trim()
+  // Remove HTML tags
+  let text = desc.replace(/<[^>]+>/g, '')
+  // Parse markdown links: [text](url) -> <a href="url">text</a>
+  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="description-link">$1</a>')
+  // Clean up extra newlines
+  text = text.replace(/\n{3,}/g, '\n\n')
+  return text.trim()
 }
 </script>
 
@@ -217,7 +224,7 @@ function cleanDescription(desc?: string): string {
 
       <div v-if="actor.description" class="va-section">
         <h3 class="section-title">About</h3>
-        <p class="description-text">{{ cleanDescription(actor.description) }}</p>
+        <div class="description-text" v-html="parseDescription(actor.description)"></div>
       </div>
 
       <div v-if="roles.length" class="va-section">
@@ -304,6 +311,15 @@ function cleanDescription(desc?: string): string {
 .va-section { padding: 0 var(--space-lg); margin-bottom: var(--space-xl); }
 .section-title { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); color: var(--text-primary); margin-bottom: var(--space-md); }
 .description-text { font-size: var(--font-size-sm); color: var(--text-secondary); line-height: var(--line-height-relaxed); white-space: pre-line; }
+.description-text :deep(.description-link) {
+  color: var(--color-primary-light);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+.description-text :deep(.description-link:hover) {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
 .no-roles { font-size: var(--font-size-sm); color: var(--text-muted); text-align: center; }
 
 .role-list { display: flex; flex-direction: column; gap: var(--space-xs); }
