@@ -1,0 +1,222 @@
+name: Auto Release on Main
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  GO_VERSION: '1.25'
+  NODE_VERSION: '22'
+  JAVA_VERSION: '17'
+
+jobs:
+  auto-release:
+    name: Auto Release Stable Version
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check for existing tag
+        id: check-tag
+        run: |
+          # Get the commit SHA
+          COMMIT_SHA="${{ github.sha }}"
+
+          # Check if this commit already has a tag
+          EXISTING_TAG=$(git tag --points-at "$COMMIT_SHA" | grep "^v" | head -1)
+
+          if [ -n "$EXISTING_TAG" ]; then
+            echo "Commit already has tag: $EXISTING_TAG"
+            echo "has_tag=true" >> $GITHUB_OUTPUT
+            echo "tag=$EXISTING_TAG" >> $GITHUB_OUTPUT
+          else
+            echo "No tag on this commit"
+            echo "has_tag=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get version from main.go
+        if: steps.check-tag.outputs.has_tag == 'false'
+        id: get-version
+        run: |
+          # Extract version from main.go
+          VERSION=$(grep -oP 'const Version = "\K[^"]+' main.go)
+          if [ -z "$VERSION" ]; then
+            echo "Could not find version in main.go" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version from main.go: $VERSION"
+
+      - name: Check if pre-release exists
+        if: steps.check-tag.outputs.has_tag == 'false'
+        id: check-prerelease
+        run: |
+          VERSION="${{ steps.get-version.outputs.version }}"
+          TAG_NAME="v${VERSION}"
+
+          # Check if this tag already exists as a pre-release
+          EXISTING_RELEASE=$(gh release view "$TAG_NAME" --json isPrerelease,tagName 2>/dev/null || echo "")
+
+          if [ -n "$EXISTING_RELEASE" ]; then
+            IS_PRERELEASE=$(echo "$EXISTING_RELEASE" | jq -r '.isPrerelease')
+            echo "Release $TAG_NAME exists, isPrerelease: $IS_PRERELEASE"
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          else
+            echo "No release found for $TAG_NAME"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create stable release from pre-release
+        if: steps.check-tag.outputs.has_tag == 'false' && steps.check-prerelease.outputs.exists == 'true' && steps.check-prerelease.outputs.is_prerelease == 'true'
+        run: |
+          VERSION="${{ steps.get-version.outputs.version }}"
+          TAG_NAME="v${VERSION}"
+
+          echo "Converting pre-release $TAG_NAME to stable release"
+
+          # Delete the pre-release
+          gh release delete "$TAG_NAME" --yes --cleanup-tag || true
+
+          # Get the APK from the pre-release (we need to rebuild)
+          echo "Will rebuild and create stable release"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create new stable release
+        if: steps.check-tag.outputs.has_tag == 'false' && (steps.check-prerelease.outputs.exists == 'false' || steps.check-prerelease.outputs.is_prerelease == 'false')
+        run: |
+          VERSION="${{ steps.get-version.outputs.version }}"
+          TAG_NAME="v${VERSION}"
+
+          echo "Creating new stable release: $TAG_NAME"
+          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+        id: create-tag
+
+      # Build APK for stable release
+      - name: Set up Go
+        if: steps.check-tag.outputs.has_tag == 'false'
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Set up Node.js
+        if: steps.check-tag.outputs.has_tag == 'false'
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Set up Java
+        if: steps.check-tag.outputs.has_tag == 'false'
+        uses: actions/setup-java@v5
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Set up Android SDK
+        if: steps.check-tag.outputs.has_tag == 'false'
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-35 build-tools;35.0.0 ndk;26.3.11579264
+
+      - name: Install system dependencies
+        if: steps.check-tag.outputs.has_tag == 'false'
+        run: |
+          sudo apt-get update
+          PKGS="pkg-config build-essential libgtk-3-dev libsoup-3.0-dev"
+          CANDIDATE=$(apt-cache search --names-only '^libwebkit2gtk-.*-dev$' | awk '{print $1}' | sort -V | tail -n1 || true)
+          if [ -n "$CANDIDATE" ]; then
+            sudo apt-get install -y $PKGS "$CANDIDATE"
+          else
+            echo "No suitable libwebkit2gtk dev package found." >&2
+            exit 1
+          fi
+
+      - name: Install Wails CLI
+        if: steps.check-tag.outputs.has_tag == 'false'
+        run: |
+          GOFLAGS=-tags=gtk3 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha2.117
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: Create build environment file
+        if: steps.check-tag.outputs.has_tag == 'false'
+        run: |
+          if [ -z "$ANILIST_CLIENT_ID" ] || [ -z "$ANILIST_CLIENT_SECRET" ]; then
+            echo "ANILIST_CLIENT_ID and ANILIST_CLIENT_SECRET GitHub secrets are required." >&2
+            exit 1
+          fi
+          {
+            printf 'ANILIST_CLIENT_ID=%s\n' "$ANILIST_CLIENT_ID"
+            printf 'ANILIST_CLIENT_SECRET=%s\n' "$ANILIST_CLIENT_SECRET"
+          } > .env
+        env:
+          ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+          ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
+
+      - name: Install frontend dependencies
+        if: steps.check-tag.outputs.has_tag == 'false'
+        run: |
+          cd frontend
+          npm ci
+          cd ..
+
+      - name: Generate Wails bindings
+        if: steps.check-tag.outputs.has_tag == 'false'
+        run: GOFLAGS=-tags=gtk3 wails3 generate bindings
+
+      - name: Build Android APK
+        if: steps.check-tag.outputs.has_tag == 'false'
+        run: wails3 task android:package:fat
+        env:
+          ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+          ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
+
+      - name: Find APK file
+        if: steps.check-tag.outputs.has_tag == 'false'
+        id: find-apk
+        run: |
+          APK_PATH=$(find bin build/android -name "*.apk" -type f | head -1)
+          if [ -z "$APK_PATH" ]; then
+            echo "APK not found" >&2
+            exit 1
+          fi
+          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+          echo "Found APK: $APK_PATH"
+
+      - name: Create stable release
+        if: steps.check-tag.outputs.has_tag == 'false'
+        run: |
+          VERSION="${{ steps.get-version.outputs.version }}"
+          TAG_NAME="v${VERSION}"
+          APK_PATH="${{ steps.find-apk.outputs.apk_path }}"
+          APK_NAME="Miku-${TAG_NAME}.apk"
+
+          # Rename APK
+          mv "$APK_PATH" "$(dirname "$APK_PATH")/$APK_NAME"
+
+          # Create tag
+          git tag "$TAG_NAME"
+          git push origin "$TAG_NAME"
+
+          # Create release
+          gh release create "$TAG_NAME" \
+            --title "Miku $TAG_NAME" \
+            --generate-notes \
+            "$(dirname "$APK_PATH")/$APK_NAME"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
