@@ -385,29 +385,63 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
             <span class="toggle-label">{{ showAllCharacters ? 'show less' : `show all (${media.characters.edges.length})` }}</span>
           </h3>
           <div class="character-list">
-            <div v-for="edge in visibleCharacters" :key="edge.id" class="character-item" @click="goToCharacter(edge)">
-              <img
-                v-if="edge.node.image"
-                :src="edge.node.image.large || edge.node.image.medium"
-                :alt="edge.node.name.full"
-                class="character-img"
-              />
-              <div class="character-info">
-                <span class="character-name">{{ edge.node.name.full }}</span>
-                <span class="character-role">{{ edge.role }}</span>
-              </div>
-              <div v-if="edge.voiceActors?.length" class="character-va" @click.stop="edge.voiceActors[0].id && router.push({ name: 'voice-actor', params: { id: edge.voiceActors[0].id } })">
+            <template v-for="edge in visibleCharacters" :key="edge.id">
+              <!-- Character with multiple VAs: show each VA as separate row -->
+              <template v-if="(edge.voiceActors?.length ?? 0) > 1">
+                <div
+                  v-for="(va, vaIndex) in edge.voiceActors"
+                  :key="`${edge.id}-${va.id}`"
+                  class="character-item"
+                  @click="goToCharacter(edge)"
+                >
+                  <img
+                    v-if="edge.node.image"
+                    :src="edge.node.image.large || edge.node.image.medium"
+                    :alt="edge.node.name.full"
+                    class="character-img"
+                  />
+                  <div class="character-info">
+                    <span class="character-name">{{ vaIndex === 0 ? edge.node.name.full : '' }}</span>
+                    <span class="character-role">{{ edge.role }}</span>
+                  </div>
+                  <div class="character-va" @click.stop="va.id && router.push({ name: 'voice-actor', params: { id: va.id } })">
+                    <img
+                      :src="va.image?.medium"
+                      :alt="va.name.full"
+                      class="va-img"
+                    />
+                    <div class="va-info">
+                      <span class="va-name">{{ va.name.full }}{{ vaIndex > 0 ? ' (child)' : '' }}</span>
+                      <span class="va-label">VA</span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+              <!-- Character with single VA: original layout -->
+              <div v-else class="character-item" @click="goToCharacter(edge)">
                 <img
-                  :src="edge.voiceActors[0].image?.medium"
-                  :alt="edge.voiceActors[0].name.full"
-                  class="va-img"
+                  v-if="edge.node.image"
+                  :src="edge.node.image.large || edge.node.image.medium"
+                  :alt="edge.node.name.full"
+                  class="character-img"
                 />
-                <div class="va-info">
-                  <span class="va-name">{{ edge.voiceActors[0].name.full }}</span>
-                  <span class="va-label">VA</span>
+                <div class="character-info">
+                  <span class="character-name">{{ edge.node.name.full }}</span>
+                  <span class="character-role">{{ edge.role }}</span>
+                </div>
+                <div v-if="edge.voiceActors?.length" class="character-va" @click.stop="edge.voiceActors[0].id && router.push({ name: 'voice-actor', params: { id: edge.voiceActors[0].id } })">
+                  <img
+                    :src="edge.voiceActors[0].image?.medium"
+                    :alt="edge.voiceActors[0].name.full"
+                    class="va-img"
+                  />
+                  <div class="va-info">
+                    <span class="va-name">{{ edge.voiceActors[0].name.full }}</span>
+                    <span class="va-label">VA</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            </template>
           </div>
         </div>
 
@@ -779,6 +813,7 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
   background: var(--bg-surface); border-radius: var(--radius-md);
 }
 .character-img { width: 40px; height: 40px; border-radius: var(--radius-full); object-fit: cover; flex-shrink: 0; }
+.character-img-placeholder { width: 40px; height: 40px; flex-shrink: 0; }
 .character-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .character-name { font-size: var(--font-size-sm); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .character-role { font-size: var(--font-size-xs); color: var(--text-muted); text-transform: capitalize; }
