@@ -27,16 +27,28 @@ Miku is a feature-rich AniList client that delivers a premium anime and manga tr
 ### Core Features
 - **OAuth2 Authentication** — Secure login via AniList's OAuth2 flow with localhost callback (works on desktop and Android)
 - **Trending & Discovery** — Browse trending, popular, seasonal anime, and top manga
-- **Advanced Search** — Full-text search with anime/manga type filter
+- **Advanced Search** — Full-text search with anime/manga/character/staff type filters
 - **Personal Lists** — Manage your anime lists (Watching, Planning, Completed, Dropped, Paused)
 - **List Management** — Add/update anime to your list directly from detail pages (status, score, progress)
 - **Activity Feed** — Following-style feed showing your own activity plus the activity of everyone you follow on AniList (like the AniList site). Tap a friend's avatar to open their AniList profile
 - **Profile & Stats** — View your profile with detailed statistics, favourite genres, and activity heatmap
 
+### In-App Updates
+- **Update Notifications** — Bell icon on Discover page checks GitHub Releases for new versions
+- **Download APK** — Download updates directly in the app with real-time progress (speed, file size)
+- **Auto-Install** — Opens the system installer after download
+- **Version Display** — Profile page shows current version with update indicator
+
+### Search Enhancements
+- **Character Search** — Search by character name to find anime/manga
+- **Staff Search** — Search by voice actor/staff name to find their works
+- **Multi-Type Filters** — Switch between Anime, Manga, Characters, and Staff search
+
 ### Detail Pages
 - **Media Details** — Full anime/manga detail pages with banner, cover, scores, genres, description, airing info
 - **Characters & Voice Actors** — View cast with character images and Japanese voice actors
-- **Voice Actor Pages** — Click any voice actor to see all their voiced roles across anime
+- **Multiple Voice Actors** — Shows all voice actors per character with "(child)" tag for child versions
+- **Voice Actor Pages** — Click any voice actor to see all their voiced roles across anime (uses correct AniList API)
 - **Relations** — Navigate between related anime (prequels, sequels, adaptations)
 - **Recommendations** — Discover similar anime (deduplicated)
 
@@ -50,12 +62,14 @@ Miku is a feature-rich AniList client that delivers a premium anime and manga tr
 - **Smooth Animations** — Page transitions, skeleton loading, micro-interactions
 - **Virtual Scrolling** — Optimized list rendering for smooth 60 FPS performance
 - **Mobile-First Design** — Optimized for Android and desktop
+- **Pull-to-Refresh** — Touch-based on mobile, manual button on desktop
 
 ### Technical
 - **GraphQL API** — Efficient data fetching with AniList's GraphQL API
 - **Type Safety** — Full TypeScript coverage with strict mode
 - **State Management** — Pinia stores for reactive state handling
 - **Cross-Platform** — Works on Windows, macOS, Linux, and Android
+- **Go Tests** — Backend tests with testify library
 
 ## Screenshots
 
@@ -75,8 +89,9 @@ Miku is a feature-rich AniList client that delivers a premium anime and manga tr
 | Build Tool | [Vite](https://vitejs.dev) | Fast development and production builds |
 | State Management | [Pinia](https://pinia.vuejs.org) | Reactive state stores |
 | Routing | [Vue Router](https://router.vuejs.org) | Client-side navigation |
-| Backend | [Go](https://go.dev) 1.25 | OAuth2 localhost server, business logic |
+| Backend | [Go](https://go.dev) 1.25 | OAuth2 localhost server, update service, business logic |
 | API | [AniList GraphQL](https://anilist.gitbook.io/anilist-apiv2-docs/) | Anime/manga data (via frontend fetch) |
+| Testing | [Testify](https://github.com/stretchr/testify) | Go testing assertions |
 
 ## Prerequisites
 
@@ -226,31 +241,46 @@ Miku/
 │   │   ├── client.go          # GraphQL client implementation
 │   │   ├── queries.go         # AniList query definitions
 │   │   └── mutations.go       # AniList mutation definitions
-│   └── auth/
-│       ├── oauth2.go          # OAuth2 authentication service
-│       └── token_store.go     # Secure token persistence
+│   ├── auth/
+│   │   ├── oauth2.go          # OAuth2 authentication service
+│   │   └── token_store.go     # Secure token persistence
+│   ├── update/
+│   │   ├── update.go          # In-app update service (GitHub Releases)
+│   │   └── update_test.go     # Update service tests
+│   └── platform/
+│       └── platform.go        # OS/arch detection service
 ├── frontend/
 │   ├── src/
+│   │   ├── api/
+│   │   │   └── graphql.ts     # GraphQL client with cache
 │   │   ├── components/
 │   │   │   ├── anime/
 │   │   │   │   ├── AnimeCard.vue      # Anime card component
 │   │   │   │   └── AnimeGrid.vue      # Virtualized grid
 │   │   │   ├── layout/
-│   │   │   │   └── BottomNav.vue      # Bottom navigation
+│   │   │   │   ├── BottomNav.vue      # Bottom navigation
+│   │   │   │   └── UpdateNotification.vue  # Update bell & panel
 │   │   │   ├── profile/
 │   │   │   │   ├── HeatmapCalendar.vue # Activity heatmap
 │   │   │   │   ├── StatsCard.vue      # User statistics
 │   │   │   │   └── FavoriteGenres.vue # Genre tags
 │   │   │   └── common/
-│   │   │       └── SkeletonLoader.vue # Loading skeleton
+│   │   │       ├── SkeletonLoader.vue # Loading skeleton
+│   │   │       └── PullToRefresh.vue  # Pull-to-refresh component
+│   │   ├── composables/
+│   │   │   ├── usePlatform.ts   # Platform detection
+│   │   │   ├── useSettings.ts   # App settings
+│   │   │   ├── useUpdate.ts     # Update state management
+│   │   │   └── usePullToRefresh.ts  # Pull-to-refresh logic
 │   │   ├── views/
 │   │   │   ├── DiscoverView.vue       # Discovery (Trending, Popular, Seasonal, Top Manga)
-│   │   │   ├── SearchView.vue         # Search with anime/manga filter
+│   │   │   ├── SearchView.vue         # Search with anime/manga/character/staff filters
 │   │   │   ├── MyListView.vue         # Personal lists with status tabs + auto-sync
 │   │   │   ├── FeedView.vue           # Activity feed
-│   │   │   ├── ProfileView.vue        # User profile with heatmap
+│   │   │   ├── ProfileView.vue        # User profile with heatmap & version
 │   │   │   ├── MediaDetailView.vue    # Anime/manga detail with list management
 │   │   │   ├── VoiceActorView.vue     # Voice actor page with voiced roles
+│   │   │   ├── CharacterView.vue      # Character detail page
 │   │   │   ├── SettingsView.vue       # Settings
 │   │   │   └── LoginView.vue          # Login
 │   │   ├── stores/
@@ -304,6 +334,9 @@ wails3 task android:build
 # Run on Android emulator
 wails3 task android:run
 
+# Run Go tests
+go test ./backend/... -v
+
 # Frontend only (without Go backend)
 cd frontend && npm run dev
 ```
@@ -339,6 +372,40 @@ This project uses GitHub Actions for automated builds. See [`.github/workflows/b
 - **Pull Request**: Validates build compiles successfully
 - **Manual trigger**: Build from Actions tab
 
+## Changelog
+
+### v0.9.4 (Latest)
+
+#### New Features
+- **Staff Search** — Search by voice actor/staff name to find their works
+- **Multiple Voice Actors** — Shows all voice actors per character with "(child)" tag for child versions
+
+#### Bug Fixes
+- Fixed voice actor page not showing all voiced roles (uses correct AniList API)
+- Fixed character images not loading for child voice actors
+- Fixed child VA row not showing character name
+
+### v0.9.0
+
+#### New Features
+- **In-App Update Notifications** — Bell icon on Discover page checks GitHub Releases for new versions
+- **Download APK Updates** — Download updates directly in the app with real-time progress (speed, file size)
+- **Character Search** — Search by character name to find anime/manga
+- **Version Display** — Profile page shows current version with update indicator
+- **Go Tests** — Backend tests with testify library
+
+#### Improvements
+- **Activity Heatmap** — Now fetches full year of activity data
+- **Search UI** — Added 4 filter tabs: Anime, Manga, Characters, Staff
+- **Mobile Responsive** — Update notification bell visible on all devices
+
+#### Bug Fixes
+- Fixed version not displaying in ProfileView
+
+### v0.8.14
+
+- Initial release with core features
+
 ## Contributing
 
 Contributions are welcome! Here's how to get started:
@@ -353,11 +420,15 @@ Contributions are welcome! Here's how to get started:
    ```bash
    wails3 dev
    ```
-5. **Commit** with a descriptive message
+5. **Run** Go tests
+   ```bash
+   go test ./backend/... -v
+   ```
+6. **Commit** with a descriptive message
    ```bash
    git commit -m "feat: add your feature description"
    ```
-6. **Push** to your fork and open a **Pull Request**
+7. **Push** to your fork and open a **Pull Request**
 
 ### Development Setup
 
@@ -378,6 +449,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 - [Vue.js](https://vuejs.org) — For the frontend framework
 - [Pinia](https://pinia.vuejs.org) — For state management
 - [Dexie.js](https://dexie.org) — For IndexedDB wrapper
+- [Testify](https://github.com/stretchr/testify) — For Go testing assertions
 
 ---
 

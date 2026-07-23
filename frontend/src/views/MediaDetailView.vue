@@ -401,7 +401,7 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
                     class="character-img"
                   />
                   <div class="character-info">
-                    <span class="character-name">{{ vaIndex === 0 ? edge.node.name.full : '' }}</span>
+                    <span class="character-name">{{ edge.node.name.full }}{{ vaIndex > 0 ? ' (child)' : '' }}</span>
                     <span class="character-role">{{ edge.role }}</span>
                   </div>
                   <div class="character-va" @click.stop="va.id && router.push({ name: 'voice-actor', params: { id: va.id } })">
@@ -411,7 +411,7 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
                       class="va-img"
                     />
                     <div class="va-info">
-                      <span class="va-name">{{ va.name.full }}{{ vaIndex > 0 ? ' (child)' : '' }}</span>
+                      <span class="va-name">{{ va.name.full }}</span>
                       <span class="va-label">VA</span>
                     </div>
                   </div>
