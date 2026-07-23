@@ -89,33 +89,50 @@ export function useUpdate() {
     downloading.value = true
     downloadProgress.value = 0
     downloaded.value = 0
+    downloadTotal.value = 0
     downloadSpeed.value = 0
     error.value = null
 
     let lastBytes = 0
     let lastTime = Date.now()
 
-    try {
-      const path = await UpdateService.DownloadUpdate(
-        info.downloadUrl,
-        (dl: number, total: number) => {
+    // Start polling for progress
+    const progressInterval = setInterval(async () => {
+      try {
+        const progress = await UpdateService.GetDownloadProgress()
+        if (progress) {
+          const [dl, total, active] = progress
           const now = Date.now()
           const elapsed = (now - lastTime) / 1000
-          if (elapsed > 0.1) {
-            const bytesDiff = dl - lastBytes
-            downloadSpeed.value = bytesDiff / elapsed
+
+          if (elapsed > 0.1 && dl > lastBytes) {
+            downloadSpeed.value = (dl - lastBytes) / elapsed
             lastBytes = dl
             lastTime = now
           }
+
           downloaded.value = dl
           downloadTotal.value = total
           downloadProgress.value = total > 0 ? Math.round((dl / total) * 100) : 0
+
+          if (!active && dl > 0) {
+            clearInterval(progressInterval)
+          }
         }
-      )
+      } catch {
+        // Ignore polling errors
+      }
+    }, 200)
+
+    try {
+      const path = await UpdateService.DownloadUpdate(info.downloadUrl)
+      clearInterval(progressInterval)
       downloadedApkPath.value = path
+      downloadProgress.value = 100
       downloadSpeed.value = 0
       return path
     } catch (e) {
+      clearInterval(progressInterval)
       error.value = e instanceof Error ? e.message : 'Download failed'
       downloadSpeed.value = 0
       return null

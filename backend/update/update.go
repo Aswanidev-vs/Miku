@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -22,6 +23,12 @@ type Config struct {
 type UpdateService struct {
 	config     Config
 	httpClient *http.Client
+
+	// Download progress tracking
+	downloadProgress int64
+	downloadTotal    int64
+	downloadActive   bool
+	mu               sync.Mutex
 }
 
 type GitHubAsset struct {
@@ -51,13 +58,19 @@ func NewUpdateService(config Config) (*UpdateService, error) {
 	return &UpdateService{
 		config: config,
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 60 * time.Second,
 		},
 	}, nil
 }
 
 func (s *UpdateService) GetCurrentVersion() string {
 	return s.config.CurrentVersion
+}
+
+func (s *UpdateService) GetDownloadProgress() (downloaded int64, total int64, active bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.downloadProgress, s.downloadTotal, s.downloadActive
 }
 
 func (s *UpdateService) CheckForUpdate() (*UpdateInfo, error) {
@@ -140,7 +153,7 @@ func CompareVersions(a, b string) int {
 	return 0
 }
 
-func (s *UpdateService) DownloadUpdate(downloadURL string, progressCallback func(downloaded, total int64)) (string, error) {
+func (s *UpdateService) DownloadUpdate(downloadURL string) (string, error) {
 	resp, err := s.httpClient.Get(downloadURL)
 	if err != nil {
 		return "", fmt.Errorf("download failed: %w", err)
@@ -164,7 +177,20 @@ func (s *UpdateService) DownloadUpdate(downloadURL string, progressCallback func
 		total = -1
 	}
 
-	buf := make([]byte, 32*1024)
+	// Track progress internally
+	s.mu.Lock()
+	s.downloadProgress = 0
+	s.downloadTotal = total
+	s.downloadActive = true
+	s.mu.Unlock()
+
+	defer func() {
+		s.mu.Lock()
+		s.downloadActive = false
+		s.mu.Unlock()
+	}()
+
+	buf := make([]byte, 64*1024) // 64KB buffer for better throughput
 	var downloaded int64
 
 	for {
@@ -176,9 +202,9 @@ func (s *UpdateService) DownloadUpdate(downloadURL string, progressCallback func
 				return "", fmt.Errorf("write failed: %w", writeErr)
 			}
 			downloaded += int64(n)
-			if progressCallback != nil {
-				progressCallback(downloaded, total)
-			}
+			s.mu.Lock()
+			s.downloadProgress = downloaded
+			s.mu.Unlock()
 		}
 		if readErr == io.EOF {
 			break
@@ -237,6 +263,8 @@ func (s *UpdateService) InstallUpdate(apkPath string) error {
 		return openFile(apkPath)
 	case "linux":
 		return openFile(apkPath)
+	case "android":
+		return installAndroidAPK(apkPath)
 	default:
 		return fmt.Errorf("auto-install not supported on %s — please install manually", runtime.GOOS)
 	}
@@ -260,4 +288,25 @@ func openFile(path string) error {
 
 	execCmd := exec.Command(cmd, args...)
 	return execCmd.Start()
+}
+
+func installAndroidAPK(apkPath string) error {
+	// Try using Android's package installer via am start
+	// This works on most Android devices
+	cmd := exec.Command("am", "start",
+		"-a", "android.intent.action.VIEW",
+		"-d", "file://"+apkPath,
+		"-t", "application/vnd.android.package-archive",
+		"--grant-read-uri-permission",
+	)
+	err := cmd.Run()
+	if err != nil {
+		// Fallback: try opening with default file handler
+		cmd2 := exec.Command("am", "start",
+			"-a", "android.intent.action.VIEW",
+			"-d", "file://"+apkPath,
+		)
+		return cmd2.Run()
+	}
+	return nil
 }
