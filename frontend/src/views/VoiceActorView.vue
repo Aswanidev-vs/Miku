@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { gqlQuery } from '../api/graphql'
+import { Browser } from '@wailsio/runtime'
 
 const route = useRoute()
 const router = useRouter()
@@ -178,11 +179,30 @@ function parseDescription(desc?: string): string {
   if (!desc) return ''
   // Remove HTML tags
   let text = desc.replace(/<[^>]+>/g, '')
-  // Parse markdown links: [text](url) -> <a href="url">text</a>
-  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="description-link">$1</a>')
+  // Parse markdown links: [text](url) -> <a href="url" data-url="url">text</a>
+  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" data-url="$2" class="description-link">$1</a>')
   // Clean up extra newlines
   text = text.replace(/\n{3,}/g, '\n\n')
   return text.trim()
+}
+
+function handleDescriptionClick(e: Event) {
+  const target = e.target as HTMLElement
+  if (target.classList.contains('description-link')) {
+    e.preventDefault()
+    const url = target.getAttribute('data-url') || target.getAttribute('href')
+    if (url) {
+      openUrl(url)
+    }
+  }
+}
+
+async function openUrl(url: string) {
+  try {
+    await Browser.OpenURL(url)
+  } catch {
+    window.open(url, '_blank')
+  }
 }
 </script>
 
@@ -224,7 +244,7 @@ function parseDescription(desc?: string): string {
 
       <div v-if="actor.description" class="va-section">
         <h3 class="section-title">About</h3>
-        <div class="description-text" v-html="parseDescription(actor.description)"></div>
+        <div class="description-text" v-html="parseDescription(actor.description)" @click="handleDescriptionClick"></div>
       </div>
 
       <div v-if="roles.length" class="va-section">
