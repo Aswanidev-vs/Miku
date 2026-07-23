@@ -122,7 +122,7 @@ const mangaStats = [
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-md);
+  gap: var(--space-sm);
 }
 
 .stat-card {
@@ -142,8 +142,8 @@ const mangaStats = [
 }
 
 .stat-icon {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -162,19 +162,49 @@ const mangaStats = [
   display: flex;
   flex-direction: column;
   min-width: 0;
+  flex: 1;
 }
 
 .stat-value {
   font-family: var(--font-body);
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
   color: var(--text-primary);
-  line-height: 1.2;
+  line-height: 1.1;
 }
 
 .stat-label {
   font-size: var(--font-size-xs);
   color: var(--text-muted);
-  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* Responsive: smaller screens */
+@media (max-width: 360px) {
+  .stats-grid {
+    gap: 6px;
+  }
+
+  .stat-card {
+    padding: var(--space-xs) var(--space-sm);
+  }
+
+  .stat-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .stat-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .stat-value {
+    font-size: var(--font-size-md);
+  }
+
+  .stat-label {
+    font-size: 10px;
+  }
 }
 </style>

@@ -19,12 +19,16 @@ export function CleanupDownloads(): $CancellablePromise<void> {
     return $Call.ByID(1337919975);
 }
 
-export function DownloadUpdate(downloadURL: string, progressCallback: any): $CancellablePromise<string> {
-    return $Call.ByID(1447067367, downloadURL, progressCallback);
+export function DownloadUpdate(downloadURL: string): $CancellablePromise<string> {
+    return $Call.ByID(1447067367, downloadURL);
 }
 
 export function GetCurrentVersion(): $CancellablePromise<string> {
     return $Call.ByID(1838294253);
+}
+
+export function GetDownloadProgress(): $CancellablePromise<[number, number, boolean]> {
+    return $Call.ByID(165365789);
 }
 
 export function InstallUpdate(apkPath: string): $CancellablePromise<void> {
