@@ -5,6 +5,30 @@
 /** AniList media type */
 export type MediaType = 'ANIME' | 'MANGA'
 
+/** Search type for the search view */
+export type SearchType = 'ANIME' | 'MANGA' | 'CHARACTER' | 'STAFF'
+
+/** Character search result */
+export interface CharacterSearchResult {
+  id: number
+  name: { full?: string; native?: string }
+  image?: { medium: string; large: string }
+  description?: string
+  gender?: string
+  age?: string
+}
+
+/** Staff search result */
+export interface StaffSearchResult {
+  id: number
+  name: { full?: string; native?: string }
+  image?: { medium: string; large: string }
+  primaryOccupations?: string[]
+  gender?: string
+  age?: number
+  homeTown?: string
+}
+
 /** Format for anime/manga entries */
 export type MediaFormat =
   | 'TV'
