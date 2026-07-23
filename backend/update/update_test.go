@@ -211,14 +211,16 @@ func TestDownloadUpdate_Success(t *testing.T) {
 		httpClient: server.Client(),
 	}
 
-	var progressCalls []struct{ downloaded, total int64 }
-	path, err := svc.DownloadUpdate(server.URL, func(d, t int64) {
-		progressCalls = append(progressCalls, struct{ downloaded, total int64 }{d, t})
-	})
+	path, err := svc.DownloadUpdate(server.URL)
 
 	require.NoError(t, err)
 	assert.NotEmpty(t, path)
-	assert.True(t, len(progressCalls) > 0, "should have called progress callback")
+
+	// Verify progress was tracked
+	dl, total, active := svc.GetDownloadProgress()
+	assert.Equal(t, int64(1024), dl)
+	assert.Equal(t, int64(1024), total)
+	assert.False(t, active)
 
 	// Verify file contents
 	content, err := os.ReadFile(path)
@@ -235,7 +237,7 @@ func TestDownloadUpdate_NetworkError(t *testing.T) {
 		httpClient: &http.Client{Timeout: 1 * time.Second},
 	}
 
-	_, err := svc.DownloadUpdate("http://localhost:1/nonexistent", nil)
+	_, err := svc.DownloadUpdate("http://localhost:1/nonexistent")
 	assert.Error(t, err)
 }
 
@@ -250,7 +252,7 @@ func TestDownloadUpdate_ServerError(t *testing.T) {
 		httpClient: server.Client(),
 	}
 
-	_, err := svc.DownloadUpdate(server.URL, nil)
+	_, err := svc.DownloadUpdate(server.URL)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "500")
 }
