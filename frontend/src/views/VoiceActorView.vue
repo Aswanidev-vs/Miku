@@ -7,31 +7,22 @@ const route = useRoute()
 const router = useRouter()
 
 const actor = ref<any>(null)
-const roles = ref<{ media: any; character: any }[]>([])
+const roles = ref<{ media: any; character: any; characterRole: string }[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 
 const currentPage = ref(1)
-const hasMoreMedia = ref(false)
+const hasMoreRoles = ref(false)
 const loadingMoreRoles = ref(false)
 const sentinelRef = ref<HTMLElement | null>(null)
-const MAX_MEDIA_PAGES = 60        // safety bound; real limiter is scroll
-const MAX_CHARACTER_PAGES = 5     // extra char pages fetched for a long anime
-
-// Per-media lazy state for anime whose character list is longer than the first
-// 50 returned inline by the staffMedia query (e.g. Slime S4 has 500).
-interface CharState { page: number; hasNext: boolean; loading: boolean; done: boolean; observed: boolean }
-const mediaCharState = new Map<number, CharState>()
+const MAX_PAGES = 50
 
 let actorId = 0
-let charObserver: IntersectionObserver | null = null
 let sentinelObserver: IntersectionObserver | null = null
 
-// Staff info + their media in one query. Characters are nested (first 50 per
-// anime) so a VA's roles surface without a request per anime; long series flag
-// hasNextPage and are paginated lazily when scrolled into view.
+// AniList's actual query for staff page - uses characterMedia (not staffMedia!)
 const STAFF_QUERY = `
-query ($id: Int!, $page: Int) {
+query ($id: Int!, $page: Int, $sort: [MediaSort]) {
   Staff(id: $id) {
     id
     name { full native }
@@ -42,37 +33,25 @@ query ($id: Int!, $page: Int) {
     yearsActive
     homeTown
     description(asHtml: false)
-    staffMedia(page: $page, perPage: 50, sort: POPULARITY_DESC, type: ANIME) {
+    characterMedia(page: $page, sort: $sort) {
+      pageInfo { total perPage currentPage lastPage hasNextPage }
       edges {
+        characterRole
+        characterName
         node {
           id
+          type
           title { romaji english userPreferred }
-          coverImage { medium }
+          coverImage { large medium }
           format
           status
-          characters(perPage: 50, sort: ROLE) {
-            pageInfo { currentPage hasNextPage }
-            edges {
-              node { id name { full } image { medium } }
-              voiceActors(language: JAPANESE) { id name { full } }
-            }
-          }
+          startDate { year }
         }
-      }
-      pageInfo { hasNextPage total }
-    }
-  }
-}
-`
-
-const MEDIA_CHARACTERS_QUERY = `
-query ($id: Int!, $page: Int, $perPage: Int) {
-  Media(id: $id) {
-    characters(page: $page, perPage: $perPage, sort: ROLE) {
-      pageInfo { currentPage hasNextPage }
-      edges {
-        node { id name { full } image { medium } }
-        voiceActors(language: JAPANESE) { id name { full } }
+        characters {
+          id
+          name { full userPreferred }
+          image { large medium }
+        }
       }
     }
   }
@@ -92,19 +71,6 @@ onMounted(async () => {
   error.value = null
   currentPage.value = 1
 
-  const root = document.querySelector('.main-content') as HTMLElement | null
-  charObserver = new IntersectionObserver(
-    (entries) => {
-      for (const e of entries) {
-        if (!e.isIntersecting) continue
-        const mid = Number((e.target as HTMLElement).dataset.mediaId)
-        charObserver?.unobserve(e.target)
-        loadMoreCharsForMedia(mid)
-      }
-    },
-    { root, rootMargin: '300px' }
-  )
-
   try {
     await fetchStaff(actorId, 1)
   } catch (e: any) {
@@ -116,75 +82,72 @@ onMounted(async () => {
   }
 })
 
-// Observe the bottom sentinel so staffMedia pages stream in as the user scrolls
-// (instead of eagerly fetching every page on mount).
 function setupSentinelObserver() {
   const sentinel = sentinelRef.value
   const root = document.querySelector('.main-content') as HTMLElement | null
   if (!sentinel) return
   sentinelObserver = new IntersectionObserver(
     (entries) => {
-      if (entries[0].isIntersecting && !loadingMoreRoles.value && hasMoreMedia.value) {
+      if (entries[0].isIntersecting && !loadingMoreRoles.value && hasMoreRoles.value) {
         loadMoreRoles()
       }
     },
-    { root, rootMargin: '200px' }
+    { root, rootMargin: '300px' }
   )
   sentinelObserver.observe(sentinel)
 }
 
-// Register a role row so its anime's extra character pages load once visible.
-function registerRoleEl(el: HTMLElement | null, role: { media: any; character: any }) {
-  if (!el || !charObserver) return
-  const mid = role.media.id
-  const st = mediaCharState.get(mid)
-  if (!st || !st.hasNext || st.done || st.observed) return
-  st.observed = true
-  el.dataset.mediaId = String(mid)
-  charObserver.observe(el)
-}
-
 async function fetchStaff(id: number, page: number) {
-  const res = await gqlQuery(STAFF_QUERY, { id, page })
-  if (!res?.data?.Staff) return
+  const res = await gqlQuery(STAFF_QUERY, {
+    id,
+    page,
+    sort: 'START_DATE_DESC'
+  })
+
+  if (!res?.data?.Staff) {
+    console.error('[VoiceActor] Query returned no data')
+    return
+  }
 
   actor.value = res.data.Staff
 
-  const mediaEdges = res.data.Staff.staffMedia?.edges || []
-  const pageInfo = res.data.Staff.staffMedia?.pageInfo
-  hasMoreMedia.value = pageInfo?.hasNextPage ?? false
+  const charMedia = res.data.Staff.characterMedia
+  const edges = charMedia?.edges || []
+  const pageInfo = charMedia?.pageInfo
+  hasMoreRoles.value = pageInfo?.hasNextPage ?? false
   currentPage.value = page
+
+  console.log(`[VoiceActor] Page ${page}: ${edges.length} roles, total: ${pageInfo?.total}, hasNext: ${pageInfo?.hasNextPage}`)
 
   const baseRoles = page === 1 ? [] : [...roles.value]
   const seen = new Set(baseRoles.map((r) => `${r.media.id}-${r.character.id}`))
 
-  for (const mEdge of mediaEdges) {
-    const m = mEdge.node
-    const charConn = m.characters
-    const charEdges = charConn?.edges ?? []
-    if (charConn?.pageInfo?.hasNextPage && !mediaCharState.has(m.id)) {
-      mediaCharState.set(m.id, { page: 2, hasNext: true, loading: false, done: false, observed: false })
-    }
-    for (const cEdge of charEdges) {
-      const nid = cEdge?.node?.id
-      if (!nid) continue
-      const vaIds = (cEdge.voiceActors || []).map((va: any) => va.id)
-      if (!vaIds.includes(id)) continue
-      const key = `${m.id}-${nid}`
+  for (const edge of edges) {
+    const media = edge.node
+    const chars = edge.characters || []
+    const characterRole = edge.characterRole || ''
+
+    for (const char of chars) {
+      const key = `${media.id}-${char.id}`
       if (!seen.has(key)) {
         seen.add(key)
-        baseRoles.push({ media: m, character: cEdge.node })
+        baseRoles.push({
+          media,
+          character: char,
+          characterRole
+        })
       }
     }
   }
+
+  console.log(`[VoiceActor] Total roles found: ${baseRoles.length}`)
   roles.value = baseRoles
 }
 
-// Infinite scroll for the anime listing.
 async function loadMoreRoles() {
-  if (loadingMoreRoles.value || !hasMoreMedia.value) return
-  if (currentPage.value >= MAX_MEDIA_PAGES) {
-    hasMoreMedia.value = false
+  if (loadingMoreRoles.value || !hasMoreRoles.value) return
+  if (currentPage.value >= MAX_PAGES) {
+    hasMoreRoles.value = false
     return
   }
   loadingMoreRoles.value = true
@@ -197,66 +160,14 @@ async function loadMoreRoles() {
   }
 }
 
-// Lazily fetch a long anime's remaining character pages once it scrolls into
-// view, so a VA's roles there aren't missed (e.g. Slime S4's 500 characters).
-async function loadMoreCharsForMedia(mediaId: number) {
-  const st = mediaCharState.get(mediaId)
-  if (!st || st.loading || st.done) return
-  st.loading = true
-
-  const media = roles.value.find((r) => r.media.id === mediaId)?.media
-  const seen = new Set(roles.value.filter((r) => r.media.id === mediaId).map((r) => r.character.id))
-
-  try {
-    let page = st.page
-    let guard = 0
-    let lastHasNext = st.hasNext
-    while (page <= MAX_CHARACTER_PAGES && guard < MAX_CHARACTER_PAGES) {
-      const res = await gqlQuery(MEDIA_CHARACTERS_QUERY, { id: mediaId, page, perPage: 50 })
-      const conn = res?.data?.Media?.characters
-      const newEdges = conn?.edges ?? []
-      if (!newEdges.length) {
-        st.done = true
-        break
-      }
-      for (const cEdge of newEdges) {
-        const nid = cEdge?.node?.id
-        if (!nid) continue
-        const vaIds = (cEdge.voiceActors || []).map((va: any) => va.id)
-        if (vaIds.includes(actorId) && !seen.has(nid)) {
-          seen.add(nid)
-          roles.value.push({ media, character: cEdge.node })
-        }
-      }
-      lastHasNext = conn?.pageInfo?.hasNextPage ?? false
-      if (!lastHasNext) {
-        st.done = true
-        break
-      }
-      page++
-      st.page = page
-      guard++
-    }
-    if (guard >= MAX_CHARACTER_PAGES) st.done = true
-    st.hasNext = !st.done && lastHasNext
-  } catch {
-    st.done = true
-  } finally {
-    st.loading = false
-  }
-}
-
 onUnmounted(() => {
-  charObserver?.disconnect()
   sentinelObserver?.disconnect()
-  charObserver = null
   sentinelObserver = null
-  mediaCharState.clear()
   actor.value = null
   roles.value = []
   error.value = null
   currentPage.value = 1
-  hasMoreMedia.value = false
+  hasMoreRoles.value = false
   loadingMoreRoles.value = false
 })
 
@@ -315,17 +226,19 @@ function cleanDescription(desc?: string): string {
           <div
             v-for="role in roles"
             :key="`${role.media.id}-${role.character.id}`"
-            :ref="el => registerRoleEl(el as HTMLElement | null, role)"
             class="role-item"
             @click="goToMedia(role.media.id)"
           >
             <img v-if="role.media.coverImage" :src="role.media.coverImage.medium" :alt="role.media.title.romaji" class="role-media-img" />
             <div class="role-info">
-              <span class="role-character">{{ role.character.name.full }}</span>
+              <span class="role-character">{{ role.character.name?.full || role.character.name?.userPreferred || 'Unknown' }}</span>
               <span class="role-media-title">{{ role.media.title.userPreferred || role.media.title.romaji }}</span>
-              <span v-if="role.media.format" class="role-format">{{ role.media.format.replace('_', ' ').toLowerCase() }}</span>
+              <span class="role-format">
+                {{ role.media.format?.replace('_', ' ')?.toLowerCase() || '' }}
+                <span v-if="role.characterRole" class="role-type"> · {{ role.characterRole }}</span>
+              </span>
             </div>
-            <img v-if="role.character.image" :src="role.character.image.medium" :alt="role.character.name.full" class="role-char-img" />
+            <img v-if="role.character.image" :src="role.character.image.medium || role.character.image.large" :alt="role.character.name?.full" class="role-char-img" />
           </div>
         </div>
 
@@ -334,6 +247,14 @@ function cleanDescription(desc?: string): string {
             <div class="spinner"></div>
             <span>Loading more roles…</span>
           </div>
+          <button
+            v-else-if="hasMoreRoles"
+            class="load-more-btn"
+            @click="loadMoreRoles"
+          >
+            Load More Roles
+          </button>
+          <p v-else-if="roles.length > 0" class="all-loaded">All roles loaded</p>
         </div>
       </div>
 
@@ -399,11 +320,35 @@ function cleanDescription(desc?: string): string {
 .role-character { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--text-primary); }
 .role-media-title { font-size: var(--font-size-xs); color: var(--color-primary-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .role-format { font-size: 10px; color: var(--text-muted); text-transform: capitalize; }
+.role-type { color: var(--text-secondary); }
 .role-char-img { width: 36px; height: 36px; border-radius: var(--radius-full); object-fit: cover; flex-shrink: 0; }
 
-.load-more-sentinel { display: flex; justify-content: center; padding: var(--space-2xl) 0; }
+.load-more-sentinel { display: flex; flex-direction: column; align-items: center; gap: var(--space-md); padding: var(--space-2xl) 0; }
 .loading-more { display: flex; align-items: center; gap: var(--space-sm); color: var(--text-muted); font-size: var(--font-size-sm); }
 .loading-more .spinner { width: 18px; height: 18px; border: 2px solid var(--border-default); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 0.7s linear infinite; }
+
+.load-more-btn {
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-hover);
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.load-more-btn:hover {
+  background: var(--bg-elevated);
+  border-color: var(--color-primary);
+  color: var(--text-primary);
+}
+
+.all-loaded {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
 
 .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: var(--space-lg); color: var(--text-muted); }
 .btn-back { padding: var(--space-sm) var(--space-lg); border-radius: var(--radius-md); font-size: var(--font-size-sm); border: 1px solid var(--bg-hover); background: var(--bg-surface); color: var(--text-secondary); cursor: pointer; }
