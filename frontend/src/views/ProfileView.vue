@@ -64,6 +64,7 @@ async function handleLogin() {
 
 async function handleLogout() {
   animeStore.stopSync()
+  animeStore.clearMyList()
   clearGqlCache()
   await authStore.logout()
 }
