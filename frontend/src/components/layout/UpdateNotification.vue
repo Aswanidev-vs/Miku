@@ -19,20 +19,26 @@ const authStore = useAuthStore()
 const animeStore = useAnimeStore()
 
 const showPanel = ref(false)
-const showBadge = ref(false)
 const episodeNoticeRevision = ref(0)
+
+const hasUnreadUpdate = computed(() => hasUpdate.value && !wasDismissedForCurrent())
 
 const episodeNotices = computed(() => {
   episodeNoticeRevision.value
+  if (!authStore.isLoggedIn || !authStore.currentUser) return []
+  const userId = authStore.currentUser.id
   const watching = animeStore.myList?.lists?.find((list) => list.status === 'CURRENT')?.entries ?? []
   return watching
     .map((entry: any) => {
       const media = entry.media
       // For a releasing show, `episodes` can be the planned total. The next
       // airing episode is the reliable boundary for what is already out.
-      const releasedEpisode = media?.status === 'RELEASING' && media.nextAiringEpisode
-        ? media.nextAiringEpisode.episode - 1
-        : media?.episodes
+      let releasedEpisode: number | undefined
+      if (media?.status === 'RELEASING' && media.nextAiringEpisode) {
+        releasedEpisode = media.nextAiringEpisode.episode - 1
+      } else if (media?.status === 'FINISHED') {
+        releasedEpisode = media.episodes
+      }
       return {
         id: media?.id,
         title: media?.title?.userPreferred || media?.title?.romaji || 'Anime',
@@ -42,12 +48,14 @@ const episodeNotices = computed(() => {
     })
     .filter((notice: any) => notice.id && notice.episode && notice.episode > notice.progress)
     .filter((notice: any) => {
-      const seen = Number(localStorage.getItem(`miku-episode-notice-${notice.id}`) || 0)
+      const seen = Number(localStorage.getItem(`miku-episode-notice-${userId}-${notice.id}`) || 0)
       return notice.episode > seen
     })
 })
 
 const hasEpisodeNotice = computed(() => episodeNotices.value.length > 0)
+const notificationCount = computed(() => (hasUnreadUpdate.value ? 1 : 0) + episodeNotices.value.length)
+const showBadge = computed(() => notificationCount.value > 0)
 
 const displayLatestVersion = computed(() => {
   if (!updateInfo.value?.latestVersion) return ''
@@ -59,27 +67,15 @@ onMounted(async () => {
   if (authStore.isLoggedIn && authStore.currentUser) {
     await animeStore.fetchMyList(authStore.currentUser.id)
   }
-  if (hasUpdate.value && !wasDismissedForCurrent()) {
-    showBadge.value = true
-  }
-  if (hasEpisodeNotice.value) showBadge.value = true
-})
-
-watch(hasUpdate, (available) => {
-  if (available && !wasDismissedForCurrent()) {
-    showBadge.value = true
-  } else {
-    showBadge.value = false
-  }
-})
-
-watch(hasEpisodeNotice, (available) => {
-  if (available) showBadge.value = true
 })
 
 watch(() => authStore.isLoggedIn, async (loggedIn) => {
   if (loggedIn && authStore.currentUser) {
     await animeStore.fetchMyList(authStore.currentUser.id)
+  } else {
+    animeStore.clearMyList()
+    episodeNoticeRevision.value++
+    showPanel.value = false
   }
 })
 
@@ -98,26 +94,24 @@ function closePanel() {
 
 function acknowledgeEpisodes() {
   for (const notice of episodeNotices.value) {
-    localStorage.setItem(`miku-episode-notice-${notice.id}`, String(notice.episode))
+    localStorage.setItem(`miku-episode-notice-${authStore.currentUser?.id}-${notice.id}`, String(notice.episode))
   }
-  showBadge.value = hasUpdate.value && !wasDismissedForCurrent()
 }
 
 function markAllAsRead() {
   acknowledgeEpisodes()
   if (hasUpdate.value) dismissUpdate()
-  showBadge.value = false
 }
 
 function markEpisodeAsRead(id: number, episode: number) {
-  localStorage.setItem(`miku-episode-notice-${id}`, String(episode))
+  const userId = authStore.currentUser?.id
+  if (!userId) return
+  localStorage.setItem(`miku-episode-notice-${userId}-${id}`, String(episode))
   episodeNoticeRevision.value++
-  showBadge.value = hasUpdate.value && !wasDismissedForCurrent()
 }
 
 function dismiss() {
   dismissUpdate()
-  showBadge.value = false
   showPanel.value = false
 }
 
@@ -149,7 +143,7 @@ function formatSpeed(bytesPerSecond: number): string {
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
       <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
     </svg>
-    <span v-if="showBadge" class="update-badge">{{ (hasUpdate && !wasDismissedForCurrent() ? 1 : 0) + episodeNotices.length }}</span>
+    <span v-if="showBadge" class="update-badge">{{ notificationCount }}</span>
   </div>
 
   <Teleport to="body">
@@ -178,7 +172,7 @@ function formatSpeed(bytesPerSecond: number): string {
               <div v-for="notice in episodeNotices" :key="notice.id" class="episode-notice">
                 <span class="episode-dot" />
                 <span class="episode-notice-copy"><strong>{{ notice.title }}</strong> has reached episode {{ notice.episode }}</span>
-                <button class="notice-read-btn" type="button" @click="markEpisodeAsRead(notice.id, notice.episode)">
+                <button class="notice-read-btn" type="button" @click="markEpisodeAsRead(notice.id, Number(notice.episode))">
                   Mark read
                 </button>
               </div>

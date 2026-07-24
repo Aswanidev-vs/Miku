@@ -318,6 +318,10 @@ export const useAnimeStore = defineStore('anime', () => {
     }
   }
 
+  function clearMyList() {
+    myList.value = null
+  }
+
   async function updateEntry(
     mediaId: number,
     status?: string,
@@ -505,6 +509,7 @@ export const useAnimeStore = defineStore('anime', () => {
     fetchTrending,
     search,
     fetchMyList,
+    clearMyList,
     updateEntry,
     deleteEntry,
     fetchDetails,
