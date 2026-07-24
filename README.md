@@ -406,6 +406,8 @@ This project uses GitHub Actions for automated builds. See [`.github/workflows/b
 
 - Initial release with core features
 
+
+
 ## Contributing
 
 Contributions are welcome! Here's how to get started:
@@ -439,6 +441,12 @@ Contributions are welcome! Here's how to get started:
 5. Test thoroughly before submitting
 
 ## License
+
+### Android Link Behavior
+
+- OAuth login links still open in Chrome Custom Tabs on Android because the localhost callback flow depends on that behavior.
+- Staff and voice actor external links use Android's normal app-link resolution instead. If the user has YouTube, Instagram, X/Twitter, or another matching app installed, Android can open that app directly.
+- If no installed app can handle the link, Android falls back to the user's default browser.
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 

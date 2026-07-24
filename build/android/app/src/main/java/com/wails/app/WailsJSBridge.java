@@ -149,6 +149,36 @@ public class WailsJSBridge {
     }
 
     /**
+     * Open a URL in the user's regular browser instead of a Chrome Custom Tab.
+     * Used for informational/external links where the app should not retain
+     * an in-app browser session.
+     */
+    @JavascriptInterface
+    public void openInBrowser(String url) {
+        Uri uri = Uri.parse(url);
+        try {
+            // Let Android resolve verified links to an installed app first
+            // (YouTube, Instagram, X, etc.). If no app claims the URL, this
+            // naturally resolves to the user's default browser.
+            Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            webView.getContext().startActivity(intent);
+        } catch (Exception e) {
+            Log.w(TAG, "Preferred URL handler unavailable, retrying in browser", e);
+            try {
+                // BROWSABLE asks Android for a web-capable handler and avoids
+                // an app-specific handler that failed to launch.
+                Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
+                browserIntent.addCategory(Intent.CATEGORY_BROWSABLE);
+                browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                webView.getContext().startActivity(browserIntent);
+            } catch (Exception browserError) {
+                Log.e(TAG, "Failed to open URL in browser", browserError);
+            }
+        }
+    }
+
+    /**
      * Send a callback response to JavaScript
      */
     private void sendCallback(String callbackId, String result, String error) {

@@ -198,6 +198,18 @@ function handleDescriptionClick(e: Event) {
 }
 
 async function openUrl(url: string) {
+  // Android's Wails runtime intentionally maps Browser.OpenURL to a Chrome
+  // Custom Tab (needed by OAuth). Profile links are ordinary external links,
+  // so send them to the user's regular browser instead.
+  const androidBridge = (window as Window & {
+    wails?: { platform?: () => string; openInBrowser?: (url: string) => void }
+  }).wails
+
+  if (androidBridge?.platform?.() === 'android' && androidBridge.openInBrowser) {
+    androidBridge.openInBrowser(url)
+    return
+  }
+
   try {
     await Browser.OpenURL(url)
   } catch {

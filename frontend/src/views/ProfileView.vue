@@ -441,4 +441,70 @@ async function handleLogout() {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Small Android screens: stack the action below the account details so the
+   account name/status never gets squeezed into an unreadable column. */
+@media (max-width: 420px) {
+  .settings-header {
+    padding-right: var(--space-md);
+    padding-left: var(--space-md);
+  }
+
+  .account-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--space-sm) var(--space-md);
+    margin-right: var(--space-md);
+    margin-left: var(--space-md);
+    padding: var(--space-sm);
+  }
+
+  .account-avatar,
+  .account-logo {
+    width: 44px;
+    height: 44px;
+  }
+
+  .account-info {
+    align-self: center;
+  }
+
+  .account-name,
+  .account-status {
+    overflow-wrap: anywhere;
+  }
+
+  .signin-btn,
+  .signout-btn {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .inline-error {
+    margin-right: var(--space-md);
+    margin-left: var(--space-md);
+  }
+
+  .settings-group {
+    margin-right: var(--space-md);
+    margin-left: var(--space-md);
+    padding-right: var(--space-sm);
+    padding-left: var(--space-sm);
+  }
+
+  .setting-row {
+    gap: var(--space-sm);
+  }
+
+  .about-row {
+    align-items: flex-start;
+    gap: var(--space-sm);
+  }
+
+  .about-value {
+    min-width: 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+}
 </style>
