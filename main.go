@@ -13,7 +13,7 @@ import (
 )
 
 // Version is the current app version. Bump before each release build.
-const Version = "0.10.0"
+const Version = "0.10.1"
 
 //go:embed all:frontend/dist
 var assets embed.FS

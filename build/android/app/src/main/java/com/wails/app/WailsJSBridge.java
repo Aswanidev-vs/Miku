@@ -11,6 +11,8 @@ import android.webkit.WebView;
 import com.wails.app.BuildConfig;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
+import java.io.File;
 
 /**
  * WailsJSBridge provides the JavaScript interface that allows the web frontend
@@ -175,6 +177,26 @@ public class WailsJSBridge {
             } catch (Exception browserError) {
                 Log.e(TAG, "Failed to open URL in browser", browserError);
             }
+        }
+    }
+
+    /** Launch Android's package installer for an APK downloaded into app storage. */
+    @JavascriptInterface
+    public void installApk(String apkPath) {
+        try {
+            Context context = webView.getContext();
+            File apk = new File(apkPath);
+            Uri apkUri = FileProvider.getUriForFile(
+                    context,
+                    context.getPackageName() + ".fileprovider",
+                    apk
+            );
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(intent);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to launch APK installer", e);
         }
     }
 
