@@ -143,6 +143,19 @@ export function useUpdate() {
 
   async function installUpdate(): Promise<void> {
     if (!downloadedApkPath.value) return
+
+    // Android must use a FileProvider URI. The Go process cannot reliably
+    // launch `am` from the app's PATH, and file:// URIs are blocked on modern
+    // Android versions.
+    const androidBridge = (window as any).wails as {
+      platform?: () => string
+      installApk?: (path: string) => void
+    } | undefined
+    if (androidBridge?.platform?.() === 'android' && androidBridge.installApk) {
+      androidBridge.installApk(downloadedApkPath.value)
+      return
+    }
+
     await ensureLoaded()
     if (!UpdateService) return
 
