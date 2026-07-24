@@ -142,6 +142,7 @@ query ($userId: Int, $status: MediaListStatus) {
           format
           episodes
           status
+          nextAiringEpisode { episode airingAt timeUntilAiring }
         }
       }
     }

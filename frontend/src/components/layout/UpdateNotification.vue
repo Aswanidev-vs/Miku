@@ -2,6 +2,8 @@
 import { ref, onMounted, watch, computed } from 'vue'
 import { useUpdate } from '../../composables/useUpdate'
 import { usePlatform } from '../../composables/usePlatform'
+import { useAuthStore } from '../../stores/auth'
+import { useAnimeStore } from '../../stores/anime'
 
 const {
   checking, downloading, downloadProgress,
@@ -13,9 +15,39 @@ const {
 } = useUpdate()
 
 const { isMobile } = usePlatform()
+const authStore = useAuthStore()
+const animeStore = useAnimeStore()
 
 const showPanel = ref(false)
 const showBadge = ref(false)
+const episodeNoticeRevision = ref(0)
+
+const episodeNotices = computed(() => {
+  episodeNoticeRevision.value
+  const watching = animeStore.myList?.lists?.find((list) => list.status === 'CURRENT')?.entries ?? []
+  return watching
+    .map((entry: any) => {
+      const media = entry.media
+      // For a releasing show, `episodes` can be the planned total. The next
+      // airing episode is the reliable boundary for what is already out.
+      const releasedEpisode = media?.status === 'RELEASING' && media.nextAiringEpisode
+        ? media.nextAiringEpisode.episode - 1
+        : media?.episodes
+      return {
+        id: media?.id,
+        title: media?.title?.userPreferred || media?.title?.romaji || 'Anime',
+        episode: releasedEpisode,
+        progress: entry.progress ?? 0,
+      }
+    })
+    .filter((notice: any) => notice.id && notice.episode && notice.episode > notice.progress)
+    .filter((notice: any) => {
+      const seen = Number(localStorage.getItem(`miku-episode-notice-${notice.id}`) || 0)
+      return notice.episode > seen
+    })
+})
+
+const hasEpisodeNotice = computed(() => episodeNotices.value.length > 0)
 
 const displayLatestVersion = computed(() => {
   if (!updateInfo.value?.latestVersion) return ''
@@ -24,9 +56,13 @@ const displayLatestVersion = computed(() => {
 
 onMounted(async () => {
   await checkForUpdate()
+  if (authStore.isLoggedIn && authStore.currentUser) {
+    await animeStore.fetchMyList(authStore.currentUser.id)
+  }
   if (hasUpdate.value && !wasDismissedForCurrent()) {
     showBadge.value = true
   }
+  if (hasEpisodeNotice.value) showBadge.value = true
 })
 
 watch(hasUpdate, (available) => {
@@ -37,8 +73,46 @@ watch(hasUpdate, (available) => {
   }
 })
 
+watch(hasEpisodeNotice, (available) => {
+  if (available) showBadge.value = true
+})
+
+watch(() => authStore.isLoggedIn, async (loggedIn) => {
+  if (loggedIn && authStore.currentUser) {
+    await animeStore.fetchMyList(authStore.currentUser.id)
+  }
+})
+
 function togglePanel() {
   showPanel.value = !showPanel.value
+  if (showPanel.value) {
+    return
+  }
+  acknowledgeEpisodes()
+}
+
+function closePanel() {
+  showPanel.value = false
+  acknowledgeEpisodes()
+}
+
+function acknowledgeEpisodes() {
+  for (const notice of episodeNotices.value) {
+    localStorage.setItem(`miku-episode-notice-${notice.id}`, String(notice.episode))
+  }
+  showBadge.value = hasUpdate.value && !wasDismissedForCurrent()
+}
+
+function markAllAsRead() {
+  acknowledgeEpisodes()
+  if (hasUpdate.value) dismissUpdate()
+  showBadge.value = false
+}
+
+function markEpisodeAsRead(id: number, episode: number) {
+  localStorage.setItem(`miku-episode-notice-${id}`, String(episode))
+  episodeNoticeRevision.value++
+  showBadge.value = hasUpdate.value && !wasDismissedForCurrent()
 }
 
 function dismiss() {
@@ -75,16 +149,16 @@ function formatSpeed(bytesPerSecond: number): string {
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
       <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
     </svg>
-    <span v-if="showBadge" class="update-badge">1</span>
+    <span v-if="showBadge" class="update-badge">{{ (hasUpdate && !wasDismissedForCurrent() ? 1 : 0) + episodeNotices.length }}</span>
   </div>
 
   <Teleport to="body">
     <Transition name="panel-fade">
-      <div v-if="showPanel" class="update-panel" @click.self="showPanel = false">
+      <div v-if="showPanel" class="update-panel" @click.self="closePanel">
         <div class="update-card" :class="{ 'mobile-sheet': isMobile }">
           <div class="card-header">
-            <h3>{{ hasUpdate ? 'Update Available' : 'App Status' }}</h3>
-            <button class="close-btn" @click="showPanel = false" aria-label="Close">
+            <h3>{{ hasUpdate ? 'Update Available' : 'Notifications' }}</h3>
+            <button class="close-btn" @click="closePanel" aria-label="Close">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"/>
                 <line x1="6" y1="6" x2="18" y2="18"/>
@@ -93,7 +167,24 @@ function formatSpeed(bytesPerSecond: number): string {
           </div>
 
           <div class="card-body">
-            <!-- Update available -->
+            <div v-if="showBadge || episodeNotices.length || hasUpdate" class="notification-actions">
+              <button class="mark-read-btn" type="button" @click="markAllAsRead">
+                Mark all as read
+              </button>
+            </div>
+
+            <div v-if="episodeNotices.length" class="episode-notices">
+              <div class="notice-heading">New episodes</div>
+              <div v-for="notice in episodeNotices" :key="notice.id" class="episode-notice">
+                <span class="episode-dot" />
+                <span class="episode-notice-copy"><strong>{{ notice.title }}</strong> has reached episode {{ notice.episode }}</span>
+                <button class="notice-read-btn" type="button" @click="markEpisodeAsRead(notice.id, notice.episode)">
+                  Mark read
+                </button>
+              </div>
+            </div>
+
+            <!-- Latest update only -->
             <template v-if="hasUpdate && updateInfo">
               <div class="version-info">
                 <div class="version-row">
@@ -142,24 +233,8 @@ function formatSpeed(bytesPerSecond: number): string {
                 <button class="btn btn-ghost" @click="dismiss">
                   Dismiss
                 </button>
-              </div>
-            </template>
-
-            <!-- Up to date -->
-            <template v-else-if="checked && updateInfo">
-              <div class="up-to-date">
-                <div class="check-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                       stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                    <polyline points="22 4 12 14.01 9 11.01"/>
-                  </svg>
-                </div>
-                <p class="up-to-date-title">App is up to date</p>
-                <p class="up-to-date-version">v{{ updateInfo.currentVersion }}</p>
-                <p class="up-to-date-sub">You're running the latest version</p>
-                <button class="btn btn-ghost btn-check" @click="checkForUpdate" :disabled="checking">
-                  {{ checking ? 'Checking...' : 'Check for updates' }}
+                <button class="btn btn-ghost" @click="dismiss">
+                  Mark as read
                 </button>
               </div>
             </template>
@@ -169,6 +244,14 @@ function formatSpeed(bytesPerSecond: number): string {
               <div class="checking-state">
                 <div class="spinner"></div>
                 <span>Checking for updates...</span>
+              </div>
+            </template>
+
+            <!-- No bell notification; detailed status is available in Settings. -->
+            <template v-else>
+              <div class="empty-notifications">
+                <p>No new notifications</p>
+                <span>Update status is available in Settings.</span>
               </div>
             </template>
           </div>
@@ -300,6 +383,68 @@ function formatSpeed(bytesPerSecond: number): string {
 .card-body {
   padding: var(--space-lg);
 }
+
+.episode-notices {
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.notification-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-md);
+}
+
+.mark-read-btn {
+  padding: var(--space-xs) var(--space-sm);
+  color: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.mark-read-btn:hover {
+  background: var(--color-primary-subtle);
+  border-color: var(--color-primary);
+}
+
+.notice-heading {
+  margin-bottom: var(--space-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.episode-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: 1.45;
+}
+
+.episode-notice + .episode-notice { margin-top: var(--space-xs); }
+.episode-dot { width: 7px; height: 7px; margin-top: 5px; flex-shrink: 0; border-radius: 50%; background: var(--color-primary); }
+.episode-notice-copy { flex: 1; min-width: 0; }
+
+.notice-read-btn {
+  flex-shrink: 0;
+  padding: 2px 5px;
+  color: var(--color-primary);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.notice-read-btn:hover { text-decoration: underline; }
 
 .version-info {
   margin-bottom: var(--space-lg);
