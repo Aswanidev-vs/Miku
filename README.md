@@ -39,6 +39,13 @@ Miku is a feature-rich AniList client that delivers a premium anime and manga tr
 - **Auto-Install** — Opens the system installer after download
 - **Version Display** — Profile page shows current version with update indicator
 
+### Notification Features
+- **Update Settings Card** — Check the installed version and latest release directly from Settings
+- **Episode Notifications** — The Discover notification bell alerts you when a new episode is available for anime in your Watching list
+- **Individual Read Controls** — Mark an individual update or episode notification as read
+- **Mark All as Read** — Clear all update and episode notifications from the bell at once
+- **Persistent Episode Read State** — Acknowledged episode releases do not repeatedly notify the user
+
 ### Search Enhancements
 - **Character Search** — Search by character name to find anime/manga
 - **Staff Search** — Search by voice actor/staff name to find their works
@@ -401,6 +408,13 @@ This project uses GitHub Actions for automated builds. See [`.github/workflows/b
 
 #### Bug Fixes
 - Fixed version not displaying in ProfileView
+
+### Notification Behavior
+
+- The Discover notification bell continues to check automatically for new app releases and shows a badge when an update is available.
+- The Settings menu contains the manual **Check for Updates** card, which reports whether the installed version is current or an update is available.
+- Anime in the user's **Watching** list generate a bell notification when AniList reports a newly released episode beyond the user's watched progress.
+- Episode and update notifications support both individual **Mark as read** actions and **Mark all as read**.
 
 ### v0.8.14
 

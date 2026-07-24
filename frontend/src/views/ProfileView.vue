@@ -14,10 +14,12 @@ const authStore = useAuthStore()
 const userStore = useUserStore()
 const animeStore = useAnimeStore()
 const { settings, toggle } = useSettings()
-const { currentVersion, hasUpdate, latestVersion, fetchCurrentVersion } = useUpdate()
+const {
+  currentVersion, hasUpdate, latestVersion, checked, checking, updateInfo, error: updateError,
+  checkForUpdate,
+} = useUpdate()
 
 onMounted(() => {
-  fetchCurrentVersion()
   if (isLoggedIn.value && user.value) {
     userStore.fetchAllActivitiesForHeatmap(user.value.id)
   }
@@ -65,6 +67,10 @@ async function handleLogout() {
   clearGqlCache()
   await authStore.logout()
 }
+
+async function handleCheckForUpdates() {
+  await checkForUpdate()
+}
 </script>
 
 <template>
@@ -105,6 +111,31 @@ async function handleLogout() {
     </section>
 
     <p v-if="authStore.error" class="inline-error">{{ authStore.error }}</p>
+
+    <!-- Manual update status and trigger -->
+    <button class="update-card" type="button" @click="handleCheckForUpdates" :disabled="checking">
+      <span class="update-card-icon" :class="{ checking }">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M20 11a8.1 8.1 0 0 0-14.9-4L3 9" />
+          <path d="M3 4v5h5" />
+          <path d="M4 13a8.1 8.1 0 0 0 14.9 4L21 15" />
+          <path d="M21 20v-5h-5" />
+        </svg>
+      </span>
+      <span class="update-card-copy">
+        <span class="update-card-title">Check for Updates</span>
+        <span class="update-card-status" v-if="checking">Checking for updates...</span>
+        <span class="update-card-status update-available" v-else-if="hasUpdate && updateInfo">
+          Update available · v{{ updateInfo.latestVersion.replace(/^v/, '') }}
+        </span>
+        <span class="update-card-status up-to-date" v-else-if="checked && updateInfo">
+          App is up to date · v{{ updateInfo.currentVersion }}
+        </span>
+        <span class="update-card-status" v-else>Tap to check your installed version</span>
+      </span>
+      <span class="update-card-chevron">›</span>
+    </button>
+    <p v-if="updateError" class="inline-error update-error">{{ updateError }}</p>
 
     <!-- Preferences -->
     <section class="settings-group">
@@ -304,6 +335,50 @@ async function handleLogout() {
   color: var(--status-dropped);
 }
 
+.update-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: calc(100% - (var(--space-lg) * 2));
+  margin: 0 var(--space-lg) var(--space-md);
+  padding: var(--space-md);
+  text-align: left;
+  color: inherit;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+}
+
+.update-card:hover:not(:disabled) {
+  background: var(--bg-elevated);
+  border-color: var(--color-primary);
+}
+
+.update-card:active:not(:disabled) { transform: scale(0.99); }
+.update-card:disabled { cursor: wait; opacity: 0.8; }
+
+.update-card-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  color: var(--color-primary);
+  background: var(--color-primary-subtle);
+  border-radius: var(--radius-md);
+}
+
+.update-card-icon svg { width: 20px; height: 20px; }
+.update-card-icon.checking svg { animation: spin 0.9s linear infinite; }
+.update-card-copy { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.update-card-title { color: var(--text-primary); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); }
+.update-card-status { margin-top: 3px; color: var(--text-muted); font-size: var(--font-size-xs); overflow-wrap: anywhere; }
+.update-card-status.update-available { color: var(--color-primary); }
+.update-card-status.up-to-date { color: var(--status-watching); }
+.update-card-chevron { color: var(--text-muted); font-size: 26px; line-height: 1; }
+
 /* Settings groups */
 .settings-group {
   margin: var(--space-lg) var(--space-lg) 0;
@@ -481,6 +556,12 @@ async function handleLogout() {
   }
 
   .inline-error {
+    margin-right: var(--space-md);
+    margin-left: var(--space-md);
+  }
+
+  .update-card {
+    width: calc(100% - (var(--space-md) * 2));
     margin-right: var(--space-md);
     margin-left: var(--space-md);
   }
