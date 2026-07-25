@@ -81,10 +81,11 @@ Miku is a feature-rich AniList client that delivers a premium anime and manga tr
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/home.png" alt="Home" width="200">
-  <img src="docs/screenshots/search.png" alt="Search" width="200">
-  <img src="docs/screenshots/profile.png" alt="Profile" width="200">
-  <img src="docs/screenshots/feed.png" alt="Feed" width="200">
+  <img src="docs/1.jpeg" alt="Discover" width="150">
+  <img src="docs/2.jpeg" alt="Search" width="150">
+  <img src="docs/3.jpeg" alt="My List" width="150">
+  <img src="docs/4.jpeg" alt="Feed" width="150">
+  <img src="docs/5.jpeg" alt="Settings" width="150">
 </p>
 
 ## Tech Stack
