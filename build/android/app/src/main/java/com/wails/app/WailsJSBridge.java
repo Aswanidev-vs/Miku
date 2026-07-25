@@ -182,21 +182,38 @@ public class WailsJSBridge {
 
     /** Launch Android's package installer for an APK downloaded into app storage. */
     @JavascriptInterface
-    public void installApk(String apkPath) {
+    public boolean installApk(String apkPath) {
+        Context context = webView.getContext();
+        File apk = new File(apkPath);
+        final Uri apkUri;
         try {
-            Context context = webView.getContext();
-            File apk = new File(apkPath);
-            Uri apkUri = FileProvider.getUriForFile(
+            apkUri = FileProvider.getUriForFile(
                     context,
                     context.getPackageName() + ".fileprovider",
                     apk
             );
-            Intent intent = new Intent(Intent.ACTION_VIEW);
+            Intent intent = new Intent(Intent.ACTION_INSTALL_PACKAGE);
             intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(intent);
+            return true;
         } catch (Exception e) {
-            Log.e(TAG, "Failed to launch APK installer", e);
+            Log.w(TAG, "Package installer intent failed; trying system APK viewer", e);
+            try {
+                Uri fallbackUri = FileProvider.getUriForFile(
+                        context,
+                        context.getPackageName() + ".fileprovider",
+                        apk
+                );
+                Intent fallback = new Intent(Intent.ACTION_VIEW);
+                fallback.setDataAndType(fallbackUri, "application/vnd.android.package-archive");
+                fallback.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(fallback);
+                return true;
+            } catch (Exception fallbackError) {
+                Log.e(TAG, "Failed to launch Android APK installer fallback", fallbackError);
+                return false;
+            }
         }
     }
 

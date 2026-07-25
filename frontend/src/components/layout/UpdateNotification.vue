@@ -7,7 +7,7 @@ import { useAnimeStore } from '../../stores/anime'
 
 const {
   checking, downloading, downloadProgress,
-  downloaded, downloadTotal, downloadSpeed,
+  downloaded, downloadTotal, downloadSpeed, installing,
   hasUpdate, updateInfo, downloadedApkPath,
   error, checked,
   checkForUpdate, downloadUpdate, installUpdate, dismissUpdate,
@@ -36,7 +36,10 @@ const episodeNotices = computed(() => {
       let releasedEpisode: number | undefined
       if (media?.status === 'RELEASING' && media.nextAiringEpisode) {
         releasedEpisode = media.nextAiringEpisode.episode - 1
-      } else if (media?.status === 'FINISHED') {
+      } else if (media?.status === 'FINISHED' || media?.status === 'HIATUS') {
+        // Finished and paused/hiatus series expose their released total in
+        // `episodes`; unlike NOT_YET_RELEASED, it is not merely a planned
+        // future count for the purpose of watching-progress notifications.
         releasedEpisode = media.episodes
       }
       return {
@@ -96,6 +99,7 @@ function acknowledgeEpisodes() {
   for (const notice of episodeNotices.value) {
     localStorage.setItem(`miku-episode-notice-${authStore.currentUser?.id}-${notice.id}`, String(notice.episode))
   }
+  episodeNoticeRevision.value++
 }
 
 function markAllAsRead() {
@@ -219,11 +223,15 @@ function formatSpeed(bytesPerSecond: number): string {
                         :disabled="checking || !updateInfo.downloadUrl">
                   {{ checking ? 'Checking...' : 'Download Update' }}
                 </button>
-                <button v-else-if="downloadedApkPath && !downloading"
+                <button v-else-if="downloadedApkPath && !downloading && !installing"
                         class="btn btn-primary"
                         @click="installUpdate">
                   Install Update
                 </button>
+                <div v-if="installing" class="installing-state">
+                  <div class="progress-bar"><div class="progress-fill" style="width: 100%" /></div>
+                  <span>Opening Android installer…</span>
+                </div>
                 <button class="btn btn-ghost" @click="dismiss">
                   Dismiss
                 </button>
@@ -485,6 +493,16 @@ function formatSpeed(bytesPerSecond: number): string {
   flex-direction: column;
   gap: var(--space-xs);
   margin-bottom: var(--space-lg);
+}
+
+.installing-state {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-xs);
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
 }
 
 .progress-bar {
