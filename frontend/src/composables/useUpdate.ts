@@ -36,6 +36,7 @@ const updateInfo = ref<UpdateInfo | null>(null)
 const currentVersionFromBackend = ref<string>('')
 const error = ref<string | null>(null)
 const downloadedApkPath = ref<string | null>(null)
+const installing = ref(false)
 
 export function useUpdate() {
   const hasUpdate = computed(() => updateInfo.value?.available ?? false)
@@ -143,16 +144,22 @@ export function useUpdate() {
 
   async function installUpdate(): Promise<void> {
     if (!downloadedApkPath.value) return
+    installing.value = true
+    error.value = null
 
     // Android must use a FileProvider URI. The Go process cannot reliably
     // launch `am` from the app's PATH, and file:// URIs are blocked on modern
     // Android versions.
     const androidBridge = (window as any).wails as {
       platform?: () => string
-      installApk?: (path: string) => void
+      installApk?: (path: string) => boolean
     } | undefined
     if (androidBridge?.platform?.() === 'android' && androidBridge.installApk) {
-      androidBridge.installApk(downloadedApkPath.value)
+      const opened = androidBridge.installApk(downloadedApkPath.value)
+      if (!opened) {
+        error.value = 'Android installer could not be opened. Please try installing the downloaded APK manually.'
+        installing.value = false
+      }
       return
     }
 
@@ -163,6 +170,8 @@ export function useUpdate() {
       await UpdateService.InstallUpdate(downloadedApkPath.value)
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Install failed'
+    } finally {
+      installing.value = false
     }
   }
 
@@ -199,6 +208,7 @@ export function useUpdate() {
     updateInfo,
     error,
     downloadedApkPath,
+    installing,
     hasUpdate,
     currentVersion,
     latestVersion,
