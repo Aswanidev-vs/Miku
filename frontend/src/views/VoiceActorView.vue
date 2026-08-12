@@ -177,8 +177,9 @@ function goToMedia(id: number) { router.push({ name: 'media-detail', params: { i
 
 function parseDescription(desc?: string): string {
   if (!desc) return ''
-  // Remove HTML tags
-  let text = desc.replace(/<[^>]+>/g, '')
+  // Safely strip HTML using DOMParser to handle nested/malformed tags
+  const doc = new DOMParser().parseFromString(desc, 'text/html')
+  let text = doc.body.textContent || ''
   // Parse markdown links: [text](url) -> <a href="url" data-url="url">text</a>
   text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" data-url="$2" class="description-link">$1</a>')
   // Clean up extra newlines
