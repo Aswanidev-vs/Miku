@@ -122,7 +122,7 @@ jobs:
 
       - name: Set up Java
         if: steps.check-tag.outputs.has_tag == 'false'
-        uses: actions/setup-java@v5.6.0
+        uses: actions/setup-java@v5.7.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: 'temurin'
