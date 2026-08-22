@@ -12,7 +12,7 @@
   "dependencies": {
     "@wailsio/runtime": "latest",
     "axios": "^1.19.0",
-    "dexie": "^4.4.4",
+    "dexie": "^4.4.5",
     "pinia": "^4.0.2",
     "vue": "^3.5.41",
     "vue-router": "^4.6.4"
