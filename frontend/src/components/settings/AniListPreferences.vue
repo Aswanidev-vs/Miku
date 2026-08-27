@@ -1,16 +1,17 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import {
   useSettings,
   type DefaultTab,
   type TitleLanguagePref,
   type ScoreFormatPref,
 } from '../../composables/useSettings'
-import { useAuthStore } from '../../stores'
+import { useAuthStore, useUserStore } from '../../stores'
 import { effectiveIsAdult } from '../../utils/mediaDisplay'
 
 const { settings, set } = useSettings()
 const authStore = useAuthStore()
+const userStore = useUserStore()
 
 const TITLE_LANGUAGE_OPTIONS: { value: TitleLanguagePref; label: string }[] = [
   { value: 'ACCOUNT', label: 'Account default' },
@@ -45,6 +46,30 @@ const shownAdult = computed(() =>
 
 function toggleAdult() {
   set('adultContent', !shownAdult.value)
+}
+
+const saving = ref(false)
+const saveState = ref<'idle' | 'saved' | 'error'>('idle')
+const saveError = ref('')
+
+async function saveToAniList() {
+  saving.value = true
+  saveState.value = 'idle'
+  try {
+    // ACCOUNT / null mean "keep the account value" — omitted from the mutation
+    await userStore.updatePreferences({
+      titleLanguage: settings.value.titleLanguage === 'ACCOUNT' ? undefined : settings.value.titleLanguage,
+      displayAdultContent: settings.value.adultContent ?? undefined,
+      scoreFormat: settings.value.scoreFormat === 'ACCOUNT' ? undefined : settings.value.scoreFormat,
+    })
+    saveState.value = 'saved'
+    await authStore.fetchUser()
+  } catch (e) {
+    saveState.value = 'error'
+    saveError.value = e instanceof Error ? e.message : 'Save failed'
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 
@@ -137,6 +162,19 @@ function toggleAdult() {
         @click="toggleAdult"
       >
         <span class="switch-knob" />
+      </button>
+    </div>
+
+    <div class="setting-row pref-save-row">
+      <span v-if="saveState === 'error'" class="save-msg save-error">{{ saveError }}</span>
+      <span v-else-if="saveState === 'saved'" class="save-msg save-status">Saved to your AniList account</span>
+      <span v-else class="save-msg save-hint">Applies these to your AniList account</span>
+      <button
+        class="save-btn"
+        :disabled="saving || !authStore.isLoggedIn"
+        @click="saveToAniList"
+      >
+        {{ saving ? 'Saving…' : 'Save to AniList' }}
       </button>
     </div>
   </section>
@@ -239,6 +277,42 @@ function toggleAdult() {
 .reset-btn:hover {
   color: var(--text-primary);
   background: var(--bg-hover);
+}
+
+.pref-save-row {
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.save-msg {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  min-width: 0;
+}
+
+.save-error {
+  color: var(--status-dropped, #e05b6a);
+}
+
+.save-btn {
+  padding: 6px var(--space-md);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  background: var(--color-primary);
+  color: var(--text-on-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.save-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.save-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 /* Switch (same pattern as the Preferences group) */

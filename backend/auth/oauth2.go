@@ -130,11 +130,13 @@ func (s *OAuth2Service) HandleCallback(code string) (*TokenData, error) {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
-	log.Printf("[OAuth] AniList response status=%d body=%s", resp.StatusCode, string(body))
-
 	if resp.StatusCode != http.StatusOK {
+		// Failure bodies are short diagnostics; success bodies carry the
+		// access/refresh tokens and must not be written to the log.
+		log.Printf("[OAuth] AniList token exchange failed status=%d body=%s", resp.StatusCode, string(body))
 		return nil, fmt.Errorf("token exchange failed: %s", string(body))
 	}
+	log.Printf("[OAuth] AniList token exchange succeeded (status=%d)", resp.StatusCode)
 
 	var tokenResp TokenResponse
 	if err := json.Unmarshal(body, &tokenResp); err != nil {

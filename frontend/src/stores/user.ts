@@ -275,6 +275,25 @@ mutation ($id: Int) {
 }
 `
 
+const UPDATE_USER_MUTATION = `
+mutation ($titleLanguage: UserTitleLanguage, $displayAdultContent: Boolean, $scoreFormat: ScoreFormat) {
+  UpdateUser(
+    titleLanguage: $titleLanguage
+    displayAdultContent: $displayAdultContent
+    scoreFormat: $scoreFormat
+  ) {
+    id
+    options {
+      titleLanguage
+      displayAdultContent
+    }
+    mediaListOptions {
+      scoreFormat
+    }
+  }
+}
+`
+
 /**
  * Collect the AniList user IDs that `userId` follows. Capped so the resulting
  * `userId_in` filter stays a sane size even for accounts following thousands
@@ -484,6 +503,24 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  /**
+   * Push preferences to the AniList account via the UpdateUser mutation.
+   * Undefined fields are omitted from the JSON body, which GraphQL treats
+   * as "not provided" — the account keeps its existing value for them.
+   */
+  async function updatePreferences(prefs: {
+    titleLanguage?: string
+    displayAdultContent?: boolean
+    scoreFormat?: string
+  }) {
+    const response = await gqlMutate(UPDATE_USER_MUTATION, {
+      titleLanguage: prefs.titleLanguage,
+      displayAdultContent: prefs.displayAdultContent,
+      scoreFormat: prefs.scoreFormat,
+    })
+    return response?.data?.UpdateUser ?? null
+  }
+
   function clearProfile() {
     profile.value = null
   }
@@ -511,6 +548,7 @@ export const useUserStore = defineStore('user', () => {
     fetchFollowers,
     postActivity,
     deleteActivity,
+    updatePreferences,
     clearProfile,
     clearActivities,
   }

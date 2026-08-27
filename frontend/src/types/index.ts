@@ -67,7 +67,7 @@ export type SortDirection = 'ASCENDING' | 'DESCENDING'
 export type ActivityType = 'TEXT' | 'ANIME_LIST' | 'MANGA_LIST' | 'MESSAGE' | 'FOLLOW'
 
 /** Score format the user prefers */
-export type ScoreFormat = 'POINT_100' | 'POINT_10' | 'POINT_10_DECIMAL' | 'POINT_5' | 'POINT_3' | 'SMILEY'
+export type ScoreFormat = 'POINT_100' | 'POINT_10' | 'POINT_10_DECIMAL' | 'POINT_5' | 'POINT_3'
 
 /* ---- Core Entities ---- */
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { nextTick } from 'vue'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia, type Pinia } from 'pinia'
 
 // jsdom has no matchMedia; install one before the settings singleton imports
@@ -32,9 +32,17 @@ vi.mock('../../../bindings/github.com/Aswanidev-vs/Miku/backend/auth/oauth2servi
   GetPendingCode: vi.fn(),
 }))
 
+vi.mock('../../api/graphql', () => ({
+  gqlQuery: vi.fn(),
+  gqlMutate: vi.fn(),
+  clearGqlCache: vi.fn(),
+  clearAuthTokenCache: vi.fn(),
+}))
+
 import AniListPreferences from './AniListPreferences.vue'
 import { useSettings } from '../../composables/useSettings'
 import { useAuthStore } from '../../stores/auth'
+import { gqlMutate } from '../../api/graphql'
 import type { User } from '../../types'
 
 const accountUser: User = {
@@ -59,6 +67,7 @@ describe('AniListPreferences', () => {
     set('scoreFormat', 'ACCOUNT')
     set('defaultTab', '/')
     set('adultContent', null)
+    vi.mocked(gqlMutate).mockReset()
     await nextTick()
   })
 
@@ -154,12 +163,61 @@ describe('AniListPreferences', () => {
 
     const wrapper = mountPrefs()
     expect(settings.value.adultContent).toBeNull()
-    const adultRow = wrapper.findAll('.setting-row').at(-1)!
+    const adultRow = wrapper.findAll('.setting-row').find((r) => r.find('.switch').exists())!
     expect(adultRow.find('.setting-hint').text()).toContain('Following your AniList account')
     expect(wrapper.find('.switch').classes()).toContain('on')
 
     // Toggling from the account-preview state writes the inverse explicitly
     await wrapper.find('.switch').trigger('click')
     expect(settings.value.adultContent).toBe(false)
+  })
+
+  it('saves non-ACCOUNT preferences to AniList and refreshes the viewer', async () => {
+    vi.mocked(gqlMutate).mockResolvedValueOnce({ data: { UpdateUser: { id: 1 } } })
+    set('titleLanguage', 'ENGLISH')
+    set('scoreFormat', 'ACCOUNT')
+    set('adultContent', true)
+
+    const authStore = useAuthStore()
+    authStore.isAuthenticated = true
+    authStore.user = accountUser
+    const fetchSpy = vi.spyOn(authStore, 'fetchUser').mockResolvedValue(undefined)
+    await nextTick()
+
+    const wrapper = mountPrefs()
+    expect(wrapper.find('.save-btn').attributes('disabled')).toBeUndefined()
+    await wrapper.find('.save-btn').trigger('click')
+    await flushPromises()
+
+    expect(gqlMutate).toHaveBeenCalledOnce()
+    const [mutation, variables] = vi.mocked(gqlMutate).mock.calls[0]
+    expect(mutation).toContain('UpdateUser')
+    expect(variables).toEqual({
+      titleLanguage: 'ENGLISH',
+      displayAdultContent: true,
+      scoreFormat: undefined,
+    })
+    expect(fetchSpy).toHaveBeenCalled()
+    expect(wrapper.find('.save-status').text()).toBe('Saved to your AniList account')
+  })
+
+  it('shows the AniList error when the save fails', async () => {
+    vi.mocked(gqlMutate).mockRejectedValueOnce(new Error('validation'))
+    set('adultContent', false)
+
+    const authStore = useAuthStore()
+    authStore.isAuthenticated = true
+    await nextTick()
+
+    const wrapper = mountPrefs()
+    await wrapper.find('.save-btn').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.save-error').text()).toBe('validation')
+  })
+
+  it('disables the save button while signed out', () => {
+    const wrapper = mountPrefs()
+    expect(wrapper.find('.save-btn').attributes('disabled')).toBeDefined()
   })
 })
