@@ -14,6 +14,28 @@ Features present in **Anihyou** but **NOT** in Miku.
 
 ---
 
+## Implemented (this pass — update table statuses accordingly)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| #54 User Stats Overview | Partial→Partial | Core metrics kept; breakdowns now separate |
+| #55-59 Genre/Tag/Studio/Staff/VA Stats | Implemented | StatsBreakdown component, Anime/Manga tabs, ranked bars |
+| #61 Following/Followers | Implemented | Social section on profile; links open AniList in browser |
+| #62 User Favorites (Characters/Staff) | Implemented | UserFavorites now shows 4 groups |
+| #63 User Activity History | Implemented | Recent Activity section with pagination; shared ActivityItem |
+| #64 User About Section | Implemented | About Me on profile |
+| #66 Publish New Activity | Implemented | Composer in Feed wired to postActivity |
+| #68 Activity Text View | Implemented | Sanitized asHtml rendering via DOMPurify |
+| #73 Theme Settings | Implemented | System/Dark/Light/Black via data-theme tokens |
+| #74 Custom Color Picker | Implemented | Accent swatches + native color input (color-mix) |
+| #76 Title Language Setting | Implemented | preferredTitle wired on cards |
+| #78 Score Format Setting | Implemented | formatScore util + picker |
+| #79 Default Tab Setting | Implemented | Startup redirect; deep links preserved |
+| #80 Adult Content Toggle | Implemented | isAdult vars in browse/search queries + account fallback |
+| (extra) Feed pull-to-refresh | Implemented | Wired existing composable into Feed tab |
+
+---
+
 ## Core Features
 
 | # | Feature | Anihyou | Miku | Priority |
