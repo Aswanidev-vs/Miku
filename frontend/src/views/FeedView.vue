@@ -7,7 +7,6 @@ import { Browser } from '@wailsio/runtime'
 import { usePullToRefresh } from '../composables/usePullToRefresh'
 import { clearGqlCache } from '../api/graphql'
 import PullToRefresh from '../components/common/PullToRefresh.vue'
-import ActivityComposer from '../components/feed/ActivityComposer.vue'
 import ActivityItem from '../components/feed/ActivityItem.vue'
 import type { TextActivity, ListActivity } from '../types'
 
@@ -64,14 +63,6 @@ async function refreshFeed() {
   await userStore.fetchFollowingActivities(user.value.id, 1, PAGE_SIZE)
 }
 
-async function handlePost(text: string) {
-  try {
-    await userStore.postActivity(text)
-  } catch {
-    /* store sets error */
-  }
-}
-
 const { pullingDown, refreshing, showRefreshBtn, manualRefresh, setupListeners, removeListeners } = usePullToRefresh(refreshFeed)
 const viewRef = ref<HTMLElement | null>(null)
 
@@ -115,14 +106,6 @@ function goToUser(activity: TextActivity | ListActivity) {
       <h1 class="feed-title">Feed</h1>
       <p class="feed-subtitle">Your activity and your friends'</p>
     </header>
-
-    <ActivityComposer
-      v-if="isLoggedIn"
-      :avatar="user?.avatar?.medium"
-      :name="user?.name"
-      :disabled="loading"
-      @post="handlePost"
-    />
 
     <!-- Not logged in -->
     <template v-if="!isLoggedIn">

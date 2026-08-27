@@ -349,17 +349,8 @@ async function saveToAniList() {
   transform: translateX(18px);
 }
 
-/* Small Android screens: stack the picker below the label */
-@media (max-width: 420px) {
-  .settings-group {
-    padding-right: var(--space-sm);
-    padding-left: var(--space-sm);
-  }
-
-  .setting-row {
-    gap: var(--space-sm);
-  }
-
+/* Small screens: stack the picker below the label */
+@media (max-width: 540px) {
   .pref-row {
     flex-direction: column;
     align-items: stretch;
@@ -376,6 +367,17 @@ async function saveToAniList() {
 
   .pref-save-row .save-btn {
     padding: var(--space-sm) var(--space-md);
+  }
+}
+
+@media (max-width: 420px) {
+  .settings-group {
+    padding-right: var(--space-sm);
+    padding-left: var(--space-sm);
+  }
+
+  .setting-row {
+    gap: var(--space-sm);
   }
 }
 </style>
