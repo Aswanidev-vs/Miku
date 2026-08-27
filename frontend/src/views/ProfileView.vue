@@ -56,7 +56,7 @@ let statsTimer: ReturnType<typeof setTimeout> | null = null
 
 // Activity history lives in local state — the shared userStore.activities
 // belongs to the feed and must not be overwritten by the profile view.
-const HISTORY_PER_PAGE = 50
+const HISTORY_PER_PAGE = 10
 const profileActivities = ref<(TextActivity | ListActivity)[]>([])
 const historyPage = ref(1)
 const historyHasNextPage = ref(false)
@@ -260,14 +260,10 @@ function handleSocialSelect(u: User) {
     </section>
 
     <!-- Appearance (theme + accent) -->
-    <div class="appearance-group">
-      <AppearanceSettings />
-    </div>
+    <AppearanceSettings />
 
     <!-- AniList preferences (title language, score format, default tab, adult content) -->
-    <div class="appearance-group">
-      <AniListPreferences />
-    </div>
+    <AniListPreferences />
 
     <!-- Profile (when signed in) — deferred: mounts 300ms after settings for faster initial paint -->
     <template v-if="isLoggedIn && user && showStats">
@@ -498,10 +494,6 @@ function handleSocialSelect(u: User) {
   padding: var(--space-md) var(--space-md) var(--space-lg);
 }
 
-.appearance-group {
-  margin: var(--space-lg) var(--space-lg) 0;
-}
-
 .group-title {
   font-family: var(--font-heading);
   font-size: var(--font-size-md);
@@ -715,11 +707,6 @@ function handleSocialSelect(u: User) {
     margin-left: var(--space-md);
     padding-right: var(--space-sm);
     padding-left: var(--space-sm);
-  }
-
-  .appearance-group {
-    margin-right: var(--space-md);
-    margin-left: var(--space-md);
   }
 
   .setting-row {

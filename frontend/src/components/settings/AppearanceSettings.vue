@@ -139,7 +139,10 @@ function onCustomAccent(e: Event) {
 /* Theme segmented picker */
 .theme-picker {
   display: flex;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex-shrink: 1;
+  min-width: 0;
   gap: 2px;
   padding: 2px;
   background: var(--bg-deep);
@@ -154,6 +157,7 @@ function onCustomAccent(e: Event) {
   font-weight: var(--font-weight-semibold);
   letter-spacing: var(--letter-spacing-wide);
   color: var(--text-muted);
+  white-space: nowrap;
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 
@@ -236,7 +240,20 @@ function onCustomAccent(e: Event) {
   cursor: default;
 }
 
-/* Small Android screens: full-width rows like Preferences */
+/* Small screens: stack rows and make pickers full width */
+@media (max-width: 540px) {
+  .theme-row,
+  .accent-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-sm);
+  }
+
+  .theme-picker {
+    justify-content: flex-start;
+  }
+}
+
 @media (max-width: 420px) {
   .settings-group {
     padding-right: var(--space-sm);
@@ -245,12 +262,6 @@ function onCustomAccent(e: Event) {
 
   .setting-row {
     gap: var(--space-sm);
-  }
-
-  .theme-row,
-  .accent-row {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }
 </style>
