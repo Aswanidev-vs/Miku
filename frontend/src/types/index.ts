@@ -328,6 +328,7 @@ export interface Activity {
 
 export interface TextActivity extends Activity {
   type: 'TEXT'
+  text?: string
   message?: string
   replyCount: number
   siteUrl?: string

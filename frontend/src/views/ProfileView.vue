@@ -7,7 +7,7 @@ import { useSettings } from '../composables/useSettings'
 import { useUpdate } from '../composables/useUpdate'
 import { clearGqlCache } from '../api/graphql'
 import StatsCard from '../components/profile/StatsCard.vue'
-import FavoriteGenres from '../components/profile/FavoriteGenres.vue'
+import UserFavorites from '../components/profile/UserFavorites.vue'
 import HeatmapCalendar from '../components/profile/HeatmapCalendar.vue'
 
 const authStore = useAuthStore()
@@ -194,11 +194,15 @@ async function handleCheckForUpdates() {
 
     <!-- Profile (when signed in) — deferred: mounts 300ms after settings for faster initial paint -->
     <template v-if="isLoggedIn && user && showStats">
+      <section v-if="user.about" class="settings-group">
+        <h3 class="group-title">About Me</h3>
+        <p class="about-me">{{ user.about }}</p>
+      </section>
       <section v-if="user.statistics" class="settings-group">
         <h3 class="group-title">Your Stats</h3>
         <StatsCard :statistics="user.statistics" />
         <HeatmapCalendar :activities="userStore.heatmapActivities" />
-        <FavoriteGenres v-if="user.favourites" :favorites="user.favourites" />
+        <UserFavorites v-if="user.favourites" :favorites="user.favourites" />
       </section>
     </template>
 
@@ -396,6 +400,14 @@ async function handleCheckForUpdates() {
   color: var(--text-primary);
   margin-bottom: var(--space-md);
   padding-left: var(--space-xs);
+}
+
+.about-me {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  white-space: pre-line;
+  line-height: var(--line-height-relaxed, 1.6);
+  overflow-wrap: anywhere;
 }
 
 .setting-row {

@@ -92,7 +92,7 @@ const ACTIVITY_NODE_FIELDS = `
   ... on TextActivity {
     id
     type
-    text
+    text(asHtml: true)
     createdAt
     user {
       id
@@ -159,7 +159,7 @@ mutation ($text: String) {
   CreateTextActivity(text: $text) {
     id
     type
-    text
+    text(asHtml: true)
     createdAt
     user {
       id

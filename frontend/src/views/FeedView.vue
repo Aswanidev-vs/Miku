@@ -7,6 +7,8 @@ import { Browser } from '@wailsio/runtime'
 import { usePullToRefresh } from '../composables/usePullToRefresh'
 import { clearGqlCache } from '../api/graphql'
 import PullToRefresh from '../components/common/PullToRefresh.vue'
+import ActivityComposer from '../components/feed/ActivityComposer.vue'
+import { renderActivityHtml } from '../utils/activityHtml'
 import type { TextActivity, ListActivity } from '../types'
 
 const userStore = useUserStore()
@@ -60,6 +62,14 @@ async function refreshFeed() {
   visibleCount.value = 10
   clearGqlCache()
   await userStore.fetchFollowingActivities(user.value.id, 1, PAGE_SIZE)
+}
+
+async function handlePost(text: string) {
+  try {
+    await userStore.postActivity(text)
+  } catch {
+    /* store sets error */
+  }
 }
 
 const { pullingDown, refreshing, showRefreshBtn, manualRefresh, setupListeners, removeListeners } = usePullToRefresh(refreshFeed)
@@ -118,6 +128,14 @@ function goToUser(activity: TextActivity | ListActivity) {
       <h1 class="feed-title">Feed</h1>
       <p class="feed-subtitle">Your activity and your friends'</p>
     </header>
+
+    <ActivityComposer
+      v-if="isLoggedIn"
+      :avatar="user?.avatar?.medium"
+      :name="user?.name"
+      :disabled="loading"
+      @post="handlePost"
+    />
 
     <!-- Not logged in -->
     <template v-if="!isLoggedIn">
@@ -191,7 +209,7 @@ function goToUser(activity: TextActivity | ListActivity) {
               <p class="activity-text">
                 <span class="activity-user">{{ activity.user?.name }}</span>
               </p>
-              <p class="activity-message">{{ activity.text }}</p>
+              <div class="activity-message" v-html="renderActivityHtml(activity.text)"></div>
               <span class="activity-time">{{ formatTime(activity.createdAt) }}</span>
             </div>
           </template>
@@ -301,6 +319,11 @@ function goToUser(activity: TextActivity | ListActivity) {
   color: var(--text-secondary);
   margin-top: var(--space-xs);
   line-height: var(--line-height-normal);
+}
+
+.activity-message :deep(a) {
+  color: var(--color-primary-light);
+  word-break: break-word;
 }
 
 .activity-time {
