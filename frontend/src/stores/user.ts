@@ -118,10 +118,12 @@ query ($name: String) {
     }
     options {
       titleLanguage
-      adultContent
+      displayAdultContent
+      staffNameLanguage
+    }
+    mediaListOptions {
       scoreFormat
       rowOrder
-      displayCharacters
     }
   }
 }

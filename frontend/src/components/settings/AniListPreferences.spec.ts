@@ -45,7 +45,7 @@ const accountUser: User = {
     anime: { count: 0, meanScore: 0, minutesWatched: 0, episodesWatched: 0 },
     manga: { count: 0, meanScore: 0, chaptersRead: 0, volumesRead: 0 },
   },
-  options: { adultContent: true },
+  options: { displayAdultContent: true },
 }
 
 describe('AniListPreferences', () => {

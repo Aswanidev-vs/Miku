@@ -82,6 +82,7 @@ export interface User {
   bannerImage?: string
   statistics: UserStatistics
   options: UserOptions
+  mediaListOptions?: UserMediaListOptions
   favourites?: {
     anime?: { nodes: { id: number; title: { romaji: string }; coverImage: { medium: string } }[] }
     manga?: { nodes: { id: number; title: { romaji: string }; coverImage: { medium: string } }[] }
@@ -92,10 +93,13 @@ export interface User {
 
 export interface UserOptions {
   titleLanguage?: string
-  adultContent?: boolean
+  displayAdultContent?: boolean
+  staffNameLanguage?: string
+}
+
+export interface UserMediaListOptions {
   scoreFormat?: ScoreFormat
   rowOrder?: string
-  displayCharacters?: boolean
 }
 
 export interface UserStatistics {

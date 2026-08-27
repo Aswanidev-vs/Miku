@@ -274,7 +274,7 @@ export const useMangaStore = defineStore('manga', () => {
   // Resolve the $adult query variable: an explicit app setting wins, null
   // defers to the AniList account option (false when signed out / unknown).
   function adultVar(): boolean {
-    return effectiveIsAdult(settings.value.adultContent, authStore.currentUser?.options?.adultContent)
+    return effectiveIsAdult(settings.value.adultContent, authStore.currentUser?.options?.displayAdultContent)
   }
 
   async function fetchTrending(page = 1, perPage = 20) {

@@ -130,7 +130,9 @@ export const useAuthStore = defineStore('auth', () => {
             bannerImage
             options {
               titleLanguage
-              adultContent
+              displayAdultContent
+            }
+            mediaListOptions {
               scoreFormat
             }
             statistics {

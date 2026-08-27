@@ -20,7 +20,7 @@ const { gridColumns } = usePlatform()
 
 // Explicit app setting wins; null follows the AniList account option
 const isAdult = computed(() =>
-  effectiveIsAdult(settings.value.adultContent, authStore.currentUser?.options?.adultContent)
+  effectiveIsAdult(settings.value.adultContent, authStore.currentUser?.options?.displayAdultContent)
 )
 
 const query = ref('')

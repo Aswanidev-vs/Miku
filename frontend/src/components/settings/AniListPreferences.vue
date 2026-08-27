@@ -36,7 +36,7 @@ const DEFAULT_TAB_OPTIONS: { value: DefaultTab; label: string }[] = [
   { value: '/profile', label: 'Profile' },
 ]
 
-const accountAdult = computed(() => authStore.currentUser?.options?.adultContent)
+const accountAdult = computed(() => authStore.currentUser?.options?.displayAdultContent)
 
 // null = follow the AniList account; the switch previews the effective value.
 const shownAdult = computed(() =>
