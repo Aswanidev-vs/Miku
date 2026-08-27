@@ -4,6 +4,16 @@ Features present in **Anihyou** but **NOT** in Miku.
 
 ---
 
+## Queued Next — High Priority (not yet implemented)
+
+| # | Feature | Notes | Priority |
+|---|---------|-------|----------|
+| A | Language Setting / i18n (vue-i18n) | Deliberately deferred. Install `vue-i18n`, extract UI strings, add locale files + language switcher setting. | High |
+| B | Activity Detail + Replies (#67, #69) | Deferred from current implementation pass — next up after profile/settings work. | Medium |
+| C | Forum Threads + Comments (#70, #71, #72) | Deferred — thread view, parent thread, child comments. | Low |
+
+---
+
 ## Core Features
 
 | # | Feature | Anihyou | Miku | Priority |
