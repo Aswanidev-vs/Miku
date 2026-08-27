@@ -14,11 +14,14 @@ import (
 	"time"
 )
 
+var (
+	AniListAuthURL  = "https://anilist.co/api/v2/oauth/authorize"
+	AniListTokenURL = "https://anilist.co/api/v2/oauth/token"
+)
+
 const (
-	AniListAuthURL        = "https://anilist.co/api/v2/oauth/authorize"
-	AniListTokenURL       = "https://anilist.co/api/v2/oauth/token"
-	DefaultCallbackPort   = 43219
-	DefaultCallbackHost   = "localhost"
+	DefaultCallbackPort = 43219
+	DefaultCallbackHost = "localhost"
 )
 
 type OAuth2Config struct {
@@ -61,6 +64,11 @@ func NewOAuth2Service(config OAuth2Config) (*OAuth2Service, error) {
 // CallbackURL returns the redirect URI for the given port.
 func CallbackURL(port int) string {
 	return fmt.Sprintf("http://%s:%d/callback", DefaultCallbackHost, port)
+}
+
+// RedirectURI returns the configured OAuth redirect URI.
+func (s *OAuth2Service) RedirectURI() string {
+	return s.config.RedirectURI
 }
 
 func (s *OAuth2Service) GetAuthorizationURL() string {
@@ -122,11 +130,13 @@ func (s *OAuth2Service) HandleCallback(code string) (*TokenData, error) {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
-	log.Printf("[OAuth] AniList response status=%d body=%s", resp.StatusCode, string(body))
-
 	if resp.StatusCode != http.StatusOK {
+		// Failure bodies are short diagnostics; success bodies carry the
+		// access/refresh tokens and must not be written to the log.
+		log.Printf("[OAuth] AniList token exchange failed status=%d body=%s", resp.StatusCode, string(body))
 		return nil, fmt.Errorf("token exchange failed: %s", string(body))
 	}
+	log.Printf("[OAuth] AniList token exchange succeeded (status=%d)", resp.StatusCode)
 
 	var tokenResp TokenResponse
 	if err := json.Unmarshal(body, &tokenResp); err != nil {

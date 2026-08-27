@@ -3,6 +3,9 @@ import { ref, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAnimeStore } from '../stores/anime'
 import { useMangaStore } from '../stores/manga'
+import { useAuthStore } from '../stores'
+import { useSettings } from '../composables/useSettings'
+import { effectiveIsAdult } from '../utils/mediaDisplay'
 import { usePlatform } from '../composables/usePlatform'
 import { gqlQuery } from '../api/graphql'
 import AnimeGrid from '../components/anime/AnimeGrid.vue'
@@ -11,7 +14,14 @@ import type { MediaType, SearchType, CharacterSearchResult, StaffSearchResult } 
 const router = useRouter()
 const animeStore = useAnimeStore()
 const mangaStore = useMangaStore()
+const authStore = useAuthStore()
+const { settings } = useSettings()
 const { gridColumns } = usePlatform()
+
+// Explicit app setting wins; null follows the AniList account option
+const isAdult = computed(() =>
+  effectiveIsAdult(settings.value.adultContent, authStore.currentUser?.options?.displayAdultContent)
+)
 
 const query = ref('')
 const activeType = ref<SearchType>('ANIME')
@@ -164,9 +174,9 @@ async function loadMore() {
     const store = currentStore.value
     const response = await gqlQuery(
       activeType.value === 'ANIME'
-        ? `query ($search: String, $page: Int, $perPage: Int) {
+        ? `query ($search: String, $page: Int, $perPage: Int, $adult: Boolean) {
             Page(page: $page, perPage: $perPage) {
-              media(search: $search, type: ANIME, sort: SEARCH_MATCH) {
+              media(search: $search, type: ANIME, sort: SEARCH_MATCH, isAdult: $adult) {
                 id
                 title { romaji english native userPreferred }
                 coverImage { large medium color }
@@ -175,9 +185,9 @@ async function loadMore() {
               pageInfo { total perPage currentPage lastPage hasNextPage }
             }
           }`
-        : `query ($search: String, $page: Int, $perPage: Int) {
+        : `query ($search: String, $page: Int, $perPage: Int, $adult: Boolean) {
             Page(page: $page, perPage: $perPage) {
-              media(search: $search, type: MANGA, sort: SEARCH_MATCH) {
+              media(search: $search, type: MANGA, sort: SEARCH_MATCH, isAdult: $adult) {
                 id
                 title { romaji english native userPreferred }
                 coverImage { large medium color }
@@ -186,7 +196,7 @@ async function loadMore() {
               pageInfo { total perPage currentPage lastPage hasNextPage }
             }
           }`,
-      { search: q, page: nextPage, perPage: 20 }
+      { search: q, page: nextPage, perPage: 20, adult: isAdult.value }
     )
     if (response?.data?.Page) {
       store.searchResults = [...store.searchResults, ...response.data.Page.media]

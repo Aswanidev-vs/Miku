@@ -20,7 +20,7 @@
 
 ## About
 
-Miku is a feature-rich AniList client that delivers a premium anime and manga tracking experience on Android and Desktop. Built with Wails 3, it combines a Go backend for OAuth2 authentication with a Vue 3 frontend featuring a custom dark anime-inspired design language with cherry blossom motifs.
+Miku is a feature-rich AniList client that delivers a premium anime and manga tracking experience on Android and Desktop. Built with Wails 3, it combines a Go backend for OAuth2 authentication with a Vue 3 frontend featuring a custom anime-inspired design language with cherry blossom motifs and switchable light/dark/black themes.
 
 ## Features
 
@@ -30,8 +30,8 @@ Miku is a feature-rich AniList client that delivers a premium anime and manga tr
 - **Advanced Search** — Full-text search with anime/manga/character/staff type filters
 - **Personal Lists** — Manage your anime lists (Watching, Planning, Completed, Dropped, Paused)
 - **List Management** — Add/update anime to your list directly from detail pages (status, score, progress)
-- **Activity Feed** — Following-style feed showing your own activity plus the activity of everyone you follow on AniList (like the AniList site). Tap a friend's avatar to open their AniList profile
-- **Profile & Stats** — View your profile with detailed statistics, favourite genres, and activity heatmap
+- **Activity Feed** — Following-style feed showing your own activity plus the activity of everyone you follow on AniList (like the AniList site). Post status updates with the built-in composer; activity text renders as rich markdown. Tap a friend's avatar to open their AniList profile
+- **Profile & Stats** — View your profile with detailed statistics and breakdowns (genres, tags, studios, staff, voice actors), favourites (anime, manga, characters, staff), following/followers, paginated activity history, and an activity heatmap
 
 ### In-App Updates
 - **Update Notifications** — Bell icon on Discover page checks GitHub Releases for new versions
@@ -64,19 +64,26 @@ Miku is a feature-rich AniList client that delivers a premium anime and manga tr
 - **Activity Refresh** — Feed updates automatically when you switch tabs
 
 ### UI/UX
-- **Dark Anime Theme** — Custom design system with deep purple/pink color palette
+- **Theme Modes** — Dark (default), Light, Black (AMOLED), and System (follows OS) via design-token overrides
+- **Accent Color Picker** — Preset swatches plus a custom color chooser that re-tints the whole UI
 - **Cherry Blossom Motifs** — Unique branding with sakura-inspired animations
 - **Smooth Animations** — Page transitions, skeleton loading, micro-interactions
 - **Virtual Scrolling** — Optimized list rendering for smooth 60 FPS performance
 - **Mobile-First Design** — Optimized for Android and desktop
-- **Pull-to-Refresh** — Touch-based on mobile, manual button on desktop
+- **Pull-to-Refresh** — Touch-based on mobile, manual button on desktop; available on Discover, My List, and Feed
+
+### Personalization Settings
+- **Title Language** — Choose romaji / English / native titles, or follow your AniList account setting
+- **Score Format** — 100-point, 10-point, 10-point decimal, 5-star, or 3-point display
+- **Default Tab** — Start the app on Discover, Search, My List, Feed, or Profile
+- **Adult Content Toggle** — Filter adult titles in browse/search, defaulting to your AniList account setting
 
 ### Technical
 - **GraphQL API** — Efficient data fetching with AniList's GraphQL API
 - **Type Safety** — Full TypeScript coverage with strict mode
 - **State Management** — Pinia stores for reactive state handling
 - **Cross-Platform** — Works on Windows, macOS, Linux, and Android
-- **Go Tests** — Backend tests with testify library
+- **Testing** — Go suites with testify (unit, integration via httptest, regression, chaos) and Vitest frontend suites; run everything with `wails3 task test`
 
 ## Screenshots
 
@@ -99,7 +106,7 @@ Miku is a feature-rich AniList client that delivers a premium anime and manga tr
 | Routing | [Vue Router](https://router.vuejs.org) | Client-side navigation |
 | Backend | [Go](https://go.dev) 1.25 | OAuth2 localhost server, update service, business logic |
 | API | [AniList GraphQL](https://anilist.gitbook.io/anilist-apiv2-docs/) | Anime/manga data (via frontend fetch) |
-| Testing | [Testify](https://github.com/stretchr/testify) | Go testing assertions |
+| Testing | [Testify](https://github.com/stretchr/testify) + [Vitest](https://vitest.dev) | Go assertions + frontend unit/integration suites |
 
 ## Prerequisites
 
@@ -269,17 +276,29 @@ Miku/
 │   │   │   │   ├── BottomNav.vue      # Bottom navigation
 │   │   │   │   └── UpdateNotification.vue  # Update bell & panel
 │   │   │   ├── profile/
-│   │   │   │   ├── HeatmapCalendar.vue # Activity heatmap
-│   │   │   │   ├── StatsCard.vue      # User statistics
-│   │   │   │   └── FavoriteGenres.vue # Genre tags
+│   │   │   │   ├── HeatmapCalendar.vue   # Activity heatmap
+│   │   │   │   ├── StatsCard.vue         # User statistics
+│   │   │   │   ├── StatsBreakdown.vue    # Genre/tag/studio/staff/VA breakdowns
+│   │   │   │   ├── SocialList.vue        # Following / followers lists
+│   │   │   │   └── UserFavorites.vue     # Favorite anime/manga/characters/staff
+│   │   │   ├── feed/
+│   │   │   │   ├── ActivityComposer.vue  # Post new status updates
+│   │   │   │   └── ActivityItem.vue      # Shared activity row (feed + history)
+│   │   │   ├── settings/
+│   │   │   │   ├── AppearanceSettings.vue  # Theme & accent picker
+│   │   │   │   └── AniListPreferences.vue  # AniList account preferences
 │   │   │   └── common/
 │   │   │       ├── SkeletonLoader.vue # Loading skeleton
 │   │   │       └── PullToRefresh.vue  # Pull-to-refresh component
 │   │   ├── composables/
 │   │   │   ├── usePlatform.ts   # Platform detection
-│   │   │   ├── useSettings.ts   # App settings
+│   │   │   ├── useSettings.ts   # App settings (theme, accent, preferences)
 │   │   │   ├── useUpdate.ts     # Update state management
 │   │   │   └── usePullToRefresh.ts  # Pull-to-refresh logic
+│   │   ├── utils/
+│   │   │   ├── activityHtml.ts    # DOMPurify-sanitized activity rendering
+│   │   │   ├── activityFormat.ts  # Relative time + status labels
+│   │   │   └── mediaDisplay.ts    # Title language + score formatting
 │   │   ├── views/
 │   │   │   ├── DiscoverView.vue       # Discovery (Trending, Popular, Seasonal, Top Manga)
 │   │   │   ├── SearchView.vue         # Search with anime/manga/character/staff filters
@@ -289,7 +308,7 @@ Miku/
 │   │   │   ├── MediaDetailView.vue    # Anime/manga detail with list management
 │   │   │   ├── VoiceActorView.vue     # Voice actor page with voiced roles
 │   │   │   ├── CharacterView.vue      # Character detail page
-│   │   │   ├── SettingsView.vue       # Settings
+│   │   │   ├── SettingsView.vue       # Redirects to profile settings
 │   │   │   └── LoginView.vue          # Login
 │   │   ├── stores/
 │   │   │   ├── auth.ts                # Authentication state
@@ -342,8 +361,14 @@ wails3 task android:build
 # Run on Android emulator
 wails3 task android:run
 
-# Run Go tests
-go test ./backend/... -v
+# Run all tests (Go + frontend)
+wails3 task test
+
+# Run Go tests only
+go test ./... -v
+
+# Run frontend tests only
+cd frontend && npm test
 
 # Frontend only (without Go backend)
 cd frontend && npm run dev
@@ -382,7 +407,20 @@ This project uses GitHub Actions for automated builds. See [`.github/workflows/b
 
 ## Changelog
 
-### v0.9.4 (Latest)
+### Unreleased
+
+#### New Features
+- **Themes** — Dark, Light, Black (AMOLED), and System modes plus a custom accent color picker
+- **Activity Composer** — Post status updates directly from the Feed; activity text now renders as rich markdown
+- **Profile Overhaul** — Stats breakdowns (genres, tags, studios, staff, voice actors), character/staff favorites, Following/Followers section, About Me, and browsable activity history
+- **AniList Preferences** — Title language, score format, default tab, and adult content settings (with account-default fallbacks)
+- **Feed Pull-to-Refresh** — Feed tab now supports the mobile gesture + desktop refresh button
+
+#### Testing
+- **Go** — testify suites for the GraphQL client (integration + chaos), OAuth2 flow, token store, and platform service
+- **Frontend** — Vitest suites (composables, components, utils, Pinia stores); run everything with `wails3 task test`
+
+### v0.9.4
 
 #### New Features
 - **Staff Search** — Search by voice actor/staff name to find their works
@@ -437,9 +475,9 @@ Contributions are welcome! Here's how to get started:
    ```bash
    wails3 dev
    ```
-5. **Run** Go tests
+5. **Run** the test suites
    ```bash
-   go test ./backend/... -v
+   wails3 task test
    ```
 6. **Commit** with a descriptive message
    ```bash

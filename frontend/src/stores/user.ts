@@ -20,12 +20,54 @@ query ($name: String) {
         meanScore
         minutesWatched
         episodesWatched
+        genres(limit: 8, sort: COUNT_DESC) {
+          genre
+          count
+        }
+        tags(limit: 8, sort: COUNT_DESC) {
+          tag {
+            name
+          }
+          count
+        }
+        studios(limit: 8, sort: COUNT_DESC) {
+          studio {
+            name
+          }
+          count
+        }
+        staff(limit: 8, sort: COUNT_DESC) {
+          staff {
+            name {
+              full
+            }
+          }
+          count
+        }
+        voiceActors(limit: 8, sort: COUNT_DESC) {
+          voiceActor {
+            name {
+              full
+            }
+          }
+          count
+        }
       }
       manga {
         count
         meanScore
         chaptersRead
         volumesRead
+        genres(limit: 8, sort: COUNT_DESC) {
+          genre
+          count
+        }
+        tags(limit: 8, sort: COUNT_DESC) {
+          tag {
+            name
+          }
+          count
+        }
       }
     }
     favourites {
@@ -34,6 +76,9 @@ query ($name: String) {
           id
           title {
             romaji
+            english
+            native
+            userPreferred
           }
           coverImage {
             medium
@@ -45,8 +90,33 @@ query ($name: String) {
           id
           title {
             romaji
+            english
+            native
+            userPreferred
           }
           coverImage {
+            medium
+          }
+        }
+      }
+      characters(page: 1, perPage: 10) {
+        nodes {
+          id
+          name {
+            full
+          }
+          image {
+            medium
+          }
+        }
+      }
+      staff(page: 1, perPage: 10) {
+        nodes {
+          id
+          name {
+            full
+          }
+          image {
             medium
           }
         }
@@ -54,10 +124,12 @@ query ($name: String) {
     }
     options {
       titleLanguage
-      adultContent
+      displayAdultContent
+      staffNameLanguage
+    }
+    mediaListOptions {
       scoreFormat
       rowOrder
-      displayCharacters
     }
   }
 }
@@ -83,6 +155,9 @@ const ACTIVITY_NODE_FIELDS = `
       id
       title {
         romaji
+        english
+        native
+        userPreferred
       }
       coverImage {
         medium
@@ -92,7 +167,7 @@ const ACTIVITY_NODE_FIELDS = `
   ... on TextActivity {
     id
     type
-    text
+    text(asHtml: true)
     createdAt
     user {
       id
@@ -135,6 +210,35 @@ query ($userId: Int!, $page: Int, $perPage: Int) {
 }
 `
 
+// Full user objects that `userId` follows — for the profile Social section
+const FOLLOWING_QUERY = `
+query ($userId: Int!, $page: Int, $perPage: Int) {
+  Page(page: $page, perPage: $perPage) {
+    following(userId: $userId) {
+      id
+      name
+      avatar {
+        medium
+      }
+    }
+  }
+}
+`
+
+const FOLLOWERS_QUERY = `
+query ($userId: Int!, $page: Int, $perPage: Int) {
+  Page(page: $page, perPage: $perPage) {
+    followers(userId: $userId) {
+      id
+      name
+      avatar {
+        medium
+      }
+    }
+  }
+}
+`
+
 // Combined feed: the user's own activity plus everyone they follow (AniList
 // "Following" feed style), sorted globally by recency.
 const ACTIVITY_FEED_FOLLOWING_QUERY = `
@@ -159,7 +263,7 @@ mutation ($text: String) {
   CreateTextActivity(text: $text) {
     id
     type
-    text
+    text(asHtml: true)
     createdAt
     user {
       id
@@ -176,6 +280,25 @@ const DELETE_ACTIVITY_MUTATION = `
 mutation ($id: Int) {
   DeleteActivity(id: $id) {
     deleted
+  }
+}
+`
+
+const UPDATE_USER_MUTATION = `
+mutation ($titleLanguage: UserTitleLanguage, $displayAdultContent: Boolean, $scoreFormat: ScoreFormat) {
+  UpdateUser(
+    titleLanguage: $titleLanguage
+    displayAdultContent: $displayAdultContent
+    scoreFormat: $scoreFormat
+  ) {
+    id
+    options {
+      titleLanguage
+      displayAdultContent
+    }
+    mediaListOptions {
+      scoreFormat
+    }
   }
 }
 `
@@ -214,6 +337,8 @@ export const useUserStore = defineStore('user', () => {
     lastPage: number
     hasNextPage: boolean
   } | null>(null)
+  const followingUsers = ref<User[]>([])
+  const followerUsers = ref<User[]>([])
 
   async function fetchProfile(name: string) {
     loading.value = true
@@ -230,7 +355,7 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  async function fetchActivities(userId: number, page = 1, perPage = 20) {
+  async function fetchActivities(userId: number, page = 1, perPage = 20, append = false) {
     loading.value = true
     error.value = null
     try {
@@ -240,13 +365,35 @@ export const useUserStore = defineStore('user', () => {
         perPage,
       })
       if (response?.data?.Page) {
-        activities.value = response.data.Page.activities
+        const items = (response.data.Page.activities ?? []) as (TextActivity | ListActivity)[]
+        if (append) {
+          const seen = new Set(activities.value.map((a) => a.id))
+          activities.value = [...activities.value, ...items.filter((a) => !seen.has(a.id))]
+        } else {
+          activities.value = items
+        }
         activityPageInfo.value = response.data.Page.pageInfo
       }
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch activities'
     } finally {
       loading.value = false
+    }
+  }
+
+  /**
+   * Fetch one page of a single user's activity history without touching the
+   * shared `activities` state — the feed owns that. Used by the profile's
+   * independent "Recent Activity" list.
+   */
+  async function fetchUserActivityPage(userId: number, page = 1, perPage = 20): Promise<{
+    items: (TextActivity | ListActivity)[]
+    pageInfo: NonNullable<typeof activityPageInfo.value> | null
+  }> {
+    const response = await gqlQuery(ACTIVITY_FEED_QUERY, { userId, page, perPage })
+    return {
+      items: (response?.data?.Page?.activities ?? []) as (TextActivity | ListActivity)[],
+      pageInfo: response?.data?.Page?.pageInfo ?? null,
     }
   }
 
@@ -307,6 +454,24 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  async function fetchFollowing(userId: number, page = 1, perPage = 25) {
+    try {
+      const response = await gqlQuery(FOLLOWING_QUERY, { userId, page, perPage })
+      followingUsers.value = response?.data?.Page?.following ?? []
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to fetch following'
+    }
+  }
+
+  async function fetchFollowers(userId: number, page = 1, perPage = 25) {
+    try {
+      const response = await gqlQuery(FOLLOWERS_QUERY, { userId, page, perPage })
+      followerUsers.value = response?.data?.Page?.followers ?? []
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to fetch followers'
+    }
+  }
+
   async function postActivity(text: string) {
     loading.value = true
     error.value = null
@@ -347,6 +512,24 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  /**
+   * Push preferences to the AniList account via the UpdateUser mutation.
+   * Undefined fields are omitted from the JSON body, which GraphQL treats
+   * as "not provided" — the account keeps its existing value for them.
+   */
+  async function updatePreferences(prefs: {
+    titleLanguage?: string
+    displayAdultContent?: boolean
+    scoreFormat?: string
+  }) {
+    const response = await gqlMutate(UPDATE_USER_MUTATION, {
+      titleLanguage: prefs.titleLanguage,
+      displayAdultContent: prefs.displayAdultContent,
+      scoreFormat: prefs.scoreFormat,
+    })
+    return response?.data?.UpdateUser ?? null
+  }
+
   function clearProfile() {
     profile.value = null
   }
@@ -363,12 +546,18 @@ export const useUserStore = defineStore('user', () => {
     loading,
     error,
     activityPageInfo,
+    followingUsers,
+    followerUsers,
     fetchProfile,
     fetchActivities,
+    fetchUserActivityPage,
     fetchFollowingActivities,
     fetchAllActivitiesForHeatmap,
+    fetchFollowing,
+    fetchFollowers,
     postActivity,
     deleteActivity,
+    updatePreferences,
     clearProfile,
     clearActivities,
   }

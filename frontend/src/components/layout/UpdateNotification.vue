@@ -4,6 +4,8 @@ import { useUpdate } from '../../composables/useUpdate'
 import { usePlatform } from '../../composables/usePlatform'
 import { useAuthStore } from '../../stores/auth'
 import { useAnimeStore } from '../../stores/anime'
+import { useSettings } from '../../composables/useSettings'
+import { preferredTitle } from '../../utils/mediaDisplay'
 
 const {
   checking, downloading, downloadProgress,
@@ -17,6 +19,7 @@ const {
 const { isMobile } = usePlatform()
 const authStore = useAuthStore()
 const animeStore = useAnimeStore()
+const { settings } = useSettings()
 
 const showPanel = ref(false)
 const episodeNoticeRevision = ref(0)
@@ -44,7 +47,7 @@ const episodeNotices = computed(() => {
       }
       return {
         id: media?.id,
-        title: media?.title?.userPreferred || media?.title?.romaji || 'Anime',
+        title: preferredTitle(media?.title, settings.value.titleLanguage) || 'Anime',
         episode: releasedEpisode,
         progress: entry.progress ?? 0,
       }

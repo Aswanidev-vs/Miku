@@ -67,7 +67,7 @@ export type SortDirection = 'ASCENDING' | 'DESCENDING'
 export type ActivityType = 'TEXT' | 'ANIME_LIST' | 'MANGA_LIST' | 'MESSAGE' | 'FOLLOW'
 
 /** Score format the user prefers */
-export type ScoreFormat = 'POINT_100' | 'POINT_10' | 'POINT_10_DECIMAL' | 'POINT_5' | 'POINT_3' | 'SMILEY'
+export type ScoreFormat = 'POINT_100' | 'POINT_10' | 'POINT_10_DECIMAL' | 'POINT_5' | 'POINT_3'
 
 /* ---- Core Entities ---- */
 
@@ -82,18 +82,24 @@ export interface User {
   bannerImage?: string
   statistics: UserStatistics
   options: UserOptions
+  mediaListOptions?: UserMediaListOptions
   favourites?: {
     anime?: { nodes: { id: number; title: { romaji: string }; coverImage: { medium: string } }[] }
     manga?: { nodes: { id: number; title: { romaji: string }; coverImage: { medium: string } }[] }
+    characters?: { nodes: { id: number; name: { full: string }; image: { medium: string } }[] }
+    staff?: { nodes: { id: number; name: { full: string }; image: { medium: string } }[] }
   }
 }
 
 export interface UserOptions {
   titleLanguage?: string
-  adultContent?: boolean
+  displayAdultContent?: boolean
+  staffNameLanguage?: string
+}
+
+export interface UserMediaListOptions {
   scoreFormat?: ScoreFormat
   rowOrder?: string
-  displayCharacters?: boolean
 }
 
 export interface UserStatistics {
@@ -102,13 +108,47 @@ export interface UserStatistics {
     meanScore: number
     minutesWatched: number
     episodesWatched: number
+    genres?: GenreStat[]
+    tags?: TagStat[]
+    studios?: StudioStat[]
+    staff?: StaffStat[]
+    voiceActors?: VoiceActorStat[]
   }
   manga: {
     count: number
     meanScore: number
     chaptersRead: number
     volumesRead: number
+    genres?: GenreStat[]
+    tags?: TagStat[]
   }
+}
+
+/* ---- User Statistics Breakdowns ---- */
+
+export interface GenreStat {
+  genre?: string | null
+  count: number
+}
+
+export interface TagStat {
+  tag?: { id?: number; name?: string | null } | null
+  count: number
+}
+
+export interface StudioStat {
+  studio?: { id?: number; name?: string | null } | null
+  count: number
+}
+
+export interface StaffStat {
+  staff?: { id?: number; name?: { full?: string | null } | null } | null
+  count: number
+}
+
+export interface VoiceActorStat {
+  voiceActor?: { id?: number; name?: { full?: string | null } | null } | null
+  count: number
 }
 
 export interface Media {
@@ -328,6 +368,7 @@ export interface Activity {
 
 export interface TextActivity extends Activity {
   type: 'TEXT'
+  text?: string
   message?: string
   replyCount: number
   siteUrl?: string

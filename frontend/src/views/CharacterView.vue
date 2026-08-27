@@ -2,10 +2,13 @@
 import { onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { gqlQuery } from '../api/graphql'
+import { useSettings } from '../composables/useSettings'
+import { preferredTitle } from '../utils/mediaDisplay'
 import { ref } from 'vue'
 
 const route = useRoute()
 const router = useRouter()
+const { settings } = useSettings()
 
 const character = ref<any>(null)
 const roles = ref<{ media: any; characterRole?: string; voiceActor?: any }[]>([])
@@ -28,7 +31,7 @@ query ($id: Int!, $page: Int) {
       edges {
         node {
           id
-          title { romaji english userPreferred }
+          title { romaji english native userPreferred }
           coverImage { medium }
           format
           status
@@ -154,9 +157,9 @@ function cleanDescription(desc?: string): string {
         <h3 class="section-title">Anime Roles ({{ roles.length }})</h3>
         <div class="role-list">
           <div v-for="role in roles" :key="role.media.id" class="role-item" @click="goToMedia(role.media.id)">
-            <img v-if="role.media.coverImage" :src="role.media.coverImage.medium" :alt="role.media.title.romaji" class="role-media-img" />
+            <img v-if="role.media.coverImage" :src="role.media.coverImage.medium" :alt="preferredTitle(role.media.title, settings.titleLanguage)" class="role-media-img" />
             <div class="role-info">
-              <span class="role-media-title">{{ role.media.title.userPreferred || role.media.title.romaji }}</span>
+              <span class="role-media-title">{{ preferredTitle(role.media.title, settings.titleLanguage) }}</span>
               <span v-if="role.characterRole" class="role-character-role">{{ role.characterRole.replace('_', ' ').toLowerCase() }}</span>
               <span v-if="role.voiceActor" class="role-va" @click.stop="goToVA(role.voiceActor.id)">{{ role.voiceActor.name.full }}</span>
             </div>

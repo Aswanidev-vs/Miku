@@ -3,9 +3,12 @@ import { onMounted, onUnmounted, ref, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { gqlQuery } from '../api/graphql'
 import { Browser } from '@wailsio/runtime'
+import { useSettings } from '../composables/useSettings'
+import { preferredTitle } from '../utils/mediaDisplay'
 
 const route = useRoute()
 const router = useRouter()
+const { settings } = useSettings()
 
 const actor = ref<any>(null)
 const roles = ref<{ media: any; character: any; characterRole: string }[]>([])
@@ -42,7 +45,7 @@ query ($id: Int!, $page: Int, $sort: [MediaSort]) {
         node {
           id
           type
-          title { romaji english userPreferred }
+          title { romaji english native userPreferred }
           coverImage { large medium }
           format
           status
@@ -269,10 +272,10 @@ async function openUrl(url: string) {
             class="role-item"
             @click="goToMedia(role.media.id)"
           >
-            <img v-if="role.media.coverImage" :src="role.media.coverImage.medium" :alt="role.media.title.romaji" class="role-media-img" />
+            <img v-if="role.media.coverImage" :src="role.media.coverImage.medium" :alt="preferredTitle(role.media.title, settings.titleLanguage)" class="role-media-img" />
             <div class="role-info">
               <span class="role-character">{{ role.character.name?.full || role.character.name?.userPreferred || 'Unknown' }}</span>
-              <span class="role-media-title">{{ role.media.title.userPreferred || role.media.title.romaji }}</span>
+              <span class="role-media-title">{{ preferredTitle(role.media.title, settings.titleLanguage) }}</span>
               <span class="role-format">
                 {{ role.media.format?.replace('_', ' ')?.toLowerCase() || '' }}
                 <span v-if="role.characterRole" class="role-type"> · {{ role.characterRole }}</span>

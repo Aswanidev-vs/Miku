@@ -1,22 +1,42 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { MediaTitle } from '../../types'
+import { preferredTitle } from '../../utils/mediaDisplay'
+import { useSettings } from '../../composables/useSettings'
+
+const { settings } = useSettings()
+
+interface MediaFavoriteNode {
+  id: number
+  title: MediaTitle
+  coverImage: { medium: string }
+}
+
+interface PersonFavoriteNode {
+  id: number
+  name: { full: string }
+  image: { medium: string }
+}
 
 const props = defineProps<{
   favorites: {
-    anime?: { nodes: { id: number; title: { romaji: string }; coverImage: { medium: string } }[] }
-    manga?: { nodes: { id: number; title: { romaji: string }; coverImage: { medium: string } }[] }
+    anime?: { nodes: MediaFavoriteNode[] }
+    manga?: { nodes: MediaFavoriteNode[] }
+    characters?: { nodes: PersonFavoriteNode[] }
+    staff?: { nodes: PersonFavoriteNode[] }
   }
 }>()
 
 const allFavorites = computed(() => {
-  const items: { id: number; title: string; cover: string; type: string }[] = []
+  const items: { id: number; title: string; cover: string; type: string; round: boolean }[] = []
   if (props.favorites?.anime?.nodes) {
     for (const node of props.favorites.anime.nodes) {
       items.push({
         id: node.id,
-        title: node.title.romaji,
+        title: preferredTitle(node.title, settings.value.titleLanguage),
         cover: node.coverImage.medium,
         type: 'anime',
+        round: false,
       })
     }
   }
@@ -24,9 +44,32 @@ const allFavorites = computed(() => {
     for (const node of props.favorites.manga.nodes) {
       items.push({
         id: node.id,
-        title: node.title.romaji,
+        title: preferredTitle(node.title, settings.value.titleLanguage),
         cover: node.coverImage.medium,
         type: 'manga',
+        round: false,
+      })
+    }
+  }
+  if (props.favorites?.characters?.nodes) {
+    for (const node of props.favorites.characters.nodes) {
+      items.push({
+        id: node.id,
+        title: node.name.full,
+        cover: node.image.medium,
+        type: 'character',
+        round: true,
+      })
+    }
+  }
+  if (props.favorites?.staff?.nodes) {
+    for (const node of props.favorites.staff.nodes) {
+      items.push({
+        id: node.id,
+        title: node.name.full,
+        cover: node.image.medium,
+        type: 'staff',
+        round: true,
       })
     }
   }
@@ -43,13 +86,15 @@ const allFavorites = computed(() => {
     <div v-else class="favorites-list">
       <div
         v-for="item in allFavorites"
-        :key="item.id"
+        :key="`${item.type}-${item.id}`"
         class="favorite-item"
+        :class="item.type"
       >
         <img
           :src="item.cover"
           :alt="item.title"
           class="favorite-cover"
+          :class="{ round: item.round }"
           loading="lazy"
         />
         <div class="favorite-info">
@@ -109,6 +154,10 @@ const allFavorites = computed(() => {
   flex-shrink: 0;
 }
 
+.favorite-cover.round {
+  border-radius: var(--radius-full);
+}
+
 .favorite-info {
   display: flex;
   flex-direction: column;
@@ -138,5 +187,13 @@ const allFavorites = computed(() => {
 
 .favorite-type.manga {
   color: var(--status-completed);
+}
+
+.favorite-type.character {
+  color: var(--status-planning);
+}
+
+.favorite-type.staff {
+  color: var(--status-paused);
 }
 </style>

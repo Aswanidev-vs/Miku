@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import type { Media } from '../../types'
+import { useSettings } from '../../composables/useSettings'
+import { preferredTitle } from '../../utils/mediaDisplay'
 
 defineProps<{
   anime: Media
 }>()
 
 const router = useRouter()
+const { settings } = useSettings()
 
 function navigateToDetail(id: number) {
   router.push({ name: 'media-detail', params: { id } })
@@ -39,7 +42,7 @@ function statusClass(status?: string): string {
     <div class="card-image">
       <img
         :src="anime.coverImage.large"
-        :alt="anime.title.userPreferred || anime.title.romaji"
+        :alt="preferredTitle(anime.title, settings.titleLanguage)"
         loading="lazy"
         decoding="async"
       />
@@ -51,7 +54,7 @@ function statusClass(status?: string): string {
       </div>
     </div>
     <div class="card-info">
-      <h3 class="card-title">{{ anime.title.userPreferred || anime.title.romaji }}</h3>
+      <h3 class="card-title">{{ preferredTitle(anime.title, settings.titleLanguage) }}</h3>
       <div class="card-meta">
         <span v-if="anime.format" class="meta-format">{{ formatLabel(anime.format) }}</span>
         <span class="meta-dot" v-if="anime.format && anime.status"></span>

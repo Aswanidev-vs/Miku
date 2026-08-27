@@ -20,6 +20,7 @@ type TokenProvider interface {
 type GraphQLClient struct {
 	httpClient *http.Client
 	tokenProv  TokenProvider
+	baseURL    string
 }
 
 type GraphQLRequest struct {
@@ -58,11 +59,16 @@ func (e GraphQLErrors) Error() string {
 }
 
 func NewClient(tokenProv TokenProvider) *GraphQLClient {
+	return NewClientWithBaseURL(tokenProv, AniListGraphQLURL)
+}
+
+func NewClientWithBaseURL(tokenProv TokenProvider, baseURL string) *GraphQLClient {
 	return &GraphQLClient{
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
 		tokenProv: tokenProv,
+		baseURL:   baseURL,
 	}
 }
 
@@ -85,7 +91,7 @@ func (c *GraphQLClient) doRequest(query string, variables map[string]any, result
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", AniListGraphQLURL, bytes.NewReader(reqBody))
+	req, err := http.NewRequest("POST", c.baseURL, bytes.NewReader(reqBody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}

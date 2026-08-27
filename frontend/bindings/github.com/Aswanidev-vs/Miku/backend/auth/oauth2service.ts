@@ -49,6 +49,13 @@ export function Logout(): $CancellablePromise<void> {
 }
 
 /**
+ * RedirectURI returns the configured OAuth redirect URI.
+ */
+export function RedirectURI(): $CancellablePromise<string> {
+    return $Call.ByID(3937017709);
+}
+
+/**
  * SaveToken saves an access token directly (for implicit grant flow)
  */
 export function SaveToken(accessToken: string): $CancellablePromise<void> {
