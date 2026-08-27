@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed, ref, watch } from 'vue'
+import { Browser } from '@wailsio/runtime'
 import { useAuthStore } from '../stores'
 import { useUserStore } from '../stores'
 import { useAnimeStore } from '../stores/anime'
@@ -8,7 +9,9 @@ import { useUpdate } from '../composables/useUpdate'
 import { clearGqlCache } from '../api/graphql'
 import StatsCard from '../components/profile/StatsCard.vue'
 import UserFavorites from '../components/profile/UserFavorites.vue'
+import SocialList from '../components/profile/SocialList.vue'
 import HeatmapCalendar from '../components/profile/HeatmapCalendar.vue'
+import type { User } from '../types'
 
 const authStore = useAuthStore()
 const userStore = useUserStore()
@@ -48,6 +51,8 @@ let statsTimer: ReturnType<typeof setTimeout> | null = null
 onMounted(async () => {
   if (isLoggedIn.value && user.value) {
     userStore.fetchActivities(user.value.id, 1, 50)
+    userStore.fetchFollowing(user.value.id)
+    userStore.fetchFollowers(user.value.id)
     if (settings.value.autoSync) animeStore.startSync(user.value.id)
   }
   // Defer heavy stats section by 300ms so account + settings appear instantly
@@ -71,6 +76,13 @@ async function handleLogout() {
 
 async function handleCheckForUpdates() {
   await checkForUpdate()
+}
+
+// Open AniList profiles in the system browser (no per-user profile route exists yet)
+function handleSocialSelect(u: User) {
+  if (user.value && u.id === user.value.id) return
+  const url = `https://anilist.co/user/${encodeURIComponent(u.name)}`
+  Browser.OpenURL(url).catch(() => window.open(url, '_blank'))
 }
 </script>
 
@@ -197,6 +209,11 @@ async function handleCheckForUpdates() {
       <section v-if="user.about" class="settings-group">
         <h3 class="group-title">About Me</h3>
         <p class="about-me">{{ user.about }}</p>
+      </section>
+      <section class="settings-group">
+        <h3 class="group-title">Social</h3>
+        <SocialList title="Following" :users="userStore.followingUsers" @select="handleSocialSelect" />
+        <SocialList title="Followers" :users="userStore.followerUsers" @select="handleSocialSelect" />
       </section>
       <section v-if="user.statistics" class="settings-group">
         <h3 class="group-title">Your Stats</h3>

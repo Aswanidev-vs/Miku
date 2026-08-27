@@ -51,6 +51,28 @@ query ($name: String) {
           }
         }
       }
+      characters(page: 1, perPage: 10) {
+        nodes {
+          id
+          name {
+            full
+          }
+          image {
+            medium
+          }
+        }
+      }
+      staff(page: 1, perPage: 10) {
+        nodes {
+          id
+          name {
+            full
+          }
+          image {
+            medium
+          }
+        }
+      }
     }
     options {
       titleLanguage
@@ -135,6 +157,35 @@ query ($userId: Int!, $page: Int, $perPage: Int) {
 }
 `
 
+// Full user objects that `userId` follows — for the profile Social section
+const FOLLOWING_QUERY = `
+query ($userId: Int!, $page: Int, $perPage: Int) {
+  Page(page: $page, perPage: $perPage) {
+    following(userId: $userId) {
+      id
+      name
+      avatar {
+        medium
+      }
+    }
+  }
+}
+`
+
+const FOLLOWERS_QUERY = `
+query ($userId: Int!, $page: Int, $perPage: Int) {
+  Page(page: $page, perPage: $perPage) {
+    followers(userId: $userId) {
+      id
+      name
+      avatar {
+        medium
+      }
+    }
+  }
+}
+`
+
 // Combined feed: the user's own activity plus everyone they follow (AniList
 // "Following" feed style), sorted globally by recency.
 const ACTIVITY_FEED_FOLLOWING_QUERY = `
@@ -214,6 +265,8 @@ export const useUserStore = defineStore('user', () => {
     lastPage: number
     hasNextPage: boolean
   } | null>(null)
+  const followingUsers = ref<User[]>([])
+  const followerUsers = ref<User[]>([])
 
   async function fetchProfile(name: string) {
     loading.value = true
@@ -307,6 +360,24 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  async function fetchFollowing(userId: number, page = 1, perPage = 25) {
+    try {
+      const response = await gqlQuery(FOLLOWING_QUERY, { userId, page, perPage })
+      followingUsers.value = response?.data?.Page?.following ?? []
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to fetch following'
+    }
+  }
+
+  async function fetchFollowers(userId: number, page = 1, perPage = 25) {
+    try {
+      const response = await gqlQuery(FOLLOWERS_QUERY, { userId, page, perPage })
+      followerUsers.value = response?.data?.Page?.followers ?? []
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to fetch followers'
+    }
+  }
+
   async function postActivity(text: string) {
     loading.value = true
     error.value = null
@@ -363,10 +434,14 @@ export const useUserStore = defineStore('user', () => {
     loading,
     error,
     activityPageInfo,
+    followingUsers,
+    followerUsers,
     fetchProfile,
     fetchActivities,
     fetchFollowingActivities,
     fetchAllActivitiesForHeatmap,
+    fetchFollowing,
+    fetchFollowers,
     postActivity,
     deleteActivity,
     clearProfile,

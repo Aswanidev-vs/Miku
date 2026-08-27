@@ -85,6 +85,8 @@ export interface User {
   favourites?: {
     anime?: { nodes: { id: number; title: { romaji: string }; coverImage: { medium: string } }[] }
     manga?: { nodes: { id: number; title: { romaji: string }; coverImage: { medium: string } }[] }
+    characters?: { nodes: { id: number; name: { full: string }; image: { medium: string } }[] }
+    staff?: { nodes: { id: number; name: { full: string }; image: { medium: string } }[] }
   }
 }
 
