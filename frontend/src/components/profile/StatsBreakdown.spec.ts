@@ -30,20 +30,39 @@ const statistics: UserStatistics = {
 }
 
 describe('StatsBreakdown', () => {
-  it('renders genre rows with counts', () => {
+  it('renders genre multi-bar grid with counts and relative widths', () => {
     const wrapper = mount(StatsBreakdown, { props: { statistics } })
     expect(wrapper.text()).toContain('Top Genres')
     expect(wrapper.text()).toContain('Action')
     expect(wrapper.text()).toContain('40')
     expect(wrapper.text()).toContain('Comedy')
     expect(wrapper.text()).toContain('20')
-  })
 
-  it('sizes the top bar at 100% and scales the rest proportionally', () => {
-    const wrapper = mount(StatsBreakdown, { props: { statistics } })
-    const bars = wrapper.find('.breakdown-section').findAll('.breakdown-bar')
+    const bars = wrapper.findAll('.genre-bar')
     const widths = bars.map((bar) => (bar.element as HTMLElement).style.width)
     expect(widths).toEqual(['100%', '50%', '25%'])
+  })
+
+  it('renders tags as chips, studios as stacked progress bar, and staff/VA cards', () => {
+    const wrapper = mount(StatsBreakdown, { props: { statistics } })
+    
+    // Tags
+    expect(wrapper.text()).toContain('Top Tags')
+    expect(wrapper.find('.tag-chip-name').text()).toBe('Time Skip')
+    expect(wrapper.find('.tag-chip-count').text()).toBe('6')
+
+    // Studios
+    expect(wrapper.text()).toContain('Top Studios')
+    expect(wrapper.find('.stacked-bar-segment').exists()).toBe(true)
+    expect(wrapper.text()).toContain('MAPPA')
+
+    // Staff
+    expect(wrapper.text()).toContain('Top Staff')
+    expect(wrapper.text()).toContain('Hideaki Anno')
+
+    // Voice Actors
+    expect(wrapper.text()).toContain('Top Voice Actors')
+    expect(wrapper.text()).toContain('Saori Hayami')
   })
 
   it('shows manga sections after switching to the Manga tab', async () => {
@@ -89,3 +108,4 @@ describe('StatsBreakdown', () => {
     expect(wrapper.find('.breakdown-section').exists()).toBe(false)
   })
 })
+
