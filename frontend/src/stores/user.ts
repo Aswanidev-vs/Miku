@@ -325,7 +325,7 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  async function fetchActivities(userId: number, page = 1, perPage = 20) {
+  async function fetchActivities(userId: number, page = 1, perPage = 20, append = false) {
     loading.value = true
     error.value = null
     try {
@@ -335,13 +335,35 @@ export const useUserStore = defineStore('user', () => {
         perPage,
       })
       if (response?.data?.Page) {
-        activities.value = response.data.Page.activities
+        const items = (response.data.Page.activities ?? []) as (TextActivity | ListActivity)[]
+        if (append) {
+          const seen = new Set(activities.value.map((a) => a.id))
+          activities.value = [...activities.value, ...items.filter((a) => !seen.has(a.id))]
+        } else {
+          activities.value = items
+        }
         activityPageInfo.value = response.data.Page.pageInfo
       }
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch activities'
     } finally {
       loading.value = false
+    }
+  }
+
+  /**
+   * Fetch one page of a single user's activity history without touching the
+   * shared `activities` state — the feed owns that. Used by the profile's
+   * independent "Recent Activity" list.
+   */
+  async function fetchUserActivityPage(userId: number, page = 1, perPage = 20): Promise<{
+    items: (TextActivity | ListActivity)[]
+    pageInfo: NonNullable<typeof activityPageInfo.value> | null
+  }> {
+    const response = await gqlQuery(ACTIVITY_FEED_QUERY, { userId, page, perPage })
+    return {
+      items: (response?.data?.Page?.activities ?? []) as (TextActivity | ListActivity)[],
+      pageInfo: response?.data?.Page?.pageInfo ?? null,
     }
   }
 
@@ -480,6 +502,7 @@ export const useUserStore = defineStore('user', () => {
     followerUsers,
     fetchProfile,
     fetchActivities,
+    fetchUserActivityPage,
     fetchFollowingActivities,
     fetchAllActivitiesForHeatmap,
     fetchFollowing,

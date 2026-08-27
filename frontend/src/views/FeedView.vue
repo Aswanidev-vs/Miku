@@ -8,7 +8,7 @@ import { usePullToRefresh } from '../composables/usePullToRefresh'
 import { clearGqlCache } from '../api/graphql'
 import PullToRefresh from '../components/common/PullToRefresh.vue'
 import ActivityComposer from '../components/feed/ActivityComposer.vue'
-import { renderActivityHtml } from '../utils/activityHtml'
+import ActivityItem from '../components/feed/ActivityItem.vue'
 import type { TextActivity, ListActivity } from '../types'
 
 const userStore = useUserStore()
@@ -88,19 +88,6 @@ onUnmounted(() => {
   observer?.disconnect()
 })
 
-function formatTime(unix: number): string {
-  const diff = Date.now() / 1000 - unix
-  if (diff < 60) return 'just now'
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-  return `${Math.floor(diff / 86400)}d ago`
-}
-
-function statusLabel(status?: string): string {
-  if (!status) return ''
-  return status.replace(/_/g, ' ').toLowerCase()
-}
-
 function goToMedia(id?: number) {
   if (id) {
     router.push({ name: 'media-detail', params: { id } })
@@ -154,66 +141,13 @@ function goToUser(activity: TextActivity | ListActivity) {
 
       <!-- Activities -->
       <div v-else-if="visibleActivities.length > 0" class="activity-list">
-        <div
+        <ActivityItem
           v-for="activity in visibleActivities"
           :key="activity.id"
-          class="activity-item"
-        >
-          <!-- List Activity -->
-          <template v-if="'media' in activity && activity.media">
-            <div class="activity-avatar" @click="goToUser(activity)">
-              <img
-                v-if="activity.user?.avatar"
-                :src="activity.user.avatar.medium"
-                :alt="activity.user.name"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
-            <div class="activity-body">
-              <p class="activity-text">
-                <span class="activity-user">{{ activity.user?.name }}</span>
-                <span class="activity-action">{{ statusLabel(activity.status) }}</span>
-                <span class="activity-media" @click="goToMedia(activity.media?.id)">
-                  {{ activity.media?.title?.romaji }}
-                </span>
-                <span v-if="activity.progress" class="activity-progress">
-                  {{ activity.progress }}
-                </span>
-              </p>
-              <span class="activity-time">{{ formatTime(activity.createdAt) }}</span>
-            </div>
-            <img
-              v-if="activity.media?.coverImage"
-              :src="activity.media.coverImage.medium"
-              :alt="activity.media.title?.romaji"
-              class="activity-cover"
-              loading="lazy"
-              decoding="async"
-              @click="goToMedia(activity.media?.id)"
-            />
-          </template>
-
-          <!-- Text Activity -->
-          <template v-else-if="'text' in activity">
-            <div class="activity-avatar" @click="goToUser(activity)">
-              <img
-                v-if="activity.user?.avatar"
-                :src="activity.user.avatar.medium"
-                :alt="activity.user.name"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
-            <div class="activity-body">
-              <p class="activity-text">
-                <span class="activity-user">{{ activity.user?.name }}</span>
-              </p>
-              <div class="activity-message" v-html="renderActivityHtml(activity.text)"></div>
-              <span class="activity-time">{{ formatTime(activity.createdAt) }}</span>
-            </div>
-          </template>
-        </div>
+          :activity="activity"
+          @open-media="goToMedia"
+          @open-user="goToUser"
+        />
 
         <!-- Load more sentinel -->
         <div ref="sentinelRef" class="load-more-sentinel">
@@ -257,89 +191,6 @@ function goToUser(activity: TextActivity | ListActivity) {
 
 .activity-list {
   padding: 0;
-}
-
-.activity-item {
-  display: flex;
-  gap: var(--space-md);
-  padding: var(--space-md) 0;
-  border-bottom: 1px solid var(--bg-surface);
-  align-items: flex-start;
-}
-
-.activity-avatar {
-  flex-shrink: 0;
-  cursor: pointer;
-}
-
-.activity-avatar img {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-full);
-  object-fit: cover;
-}
-
-.activity-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.activity-text {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  line-height: var(--line-height-normal);
-}
-
-.activity-user {
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-}
-
-.activity-action {
-  margin: 0 var(--space-xs);
-}
-
-.activity-media {
-  font-weight: var(--font-weight-medium);
-  color: var(--color-primary-light);
-  cursor: pointer;
-}
-
-.activity-media:hover {
-  text-decoration: underline;
-}
-
-.activity-progress {
-  margin-left: var(--space-xs);
-  color: var(--text-muted);
-}
-
-.activity-message {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  margin-top: var(--space-xs);
-  line-height: var(--line-height-normal);
-}
-
-.activity-message :deep(a) {
-  color: var(--color-primary-light);
-  word-break: break-word;
-}
-
-.activity-time {
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-  margin-top: var(--space-xs);
-  display: block;
-}
-
-.activity-cover {
-  width: 48px;
-  height: 64px;
-  border-radius: var(--radius-md);
-  object-fit: cover;
-  flex-shrink: 0;
-  cursor: pointer;
 }
 
 .load-more-sentinel {

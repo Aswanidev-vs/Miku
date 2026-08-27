@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { Browser } from '@wailsio/runtime'
 import { useAuthStore } from '../stores'
 import { useUserStore } from '../stores'
@@ -12,11 +13,13 @@ import StatsBreakdown from '../components/profile/StatsBreakdown.vue'
 import UserFavorites from '../components/profile/UserFavorites.vue'
 import SocialList from '../components/profile/SocialList.vue'
 import HeatmapCalendar from '../components/profile/HeatmapCalendar.vue'
-import type { User } from '../types'
+import ActivityItem from '../components/feed/ActivityItem.vue'
+import type { User, TextActivity, ListActivity } from '../types'
 
 const authStore = useAuthStore()
 const userStore = useUserStore()
 const animeStore = useAnimeStore()
+const router = useRouter()
 const { settings, toggle } = useSettings()
 const {
   currentVersion, hasUpdate, latestVersion, checked, checking, updateInfo, error: updateError,
@@ -49,9 +52,58 @@ watch(
 const showStats = ref(false)
 let statsTimer: ReturnType<typeof setTimeout> | null = null
 
+// Activity history lives in local state — the shared userStore.activities
+// belongs to the feed and must not be overwritten by the profile view.
+const HISTORY_PER_PAGE = 50
+const profileActivities = ref<(TextActivity | ListActivity)[]>([])
+const historyPage = ref(1)
+const historyHasNextPage = ref(false)
+const historyAppendLoading = ref(false)
+
+async function loadHistoryPage(page: number, append: boolean) {
+  if (!user.value || historyAppendLoading.value) return
+  historyAppendLoading.value = true
+  try {
+    const { items, pageInfo } = await userStore.fetchUserActivityPage(user.value.id, page, HISTORY_PER_PAGE)
+    if (append) {
+      const seen = new Set(profileActivities.value.map((a) => a.id))
+      profileActivities.value = [...profileActivities.value, ...items.filter((a) => !seen.has(a.id))]
+    } else {
+      profileActivities.value = items
+    }
+    historyPage.value = page
+    historyHasNextPage.value = pageInfo?.hasNextPage ?? false
+  } catch {
+    // keep whatever already loaded; the section degrades gracefully
+  } finally {
+    historyAppendLoading.value = false
+  }
+}
+
+function loadMoreHistory() {
+  loadHistoryPage(historyPage.value + 1, true)
+}
+
+function openMedia(id: number) {
+  router.push({ name: 'media-detail', params: { id } })
+}
+
+// Tap a user's avatar: your own goes to the in-app profile, friends open their
+// AniList profile in the system browser (no per-user profile route exists yet).
+function openUser(activity: TextActivity | ListActivity) {
+  const u = activity.user
+  if (!u?.name) return
+  if (user.value && u.id === user.value.id) {
+    router.push({ name: 'profile' })
+  } else {
+    const url = `https://anilist.co/user/${encodeURIComponent(u.name)}`
+    Browser.OpenURL(url).catch(() => window.open(url, '_blank'))
+  }
+}
+
 onMounted(async () => {
   if (isLoggedIn.value && user.value) {
-    userStore.fetchActivities(user.value.id, 1, 50)
+    loadHistoryPage(1, false)
     userStore.fetchFollowing(user.value.id)
     userStore.fetchFollowers(user.value.id)
     if (settings.value.autoSync) animeStore.startSync(user.value.id)
@@ -222,6 +274,28 @@ function handleSocialSelect(u: User) {
         <StatsBreakdown :statistics="user.statistics" />
         <HeatmapCalendar :activities="userStore.heatmapActivities" />
         <UserFavorites v-if="user.favourites" :favorites="user.favourites" />
+      </section>
+      <section class="settings-group">
+        <h3 class="group-title">Recent Activity</h3>
+        <div v-if="profileActivities.length" class="activity-history">
+          <ActivityItem
+            v-for="a in profileActivities"
+            :key="a.id"
+            :activity="a"
+            @open-media="openMedia"
+            @open-user="openUser"
+          />
+          <button
+            v-if="historyHasNextPage && !historyAppendLoading"
+            class="btn btn-secondary load-more"
+            :disabled="historyAppendLoading"
+            @click="loadMoreHistory"
+          >
+            Load more
+          </button>
+          <p v-if="historyAppendLoading" class="loading-more-hint">Loading…</p>
+        </div>
+        <p v-else class="history-empty">No activity yet</p>
       </section>
     </template>
 
@@ -427,6 +501,28 @@ function handleSocialSelect(u: User) {
   white-space: pre-line;
   line-height: var(--line-height-relaxed, 1.6);
   overflow-wrap: anywhere;
+}
+
+/* Recent Activity */
+.activity-history {
+  padding: 0 var(--space-xs);
+}
+
+.load-more {
+  width: 100%;
+  margin-top: var(--space-md);
+}
+
+.loading-more-hint {
+  margin-top: var(--space-sm);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.history-empty {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
 }
 
 .setting-row {
