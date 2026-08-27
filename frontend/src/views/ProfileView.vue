@@ -14,6 +14,7 @@ import UserFavorites from '../components/profile/UserFavorites.vue'
 import SocialList from '../components/profile/SocialList.vue'
 import HeatmapCalendar from '../components/profile/HeatmapCalendar.vue'
 import ActivityItem from '../components/feed/ActivityItem.vue'
+import AppearanceSettings from '../components/settings/AppearanceSettings.vue'
 import type { User, TextActivity, ListActivity } from '../types'
 
 const authStore = useAuthStore()
@@ -257,6 +258,11 @@ function handleSocialSelect(u: User) {
       </div>
     </section>
 
+    <!-- Appearance (theme + accent) -->
+    <div class="appearance-group">
+      <AppearanceSettings />
+    </div>
+
     <!-- Profile (when signed in) — deferred: mounts 300ms after settings for faster initial paint -->
     <template v-if="isLoggedIn && user && showStats">
       <section v-if="user.about" class="settings-group">
@@ -486,6 +492,10 @@ function handleSocialSelect(u: User) {
   padding: var(--space-md) var(--space-md) var(--space-lg);
 }
 
+.appearance-group {
+  margin: var(--space-lg) var(--space-lg) 0;
+}
+
 .group-title {
   font-family: var(--font-heading);
   font-size: var(--font-size-md);
@@ -699,6 +709,11 @@ function handleSocialSelect(u: User) {
     margin-left: var(--space-md);
     padding-right: var(--space-sm);
     padding-left: var(--space-sm);
+  }
+
+  .appearance-group {
+    margin-right: var(--space-md);
+    margin-left: var(--space-md);
   }
 
   .setting-row {
