@@ -368,5 +368,14 @@ async function saveToAniList() {
   .seg-picker {
     justify-content: flex-start;
   }
+
+  .pref-save-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pref-save-row .save-btn {
+    padding: var(--space-sm) var(--space-md);
+  }
 }
 </style>

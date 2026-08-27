@@ -98,5 +98,7 @@ const emit = defineEmits<{
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* flex items default to min-width:auto, which blocks ellipsis on long names */
+  min-width: 0;
 }
 </style>
