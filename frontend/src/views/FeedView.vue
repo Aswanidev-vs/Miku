@@ -4,6 +4,9 @@ import { useUserStore } from '../stores/user'
 import { useAuthStore } from '../stores/auth'
 import { useRouter } from 'vue-router'
 import { Browser } from '@wailsio/runtime'
+import { usePullToRefresh } from '../composables/usePullToRefresh'
+import { clearGqlCache } from '../api/graphql'
+import PullToRefresh from '../components/common/PullToRefresh.vue'
 import type { TextActivity, ListActivity } from '../types'
 
 const userStore = useUserStore()
@@ -51,14 +54,27 @@ function setupObserver() {
   observer.observe(sentinelRef.value)
 }
 
+// Pull-to-refresh: reset pagination, drop the GQL cache and refetch page 1
+async function refreshFeed() {
+  if (!isLoggedIn.value || !user.value) return
+  visibleCount.value = 10
+  clearGqlCache()
+  await userStore.fetchFollowingActivities(user.value.id, 1, PAGE_SIZE)
+}
+
+const { pullingDown, refreshing, showRefreshBtn, manualRefresh, setupListeners, removeListeners } = usePullToRefresh(refreshFeed)
+const viewRef = ref<HTMLElement | null>(null)
+
 onMounted(() => {
   if (isLoggedIn.value && user.value) {
     userStore.fetchFollowingActivities(user.value.id, 1, PAGE_SIZE)
   }
+  if (viewRef.value) setupListeners(viewRef.value)
   setupObserver()
 })
 
 onUnmounted(() => {
+  if (viewRef.value) removeListeners(viewRef.value)
   observer?.disconnect()
 })
 
@@ -96,7 +112,8 @@ function goToUser(activity: TextActivity | ListActivity) {
 </script>
 
 <template>
-  <div class="feed-view">
+  <PullToRefresh :pulling-down="pullingDown" :refreshing="refreshing" :show-refresh-btn="showRefreshBtn" @refresh="manualRefresh">
+  <div ref="viewRef" class="feed-view">
     <header class="feed-header safe-area-top">
       <h1 class="feed-title">Feed</h1>
       <p class="feed-subtitle">Your activity and your friends'</p>
@@ -195,6 +212,7 @@ function goToUser(activity: TextActivity | ListActivity) {
       </div>
     </template>
   </div>
+  </PullToRefresh>
 </template>
 
 <style scoped>
