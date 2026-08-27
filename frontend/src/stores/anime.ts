@@ -136,6 +136,7 @@ query ($userId: Int, $status: MediaListStatus) {
           title {
             romaji
             english
+            native
             userPreferred
           }
           coverImage {
@@ -183,12 +184,12 @@ query ($id: Int) {
     relations {
       edges {
         id relationType
-        node { id title { romaji } coverImage { medium } format }
+        node { id title { romaji english native userPreferred } coverImage { medium } format }
       }
     }
     recommendations {
       edges {
-        node { id userRating media { id title { romaji } coverImage { medium } } }
+        node { id userRating media { id title { romaji english native userPreferred } coverImage { medium } } }
       }
     }
     characters(perPage: 50, sort: ROLE) {

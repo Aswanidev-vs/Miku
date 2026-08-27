@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { MediaTitle } from '../../types'
+import { preferredTitle } from '../../utils/mediaDisplay'
+import { useSettings } from '../../composables/useSettings'
+
+const { settings } = useSettings()
 
 interface MediaFavoriteNode {
   id: number
-  title: { romaji: string }
+  title: MediaTitle
   coverImage: { medium: string }
 }
 
@@ -28,7 +33,7 @@ const allFavorites = computed(() => {
     for (const node of props.favorites.anime.nodes) {
       items.push({
         id: node.id,
-        title: node.title.romaji,
+        title: preferredTitle(node.title, settings.value.titleLanguage),
         cover: node.coverImage.medium,
         type: 'anime',
         round: false,
@@ -39,7 +44,7 @@ const allFavorites = computed(() => {
     for (const node of props.favorites.manga.nodes) {
       items.push({
         id: node.id,
-        title: node.title.romaji,
+        title: preferredTitle(node.title, settings.value.titleLanguage),
         cover: node.coverImage.medium,
         type: 'manga',
         round: false,

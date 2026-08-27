@@ -76,6 +76,9 @@ query ($name: String) {
           id
           title {
             romaji
+            english
+            native
+            userPreferred
           }
           coverImage {
             medium
@@ -87,6 +90,9 @@ query ($name: String) {
           id
           title {
             romaji
+            english
+            native
+            userPreferred
           }
           coverImage {
             medium
@@ -149,6 +155,9 @@ const ACTIVITY_NODE_FIELDS = `
       id
       title {
         romaji
+        english
+        native
+        userPreferred
       }
       coverImage {
         medium

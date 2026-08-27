@@ -2,6 +2,10 @@
 import type { TextActivity, ListActivity } from '../../types'
 import { renderActivityHtml } from '../../utils/activityHtml'
 import { formatTime, statusLabel } from '../../utils/activityFormat'
+import { preferredTitle } from '../../utils/mediaDisplay'
+import { useSettings } from '../../composables/useSettings'
+
+const { settings } = useSettings()
 
 defineProps<{
   activity: TextActivity | ListActivity
@@ -36,7 +40,7 @@ function openMedia(id?: number) {
           <span class="activity-user">{{ activity.user?.name }}</span>
           <span class="activity-action">{{ statusLabel(activity.status) }}</span>
           <span class="activity-media" @click="openMedia(activity.media?.id)">
-            {{ activity.media?.title?.romaji }}
+            {{ preferredTitle(activity.media?.title, settings.titleLanguage) }}
           </span>
           <span v-if="activity.progress" class="activity-progress">
             {{ activity.progress }}
@@ -47,7 +51,7 @@ function openMedia(id?: number) {
       <img
         v-if="activity.media?.coverImage"
         :src="activity.media.coverImage.medium"
-        :alt="activity.media.title?.romaji"
+        :alt="preferredTitle(activity.media?.title, settings.titleLanguage)"
         class="activity-cover"
         loading="lazy"
         decoding="async"

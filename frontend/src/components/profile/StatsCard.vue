@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import type { UserStatistics } from '../../types'
+import { useSettings } from '../../composables/useSettings'
+import { formatScore } from '../../utils/mediaDisplay'
+
+const { settings } = useSettings()
 
 defineProps<{
   statistics: UserStatistics
@@ -59,7 +63,7 @@ const mangaStats = [
                 {{ formatMinutes(statistics.anime[stat.key] as number) }}
               </template>
               <template v-else-if="stat.key === 'meanScore'">
-                {{ (statistics.anime[stat.key] as number / 10).toFixed(1) }}
+                {{ formatScore(statistics.anime[stat.key] as number, settings.scoreFormat) }}
               </template>
               <template v-else>
                 {{ (statistics.anime[stat.key] as number).toLocaleString() }}
@@ -83,7 +87,7 @@ const mangaStats = [
           <div class="stat-content">
             <span class="stat-value">
               <template v-if="stat.key === 'meanScore'">
-                {{ (statistics.manga[stat.key] as number / 10).toFixed(1) }}
+                {{ formatScore(statistics.manga[stat.key] as number, settings.scoreFormat) }}
               </template>
               <template v-else>
                 {{ (statistics.manga[stat.key] as number).toLocaleString() }}

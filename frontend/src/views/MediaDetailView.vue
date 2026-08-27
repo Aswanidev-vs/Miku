@@ -4,12 +4,15 @@ import { onMounted, onUnmounted, computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAnimeStore } from '../stores/anime'
 import { useAuthStore } from '../stores/auth'
+import { useSettings } from '../composables/useSettings'
+import { preferredTitle } from '../utils/mediaDisplay'
 import type { ListStatus } from '../types'
 
 const route = useRoute()
 const router = useRouter()
 const animeStore = useAnimeStore()
 const authStore = useAuthStore()
+const { settings } = useSettings()
 
 const media = computed(() => animeStore.currentMedia)
 const loading = computed(() => animeStore.loading)
@@ -242,11 +245,11 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
         <div class="detail-header">
           <img
             :src="media.coverImage.large"
-            :alt="media.title.userPreferred || media.title.romaji"
+            :alt="preferredTitle(media.title, settings.titleLanguage)"
             class="detail-cover"
           />
           <div class="detail-info">
-            <h1 class="detail-title">{{ media.title.userPreferred || media.title.romaji }}</h1>
+            <h1 class="detail-title">{{ preferredTitle(media.title, settings.titleLanguage) }}</h1>
             <p v-if="media.title.english && media.title.english !== media.title.romaji" class="detail-alt-title">
               {{ media.title.english }}
             </p>
@@ -458,11 +461,11 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
               <img
                 v-if="edge.node.coverImage"
                 :src="edge.node.coverImage.medium"
-                :alt="edge.node.title.romaji"
+                :alt="preferredTitle(edge.node.title, settings.titleLanguage)"
                 class="relation-img"
               />
               <div class="relation-info">
-                <span class="relation-title">{{ edge.node.title.romaji }}</span>
+                <span class="relation-title">{{ preferredTitle(edge.node.title, settings.titleLanguage) }}</span>
                 <span class="relation-type">{{ edge.relationType?.replace('_', ' ').toLowerCase() }}</span>
               </div>
             </div>
@@ -483,11 +486,11 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
                 <img
                   v-if="rec.coverImage"
                   :src="rec.coverImage.medium || rec.coverImage.large"
-                  :alt="rec.title?.romaji"
+                  :alt="preferredTitle(rec.title, settings.titleLanguage)"
                   loading="lazy"
                 />
               </div>
-              <span class="recommendation-title">{{ rec.title?.userPreferred || rec.title?.romaji }}</span>
+              <span class="recommendation-title">{{ preferredTitle(rec.title, settings.titleLanguage) }}</span>
             </div>
           </div>
         </div>
