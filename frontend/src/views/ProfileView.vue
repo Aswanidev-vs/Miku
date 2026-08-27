@@ -8,6 +8,7 @@ import { useSettings } from '../composables/useSettings'
 import { useUpdate } from '../composables/useUpdate'
 import { clearGqlCache } from '../api/graphql'
 import StatsCard from '../components/profile/StatsCard.vue'
+import StatsBreakdown from '../components/profile/StatsBreakdown.vue'
 import UserFavorites from '../components/profile/UserFavorites.vue'
 import SocialList from '../components/profile/SocialList.vue'
 import HeatmapCalendar from '../components/profile/HeatmapCalendar.vue'
@@ -218,6 +219,7 @@ function handleSocialSelect(u: User) {
       <section v-if="user.statistics" class="settings-group">
         <h3 class="group-title">Your Stats</h3>
         <StatsCard :statistics="user.statistics" />
+        <StatsBreakdown :statistics="user.statistics" />
         <HeatmapCalendar :activities="userStore.heatmapActivities" />
         <UserFavorites v-if="user.favourites" :favorites="user.favourites" />
       </section>

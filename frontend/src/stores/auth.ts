@@ -134,12 +134,54 @@ export const useAuthStore = defineStore('auth', () => {
                 meanScore
                 minutesWatched
                 episodesWatched
+                genres(limit: 8, sort: COUNT_DESC) {
+                  genre
+                  count
+                }
+                tags(limit: 8, sort: COUNT_DESC) {
+                  tag {
+                    name
+                  }
+                  count
+                }
+                studios(limit: 8, sort: COUNT_DESC) {
+                  studio {
+                    name
+                  }
+                  count
+                }
+                staff(limit: 8, sort: COUNT_DESC) {
+                  staff {
+                    name {
+                      full
+                    }
+                  }
+                  count
+                }
+                voiceActors(limit: 8, sort: COUNT_DESC) {
+                  voiceActor {
+                    name {
+                      full
+                    }
+                  }
+                  count
+                }
               }
               manga {
                 count
                 meanScore
                 chaptersRead
                 volumesRead
+                genres(limit: 8, sort: COUNT_DESC) {
+                  genre
+                  count
+                }
+                tags(limit: 8, sort: COUNT_DESC) {
+                  tag {
+                    name
+                  }
+                  count
+                }
               }
             }
           }

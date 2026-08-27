@@ -104,13 +104,47 @@ export interface UserStatistics {
     meanScore: number
     minutesWatched: number
     episodesWatched: number
+    genres?: GenreStat[]
+    tags?: TagStat[]
+    studios?: StudioStat[]
+    staff?: StaffStat[]
+    voiceActors?: VoiceActorStat[]
   }
   manga: {
     count: number
     meanScore: number
     chaptersRead: number
     volumesRead: number
+    genres?: GenreStat[]
+    tags?: TagStat[]
   }
+}
+
+/* ---- User Statistics Breakdowns ---- */
+
+export interface GenreStat {
+  genre?: string | null
+  count: number
+}
+
+export interface TagStat {
+  tag?: { id?: number; name?: string | null } | null
+  count: number
+}
+
+export interface StudioStat {
+  studio?: { id?: number; name?: string | null } | null
+  count: number
+}
+
+export interface StaffStat {
+  staff?: { id?: number; name?: { full?: string | null } | null } | null
+  count: number
+}
+
+export interface VoiceActorStat {
+  voiceActor?: { id?: number; name?: { full?: string | null } | null } | null
+  count: number
 }
 
 export interface Media {
