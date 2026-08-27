@@ -15,6 +15,7 @@ import SocialList from '../components/profile/SocialList.vue'
 import HeatmapCalendar from '../components/profile/HeatmapCalendar.vue'
 import ActivityItem from '../components/feed/ActivityItem.vue'
 import AppearanceSettings from '../components/settings/AppearanceSettings.vue'
+import AniListPreferences from '../components/settings/AniListPreferences.vue'
 import type { User, TextActivity, ListActivity } from '../types'
 
 const authStore = useAuthStore()
@@ -261,6 +262,11 @@ function handleSocialSelect(u: User) {
     <!-- Appearance (theme + accent) -->
     <div class="appearance-group">
       <AppearanceSettings />
+    </div>
+
+    <!-- AniList preferences (title language, score format, default tab, adult content) -->
+    <div class="appearance-group">
+      <AniListPreferences />
     </div>
 
     <!-- Profile (when signed in) — deferred: mounts 300ms after settings for faster initial paint -->

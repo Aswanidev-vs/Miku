@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, watch } from 'vue'
-import { RouterView } from 'vue-router'
+import { RouterView, useRouter } from 'vue-router'
 import { useAuthStore } from './stores'
+import { useSettings } from './composables/useSettings'
 import { usePlatform } from './composables/usePlatform'
 import BottomNav from './components/layout/BottomNav.vue'
 
 const authStore = useAuthStore()
+const router = useRouter()
+const { settings } = useSettings()
 const { os, isDesktop, isMobile, screenSmall, screenMedium, screenLarge } = usePlatform()
 
 // Lazy-load Wails runtime imports to avoid crash if runtime isn't ready
@@ -79,6 +82,12 @@ onMounted(async () => {
   // now so the user isn't forced to tap "Sign in" a second time.
   if (!authStore.isLoggedIn) {
     await checkPendingCode()
+  }
+
+  // Jump to the user's preferred landing tab, but only when the app actually
+  // opened on Discover — deep links (e.g. #/media/123) must not be clobbered.
+  if (settings.value.defaultTab !== '/' && router.currentRoute.value.path === '/') {
+    router.replace(settings.value.defaultTab)
   }
 
   window.addEventListener('focus', onFocus)

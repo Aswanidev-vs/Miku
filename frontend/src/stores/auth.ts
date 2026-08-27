@@ -128,6 +128,11 @@ export const useAuthStore = defineStore('auth', () => {
               medium
             }
             bannerImage
+            options {
+              titleLanguage
+              adultContent
+              scoreFormat
+            }
             statistics {
               anime {
                 count

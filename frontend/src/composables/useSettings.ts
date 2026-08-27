@@ -3,6 +3,15 @@ import { ref, watch } from 'vue'
 const STORAGE_KEY = 'miku-settings'
 
 export type ThemeMode = 'system' | 'dark' | 'light' | 'black'
+export type DefaultTab = '/' | '/search' | '/mylist' | '/feed' | '/profile'
+export type TitleLanguagePref = 'ACCOUNT' | 'ROMAJI' | 'ENGLISH' | 'NATIVE'
+export type ScoreFormatPref =
+  | 'ACCOUNT'
+  | 'POINT_100'
+  | 'POINT_10_DECIMAL'
+  | 'POINT_10'
+  | 'POINT_5'
+  | 'POINT_3'
 
 export interface Settings {
   autoSync: boolean
@@ -10,6 +19,10 @@ export interface Settings {
   reduceMotion: boolean
   theme: ThemeMode
   accentColor: string | null
+  defaultTab: DefaultTab
+  titleLanguage: TitleLanguagePref
+  scoreFormat: ScoreFormatPref
+  adultContent: boolean | null
 }
 
 const defaults: Settings = {
@@ -18,6 +31,10 @@ const defaults: Settings = {
   reduceMotion: false,
   theme: 'dark', // preserves the original Sakura Noir look for existing users
   accentColor: null, // null = default sakura coral
+  defaultTab: '/',
+  titleLanguage: 'ACCOUNT', // ACCOUNT = follow the AniList account preference
+  scoreFormat: 'ACCOUNT',
+  adultContent: null, // null = follow the AniList account setting
 }
 
 /* ---------- Pure theme helpers (unit-tested, no DOM access) ---------- */

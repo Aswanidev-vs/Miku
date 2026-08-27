@@ -1,17 +1,27 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+
+// Settings live on the Profile screen; this route only exists for old links.
+const router = useRouter()
+
+onMounted(() => {
+  router.replace({ name: 'profile' })
+})
 </script>
 
 <template>
   <div class="settings-view">
-    <h1>Settings</h1>
-    <p>App settings and preferences</p>
+    <p>
+      Settings moved to
+      <RouterLink :to="{ name: 'profile' }">Profile</RouterLink>
+    </p>
   </div>
 </template>
 
 <style scoped>
 .settings-view {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   flex: 1;

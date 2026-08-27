@@ -2,11 +2,14 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Media, MediaListCollection, PageInfo, CharacterEdge } from '../types'
 import { gqlQuery, gqlMutate } from '../api/graphql'
+import { useAuthStore } from './auth'
+import { useSettings } from '../composables/useSettings'
+import { effectiveIsAdult } from '../utils/mediaDisplay'
 
 const TRENDING_ANIME_QUERY = `
-query ($page: Int, $perPage: Int) {
+query ($page: Int, $perPage: Int, $adult: Boolean) {
   Page(page: $page, perPage: $perPage) {
-    media(sort: TRENDING_DESC, type: ANIME) {
+    media(sort: TRENDING_DESC, type: ANIME, isAdult: $adult) {
       id
       title {
         romaji
@@ -46,9 +49,9 @@ query ($page: Int, $perPage: Int) {
 `
 
 const SEARCH_ANIME_QUERY = `
-query ($search: String, $page: Int, $perPage: Int) {
+query ($search: String, $page: Int, $perPage: Int, $adult: Boolean) {
   Page(page: $page, perPage: $perPage) {
-    media(search: $search, type: ANIME, sort: SEARCH_MATCH) {
+    media(search: $search, type: ANIME, sort: SEARCH_MATCH, isAdult: $adult) {
       id
       title {
         romaji
@@ -80,9 +83,9 @@ query ($search: String, $page: Int, $perPage: Int) {
 
 // Genre-based recommendations — used to supplement sparse native AniList recs.
 const GENRE_RECS_QUERY = `
-query ($genre: String, $page: Int, $perPage: Int) {
+query ($genre: String, $page: Int, $perPage: Int, $adult: Boolean) {
   Page(page: $page, perPage: $perPage) {
-    media(genre: $genre, type: ANIME, sort: POPULARITY_DESC) {
+    media(genre: $genre, type: ANIME, sort: POPULARITY_DESC, isAdult: $adult) {
       id
       title {
         romaji
@@ -251,6 +254,9 @@ mutation ($id: Int) {
 `
 
 export const useAnimeStore = defineStore('anime', () => {
+  const authStore = useAuthStore()
+  const { settings } = useSettings()
+
   const trending = ref<Media[]>([])
   const searchResults = ref<Media[]>([])
   const myList = ref<MediaListCollection | null>(null)
@@ -260,6 +266,12 @@ export const useAnimeStore = defineStore('anime', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  // Resolve the $adult query variable: an explicit app setting wins, null
+  // defers to the AniList account option (false when signed out / unknown).
+  function adultVar(): boolean {
+    return effectiveIsAdult(settings.value.adultContent, authStore.currentUser?.options?.adultContent)
+  }
+
   async function fetchTrending(page = 1, perPage = 20) {
     loading.value = true
     error.value = null
@@ -267,6 +279,7 @@ export const useAnimeStore = defineStore('anime', () => {
       const response = await gqlQuery(TRENDING_ANIME_QUERY, {
         page,
         perPage,
+        adult: adultVar(),
       })
       if (response?.data?.Page) {
         trending.value = response.data.Page.media
@@ -287,6 +300,7 @@ export const useAnimeStore = defineStore('anime', () => {
         search: query,
         page,
         perPage,
+        adult: adultVar(),
       })
       if (response?.data?.Page) {
         searchResults.value = response.data.Page.media
@@ -441,7 +455,7 @@ export const useAnimeStore = defineStore('anime', () => {
     try {
       const results = await Promise.all(
         genres.map((g) =>
-          gqlQuery(GENRE_RECS_QUERY, { genre: g, page: 1, perPage: 12 })
+          gqlQuery(GENRE_RECS_QUERY, { genre: g, page: 1, perPage: 12, adult: adultVar() })
             .then((r) => r?.data?.Page?.media ?? [])
             .catch(() => [])
         )

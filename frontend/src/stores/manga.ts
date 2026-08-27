@@ -2,11 +2,14 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Media, MediaListCollection, PageInfo } from '../types'
 import { gqlQuery, gqlMutate } from '../api/graphql'
+import { useAuthStore } from './auth'
+import { useSettings } from '../composables/useSettings'
+import { effectiveIsAdult } from '../utils/mediaDisplay'
 
 const TRENDING_MANGA_QUERY = `
-query ($page: Int, $perPage: Int) {
+query ($page: Int, $perPage: Int, $adult: Boolean) {
   Page(page: $page, perPage: $perPage) {
-    media(sort: TRENDING_DESC, type: MANGA) {
+    media(sort: TRENDING_DESC, type: MANGA, isAdult: $adult) {
       id
       title {
         romaji
@@ -42,9 +45,9 @@ query ($page: Int, $perPage: Int) {
 `
 
 const SEARCH_MANGA_QUERY = `
-query ($search: String, $page: Int, $perPage: Int) {
+query ($search: String, $page: Int, $perPage: Int, $adult: Boolean) {
   Page(page: $page, perPage: $perPage) {
-    media(search: $search, type: MANGA, sort: SEARCH_MATCH) {
+    media(search: $search, type: MANGA, sort: SEARCH_MATCH, isAdult: $adult) {
       id
       title {
         romaji
@@ -257,6 +260,9 @@ mutation ($id: Int) {
 `
 
 export const useMangaStore = defineStore('manga', () => {
+  const authStore = useAuthStore()
+  const { settings } = useSettings()
+
   const trending = ref<Media[]>([])
   const searchResults = ref<Media[]>([])
   const myList = ref<MediaListCollection | null>(null)
@@ -265,6 +271,12 @@ export const useMangaStore = defineStore('manga', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  // Resolve the $adult query variable: an explicit app setting wins, null
+  // defers to the AniList account option (false when signed out / unknown).
+  function adultVar(): boolean {
+    return effectiveIsAdult(settings.value.adultContent, authStore.currentUser?.options?.adultContent)
+  }
+
   async function fetchTrending(page = 1, perPage = 20) {
     loading.value = true
     error.value = null
@@ -272,6 +284,7 @@ export const useMangaStore = defineStore('manga', () => {
       const response = await gqlQuery(TRENDING_MANGA_QUERY, {
         page,
         perPage,
+        adult: adultVar(),
       })
       if (response?.data?.Page) {
         trending.value = response.data.Page.media
@@ -292,6 +305,7 @@ export const useMangaStore = defineStore('manga', () => {
         search: query,
         page,
         perPage,
+        adult: adultVar(),
       })
       if (response?.data?.Page) {
         searchResults.value = response.data.Page.media
