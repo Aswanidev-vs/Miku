@@ -14,11 +14,14 @@ import (
 	"time"
 )
 
+var (
+	AniListAuthURL  = "https://anilist.co/api/v2/oauth/authorize"
+	AniListTokenURL = "https://anilist.co/api/v2/oauth/token"
+)
+
 const (
-	AniListAuthURL        = "https://anilist.co/api/v2/oauth/authorize"
-	AniListTokenURL       = "https://anilist.co/api/v2/oauth/token"
-	DefaultCallbackPort   = 43219
-	DefaultCallbackHost   = "localhost"
+	DefaultCallbackPort = 43219
+	DefaultCallbackHost = "localhost"
 )
 
 type OAuth2Config struct {
@@ -61,6 +64,11 @@ func NewOAuth2Service(config OAuth2Config) (*OAuth2Service, error) {
 // CallbackURL returns the redirect URI for the given port.
 func CallbackURL(port int) string {
 	return fmt.Sprintf("http://%s:%d/callback", DefaultCallbackHost, port)
+}
+
+// RedirectURI returns the configured OAuth redirect URI.
+func (s *OAuth2Service) RedirectURI() string {
+	return s.config.RedirectURI
 }
 
 func (s *OAuth2Service) GetAuthorizationURL() string {
