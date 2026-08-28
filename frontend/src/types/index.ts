@@ -100,6 +100,14 @@ export interface UserOptions {
 export interface UserMediaListOptions {
   scoreFormat?: ScoreFormat
   rowOrder?: string
+  animeList?: {
+    customLists?: string[]
+    sectionOrder?: string[]
+  }
+  mangaList?: {
+    customLists?: string[]
+    sectionOrder?: string[]
+  }
 }
 
 export interface UserStatistics {
@@ -168,6 +176,7 @@ export interface Media {
   popularity?: number
   trending?: number
   favourites?: number
+  isFavourite?: boolean
   description?: string
   startDate?: FuzzyDate
   endDate?: FuzzyDate
@@ -181,6 +190,7 @@ export interface Media {
   characters?: CharacterConnection
   staff?: StaffConnection
   streamingEpisodes?: StreamingEpisode[]
+  mediaListEntry?: MediaListEntry
 }
 
 export interface MediaTitle {
@@ -241,10 +251,12 @@ export interface MediaListEntry {
   priority?: number
   private?: boolean
   notes?: string
+  hiddenFromStatusLists?: boolean
   startedAt?: FuzzyDate
   completedAt?: FuzzyDate
-  updatedAt: number
-  customLists?: Record<string, boolean>
+  updatedAt?: number
+  createdAt?: number
+  customLists?: Record<string, boolean> | string[]
 }
 
 export interface MediaListCollection {

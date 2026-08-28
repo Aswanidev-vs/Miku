@@ -131,6 +131,10 @@ query ($userId: Int, $status: MediaListStatus) {
           month
           day
         }
+        notes
+        private
+        hiddenFromStatusLists
+        customLists
         media {
           id
           title {
@@ -154,6 +158,57 @@ query ($userId: Int, $status: MediaListStatus) {
 }
 `
 
+const USER_FAVOURITES_QUERY = `
+query ($userId: Int) {
+  User(id: $userId) {
+    favourites {
+      anime {
+        nodes {
+          id
+          title {
+            romaji
+            english
+            native
+            userPreferred
+          }
+          coverImage {
+            large
+            medium
+          }
+          format
+          episodes
+          status
+          averageScore
+          genres
+          nextAiringEpisode { episode airingAt timeUntilAiring }
+        }
+      }
+      manga {
+        nodes {
+          id
+          title {
+            romaji
+            english
+            native
+            userPreferred
+          }
+          coverImage {
+            large
+            medium
+          }
+          format
+          chapters
+          volumes
+          status
+          averageScore
+          genres
+        }
+      }
+    }
+  }
+}
+`
+
 // Fast query: banner, cover, title, meta, list entry — shown immediately
 const MEDIA_DETAILS_FAST = `
 query ($id: Int) {
@@ -164,13 +219,30 @@ query ($id: Int) {
     bannerImage
     format status episodes chapters volumes duration
     averageScore meanScore popularity trending favourites
+    isFavourite
     genres
     description(asHtml: false)
     startDate { year month day }
     endDate { year month day }
     season seasonYear
     nextAiringEpisode { id episode airingAt timeUntilAiring }
-    mediaListEntry { id status score progress repeat }
+    mediaListEntry {
+      id
+      mediaId
+      status
+      score
+      progress
+      repeat
+      priority
+      private
+      notes
+      hiddenFromStatusLists
+      customLists
+      startedAt { year month day }
+      completedAt { year month day }
+      updatedAt
+      createdAt
+    }
   }
 }
 `
@@ -222,13 +294,33 @@ query ($id: Int!, $page: Int, $perPage: Int) {
 `
 
 const SAVE_MEDIA_LIST_ENTRY_MUTATION = `
-mutation ($mediaId: Int, $status: MediaListStatus, $score: Float, $progress: Int, $repeat: Int) {
+mutation (
+  $id: Int
+  $mediaId: Int
+  $status: MediaListStatus
+  $score: Float
+  $progress: Int
+  $repeat: Int
+  $private: Boolean
+  $notes: String
+  $hiddenFromStatusLists: Boolean
+  $customLists: [String]
+  $startedAt: FuzzyDateInput
+  $completedAt: FuzzyDateInput
+) {
   SaveMediaListEntry(
+    id: $id
     mediaId: $mediaId
     status: $status
     score: $score
     progress: $progress
     repeat: $repeat
+    private: $private
+    notes: $notes
+    hiddenFromStatusLists: $hiddenFromStatusLists
+    customLists: $customLists
+    startedAt: $startedAt
+    completedAt: $completedAt
   ) {
     id
     mediaId
@@ -236,6 +328,13 @@ mutation ($mediaId: Int, $status: MediaListStatus, $score: Float, $progress: Int
     score
     progress
     repeat
+    private
+    notes
+    hiddenFromStatusLists
+    customLists
+    startedAt { year month day }
+    completedAt { year month day }
+    updatedAt
     media {
       id
       title {
@@ -254,6 +353,18 @@ mutation ($id: Int) {
 }
 `
 
+const TOGGLE_FAVOURITE_MUTATION = `
+mutation ($animeId: Int) {
+  ToggleFavourite(animeId: $animeId) {
+    anime {
+      nodes {
+        id
+      }
+    }
+  }
+}
+`
+
 export const useAnimeStore = defineStore('anime', () => {
   const authStore = useAuthStore()
   const { settings } = useSettings()
@@ -263,6 +374,7 @@ export const useAnimeStore = defineStore('anime', () => {
   const myList = ref<MediaListCollection | null>(null)
   const currentMedia = ref<Media | null>(null)
   const genreRecommendations = ref<Media[]>([])
+  const favourites = ref<{ anime: Media[]; manga: Media[] }>({ anime: [], manga: [] })
   const pageInfo = ref<PageInfo | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -333,10 +445,6 @@ export const useAnimeStore = defineStore('anime', () => {
     }
   }
 
-  function clearMyList() {
-    myList.value = null
-  }
-
   async function updateEntry(
     mediaId: number,
     status?: string,
@@ -344,25 +452,94 @@ export const useAnimeStore = defineStore('anime', () => {
     progress?: number,
     repeat?: number
   ) {
+    return saveListEntry({
+      mediaId,
+      status,
+      score,
+      progress,
+      repeat,
+    })
+  }
+
+  async function saveListEntry(payload: {
+    id?: number
+    mediaId: number
+    status?: string
+    score?: number
+    progress?: number
+    repeat?: number
+    private?: boolean
+    notes?: string
+    hiddenFromStatusLists?: boolean
+    customLists?: string[]
+    startedAt?: { year?: number; month?: number; day?: number }
+    completedAt?: { year?: number; month?: number; day?: number }
+  }) {
     loading.value = true
     error.value = null
     try {
-      const variables: Record<string, any> = { mediaId }
-      if (status) variables.status = status
-      if (score !== undefined) variables.score = score
-      if (progress !== undefined) variables.progress = progress
-      if (repeat !== undefined) variables.repeat = repeat
+      const variables: Record<string, any> = {
+        mediaId: payload.mediaId,
+      }
+      if (payload.id) variables.id = payload.id
+      if (payload.status) variables.status = payload.status
+      if (payload.score !== undefined) variables.score = payload.score
+      if (payload.progress !== undefined) variables.progress = payload.progress
+      if (payload.repeat !== undefined) variables.repeat = payload.repeat
+      if (payload.private !== undefined) variables.private = payload.private
+      if (payload.notes !== undefined) variables.notes = payload.notes
+      if (payload.hiddenFromStatusLists !== undefined) variables.hiddenFromStatusLists = payload.hiddenFromStatusLists
+      if (payload.customLists !== undefined) variables.customLists = payload.customLists
+      if (payload.startedAt) variables.startedAt = payload.startedAt
+      if (payload.completedAt) variables.completedAt = payload.completedAt
 
       const response = await gqlMutate(
         SAVE_MEDIA_LIST_ENTRY_MUTATION,
         variables
       )
-      return response?.data?.SaveMediaListEntry
+      const entry = response?.data?.SaveMediaListEntry
+      if (entry && currentMedia.value && currentMedia.value.id === payload.mediaId) {
+        currentMedia.value = {
+          ...currentMedia.value,
+          mediaListEntry: entry,
+        }
+      }
+      return entry
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to update entry'
+      error.value = e instanceof Error ? e.message : 'Failed to save list entry'
       throw e
     } finally {
       loading.value = false
+    }
+  }
+
+  async function toggleFavourite(animeId: number): Promise<boolean> {
+    try {
+      const response = await gqlMutate(TOGGLE_FAVOURITE_MUTATION, { animeId })
+      const favNodes = response?.data?.ToggleFavourite?.anime?.nodes
+      let isNowFav: boolean
+      if (Array.isArray(favNodes)) {
+        isNowFav = favNodes.some((n: any) => n.id === animeId)
+      } else {
+        isNowFav = !currentMedia.value?.isFavourite
+      }
+      if (currentMedia.value && currentMedia.value.id === animeId) {
+        currentMedia.value = {
+          ...currentMedia.value,
+          isFavourite: isNowFav,
+        }
+      }
+      if (isNowFav) {
+        if (currentMedia.value && !favourites.value.anime.some(a => a.id === animeId)) {
+          favourites.value.anime.unshift(currentMedia.value)
+        }
+      } else {
+        favourites.value.anime = favourites.value.anime.filter(a => a.id !== animeId)
+      }
+      return isNowFav
+    } catch (e) {
+      console.error('Failed to toggle favourite:', e)
+      throw e
     }
   }
 
@@ -374,6 +551,12 @@ export const useAnimeStore = defineStore('anime', () => {
         DELETE_MEDIA_LIST_ENTRY_MUTATION,
         { id: entryId }
       )
+      if (currentMedia.value?.mediaListEntry?.id === entryId) {
+        currentMedia.value = {
+          ...currentMedia.value,
+          mediaListEntry: undefined,
+        }
+      }
       return response?.data?.DeleteMediaListEntry?.deleted
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to delete entry'
@@ -478,6 +661,27 @@ export const useAnimeStore = defineStore('anime', () => {
     }
   }
 
+  async function fetchFavourites(userId: number) {
+    try {
+      const response = await gqlQuery(USER_FAVOURITES_QUERY, { userId })
+      const favs = response?.data?.User?.favourites
+      favourites.value = {
+        anime: (favs?.anime?.nodes || []) as Media[],
+        manga: (favs?.manga?.nodes || []) as Media[],
+      }
+      return favourites.value
+    } catch (e) {
+      console.error('Failed to fetch favourites:', e)
+      return favourites.value
+    }
+  }
+
+  function clearMyList() {
+    myList.value = null
+    favourites.value = { anime: [], manga: [] }
+    stopSync()
+  }
+
   function clearSearch() {
     searchResults.value = []
     pageInfo.value = null
@@ -497,9 +701,11 @@ export const useAnimeStore = defineStore('anime', () => {
     syncUserId = userId
     // Immediately fetch fresh data
     fetchMyList(userId)
+    fetchFavourites(userId)
     // Then poll at interval
     syncTimer = setInterval(() => {
       fetchMyList(userId)
+      fetchFavourites(userId)
       fetchTrending(1, 20)
     }, intervalMs)
   }
@@ -518,14 +724,18 @@ export const useAnimeStore = defineStore('anime', () => {
     myList,
     currentMedia,
     genreRecommendations,
+    favourites,
     pageInfo,
     loading,
     error,
     fetchTrending,
     search,
     fetchMyList,
+    fetchFavourites,
     clearMyList,
     updateEntry,
+    saveListEntry,
+    toggleFavourite,
     deleteEntry,
     fetchDetails,
     clearSearch,

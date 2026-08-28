@@ -13,13 +13,23 @@ const animeStore = useAnimeStore()
 const authStore = useAuthStore()
 const { gridColumns } = usePlatform()
 
-const activeTab = ref<ListStatus>('CURRENT')
+type MyListTab = ListStatus | 'FAVOURITES'
+
+const activeTab = ref<MyListTab>('CURRENT')
+const favFilter = ref<'ALL' | 'ANIME' | 'MANGA'>('ALL')
 
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const user = computed(() => authStore.currentUser)
 const loading = computed(() => animeStore.loading)
 
 const listMedia = computed(() => {
+  if (activeTab.value === 'FAVOURITES') {
+    const favAnime = animeStore.favourites?.anime || []
+    const favManga = animeStore.favourites?.manga || []
+    if (favFilter.value === 'ANIME') return favAnime
+    if (favFilter.value === 'MANGA') return favManga
+    return [...favAnime, ...favManga]
+  }
   const collection = animeStore.myList
   if (!collection?.lists) return []
   const list = collection.lists.find(l => l.status === activeTab.value)
@@ -29,12 +39,13 @@ const listMedia = computed(() => {
     .map(e => e.media as Media)
 })
 
-const tabs: { label: string; value: ListStatus }[] = [
+const tabs: { label: string; value: MyListTab }[] = [
   { label: 'Watching', value: 'CURRENT' },
   { label: 'Planning', value: 'PLANNING' },
   { label: 'Completed', value: 'COMPLETED' },
   { label: 'Paused', value: 'PAUSED' },
   { label: 'Dropped', value: 'DROPPED' },
+  { label: 'Favourites', value: 'FAVOURITES' },
 ]
 
 async function refreshMyList() {
@@ -66,6 +77,12 @@ watch(isLoggedIn, (val) => {
     animeStore.stopSync()
   }
 })
+
+watch(activeTab, (tab) => {
+  if (tab === 'FAVOURITES' && user.value) {
+    animeStore.fetchFavourites(user.value.id)
+  }
+})
 </script>
 
 <template>
@@ -73,7 +90,7 @@ watch(isLoggedIn, (val) => {
     <div ref="viewRef" class="mylist-view">
       <header class="mylist-header safe-area-top">
         <h1 class="mylist-title">My List</h1>
-        <p class="mylist-subtitle">Your anime collection</p>
+        <p class="mylist-subtitle">Your anime & manga collection</p>
       </header>
 
     <!-- Not logged in -->
@@ -99,6 +116,36 @@ watch(isLoggedIn, (val) => {
         </button>
       </div>
 
+      <!-- Sub-filter for Favourites (All / Anime / Manga) -->
+      <div
+        v-if="activeTab === 'FAVOURITES' && ((animeStore.favourites?.anime?.length || 0) > 0 || (animeStore.favourites?.manga?.length || 0) > 0)"
+        class="fav-filter-bar"
+      >
+        <button
+          class="fav-filter-btn"
+          :class="{ active: favFilter === 'ALL' }"
+          @click="favFilter = 'ALL'"
+        >
+          All ({{ (animeStore.favourites?.anime?.length || 0) + (animeStore.favourites?.manga?.length || 0) }})
+        </button>
+        <button
+          v-if="(animeStore.favourites?.anime?.length || 0) > 0"
+          class="fav-filter-btn"
+          :class="{ active: favFilter === 'ANIME' }"
+          @click="favFilter = 'ANIME'"
+        >
+          Anime ({{ animeStore.favourites?.anime?.length || 0 }})
+        </button>
+        <button
+          v-if="(animeStore.favourites?.manga?.length || 0) > 0"
+          class="fav-filter-btn"
+          :class="{ active: favFilter === 'MANGA' }"
+          @click="favFilter = 'MANGA'"
+        >
+          Manga ({{ animeStore.favourites?.manga?.length || 0 }})
+        </button>
+      </div>
+
       <!-- Loading -->
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
@@ -111,8 +158,8 @@ watch(isLoggedIn, (val) => {
         </template>
         <template v-else>
           <div class="empty-state">
-            <p class="empty-title">No anime here</p>
-            <p class="empty-subtitle">Add anime to your list from the detail page</p>
+            <p class="empty-title">{{ activeTab === 'FAVOURITES' ? 'No favorites yet' : 'No anime here' }}</p>
+            <p class="empty-subtitle">{{ activeTab === 'FAVOURITES' ? 'Favorite anime or manga to see them here' : 'Add anime to your list from the detail page' }}</p>
           </div>
         </template>
       </div>
@@ -171,6 +218,32 @@ watch(isLoggedIn, (val) => {
 .tab-btn.active {
   background: var(--color-primary);
   color: var(--text-on-primary);
+  border-color: var(--color-primary);
+}
+
+.fav-filter-bar {
+  display: flex;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+
+.fav-filter-btn {
+  padding: 4px var(--space-sm);
+  border: 1px solid var(--bg-hover);
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-body);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.fav-filter-btn.active {
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
   border-color: var(--color-primary);
 }
 
