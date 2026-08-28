@@ -162,6 +162,29 @@ wails3 build
 
 The compiled binary will be placed in the `build` directory.
 
+## Building for Windows
+
+### Prerequisites
+
+- Windows 10 or later
+- Inno Setup 6
+
+Build the Windows executable and installer with:
+
+~~~powershell
+wails3 task windows:package FORMAT=inno ARCH=amd64
+~~~
+
+The installer is written to bin/Miku-<version>-windows-setup.exe. It opens
+the normal Inno Setup directory picker and defaults to
+C:\Program Files\Miku. Users can choose another drive and folder, such as
+E:\Miku; the selected Miku directory is created automatically and the
+application is installed there. The installer also handles the Microsoft Edge
+WebView2 Runtime and creates Start Menu and optional desktop shortcuts.
+
+FORMAT=nsis remains available for the existing NSIS package, and
+FORMAT=msix creates an MSIX package.
+
 ## Building for Android
 
 ### Prerequisites
@@ -437,7 +460,8 @@ This project uses GitHub Actions for automated builds. See [`.github/workflows/b
 
 ### Automated Builds
 
-- **Push to main**: Builds Android APK and attaches to release
+- **Push to main**: Creates a version tag; the tag build publishes the Android APK and Windows Inno Setup installer together
+- **Version tags**: Build both Android and Windows release artifacts and attach them to the GitHub release
 - **Pull Request**: Validates build compiles successfully
 - **Manual trigger**: Build from Actions tab
 

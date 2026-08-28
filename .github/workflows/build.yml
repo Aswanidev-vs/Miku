@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK and Windows Installer
 
 on:
   push:
@@ -17,6 +17,105 @@ env:
   JAVA_VERSION: '17'
 
 jobs:
+  build-windows:
+    name: Build Windows installer
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          $innoDirectories = @(
+            "${env:ProgramFiles(x86)}\Inno Setup 6",
+            "${env:ProgramFiles}\Inno Setup 6"
+          )
+          $innoDirectory = $innoDirectories | Where-Object { Test-Path (Join-Path $_ "ISCC.exe") } | Select-Object -First 1
+
+          if ([string]::IsNullOrWhiteSpace($innoDirectory)) {
+            choco install innosetup --no-progress --yes
+            $innoDirectory = $innoDirectories | Where-Object { Test-Path (Join-Path $_ "ISCC.exe") } | Select-Object -First 1
+          }
+
+          if ([string]::IsNullOrWhiteSpace($innoDirectory)) {
+            throw "Inno Setup 6 was not found after installation."
+          }
+
+          Add-Content -Path $env:GITHUB_PATH -Value $innoDirectory
+          Write-Host "Using Inno Setup from $innoDirectory"
+
+      - name: Create build environment file
+        shell: pwsh
+        env:
+          ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+          ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:ANILIST_CLIENT_ID) -or [string]::IsNullOrWhiteSpace($env:ANILIST_CLIENT_SECRET)) {
+            throw "ANILIST_CLIENT_ID and ANILIST_CLIENT_SECRET GitHub secrets are required for Windows builds."
+          }
+          @(
+            "ANILIST_CLIENT_ID=$env:ANILIST_CLIENT_ID"
+            "ANILIST_CLIENT_SECRET=$env:ANILIST_CLIENT_SECRET"
+          ) | Set-Content -Path .env
+
+      - name: Install Wails CLI
+        shell: pwsh
+        run: |
+          $env:GOFLAGS = "-tags=gtk3"
+          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha2.117
+          Add-Content -Path $env:GITHUB_PATH -Value "$(go env GOPATH)\bin"
+
+      - name: Install frontend dependencies
+        shell: pwsh
+        run: npm ci --prefix frontend
+
+      - name: Generate Wails bindings
+        shell: pwsh
+        run: wails3 generate bindings
+
+      - name: Build Inno Setup installer
+        shell: pwsh
+        env:
+          ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+          ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
+          RELEASE_VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
+        run: wails3 task windows:package FORMAT=inno ARCH=amd64 VERSION="$env:RELEASE_VERSION"
+
+      - name: Verify installer
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path bin -Filter "Miku-*-windows-setup.exe" -File | Select-Object -First 1
+          if ($null -eq $installer) {
+            throw "Inno Setup installer was not created."
+          }
+          Write-Host "Created $($installer.FullName)"
+
+      - name: Upload Windows installer artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: miku-windows-installer
+          path: bin/Miku-*-windows-setup.exe
+          if-no-files-found: error
+          retention-days: 30
+
   build-android:
     name: Build Android APK
     runs-on: ubuntu-22.04
@@ -148,8 +247,10 @@ jobs:
             IS_TAG="false"
           fi
 
-          # Check if this is main or develop
-          if [[ "$BRANCH" == "main" ]] || [[ "$BRANCH" == "refs/heads/main" ]]; then
+          # Versioned tags without a suffix are stable; tags with a suffix
+          # (for example, -beta.1) are prereleases. GitHub does not expose
+          # the source branch for a tag push in GITHUB_REF.
+          if [[ "$IS_TAG" == "true" && "$VERSION" != *"-"* ]]; then
             IS_STABLE="true"
           else
             IS_STABLE="false"
@@ -168,40 +269,62 @@ jobs:
           path: ${{ steps.find-apk.outputs.apk_path }}
           retention-days: 30
 
-      # Pre-release from develop branch tags
-      - name: Create Pre-release (develop)
-        if: steps.version.outputs.is_tag == 'true' && steps.version.outputs.is_stable == 'false'
-        run: |
-          TAG_NAME="${GITHUB_REF#refs/tags/}"
-          APK_PATH="${{ steps.find-apk.outputs.apk_path }}"
-          APK_NAME="Miku-${TAG_NAME}-beta.apk"
+  release:
+    name: Publish release assets
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - build-android
+      - build-windows
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
 
-          # Rename APK to include version and beta suffix
-          mv "$APK_PATH" "$(dirname "$APK_PATH")/$APK_NAME"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Download Android artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: miku-${{ github.ref_name }}
+          path: release-assets/android
+
+      - name: Download Windows installer artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: miku-windows-installer
+          path: release-assets/windows
+
+      - name: Create GitHub release
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          APK_PATH=$(find release-assets/android -name "*.apk" -type f | head -1)
+          WINDOWS_INSTALLER_PATH=$(find release-assets/windows -name "*.exe" -type f | head -1)
+
+          if [[ -z "$APK_PATH" || -z "$WINDOWS_INSTALLER_PATH" ]]; then
+            echo "Both the Android APK and Windows installer are required." >&2
+            exit 1
+          fi
+
+          if [[ "$TAG_NAME" == *"-"* ]]; then
+            APK_NAME="Miku-${TAG_NAME}.apk"
+            RELEASE_TITLE="Miku ${TAG_NAME} (Beta)"
+            PRERELEASE_FLAG="--prerelease"
+          else
+            APK_NAME="Miku-${TAG_NAME}.apk"
+            RELEASE_TITLE="Miku ${TAG_NAME}"
+            PRERELEASE_FLAG=""
+          fi
+
+          cp "$APK_PATH" "$(dirname "$APK_PATH")/$APK_NAME"
 
           gh release create "$TAG_NAME" \
-            --title "Miku $TAG_NAME (Beta)" \
+            --title "$RELEASE_TITLE" \
             --generate-notes \
-            --prerelease \
-            "$(dirname "$APK_PATH")/$APK_NAME"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Stable release from main branch tags
-      - name: Create Stable Release (main)
-        if: steps.version.outputs.is_tag == 'true' && steps.version.outputs.is_stable == 'true'
-        run: |
-          TAG_NAME="${GITHUB_REF#refs/tags/}"
-          APK_PATH="${{ steps.find-apk.outputs.apk_path }}"
-          APK_NAME="Miku-${TAG_NAME}.apk"
-
-          # Rename APK to include version
-          mv "$APK_PATH" "$(dirname "$APK_PATH")/$APK_NAME"
-
-          gh release create "$TAG_NAME" \
-            --title "Miku $TAG_NAME" \
-            --generate-notes \
-            "$(dirname "$APK_PATH")/$APK_NAME"
+            $PRERELEASE_FLAG \
+            "$(dirname "$APK_PATH")/$APK_NAME" \
+            "$WINDOWS_INSTALLER_PATH"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
