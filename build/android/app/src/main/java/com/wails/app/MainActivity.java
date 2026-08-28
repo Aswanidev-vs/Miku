@@ -58,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
     private WailsBridge bridge;
+    private WailsJSBridge jsBridge;
     // Battery: system-event receivers are registered only while the activity is
     // in the foreground (onStart) and torn down in onStop, so background battery/
     // network/screen broadcasts don't wake the app.
@@ -212,7 +213,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // Add JavaScript interface for Go communication
-        webView.addJavascriptInterface(new WailsJSBridge(bridge, webView), "wails");
+        jsBridge = new WailsJSBridge(bridge, webView);
+        webView.addJavascriptInterface(jsBridge, "wails");
     }
 
     private void loadApplication() {
@@ -783,6 +785,9 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         if (bridge != null) {
             bridge.onResume();
+            if (jsBridge != null) {
+                jsBridge.resumePendingInstall();
+            }
             // Emit WindowFocus so the frontend can check for pending OAuth codes
             bridge.emitEvent("common:WindowFocus", "{}");
         }

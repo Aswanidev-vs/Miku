@@ -2,6 +2,59 @@ plugins {
     id 'com.android.application'
 }
 
+def versionSource = rootProject.file('../../main.go')
+def versionMatch = versionSource.exists()
+        ? (versionSource.text =~ /const Version = "([^"]+)"/)
+        : null
+def appVersionName = (System.getenv('MIKU_VERSION') ?: '').trim()
+if (appVersionName.isEmpty() && versionMatch != null && versionMatch.find()) {
+    appVersionName = versionMatch.group(1)
+}
+if (appVersionName.isEmpty()) {
+    appVersionName = '0.1.0'
+}
+appVersionName = appVersionName.replaceFirst(/^v/, '').replaceFirst(/[-+].*$/, '')
+
+def versionParts = appVersionName.tokenize('.')
+def major = versionParts.size() > 0 ? versionParts[0].toInteger() : 0
+def minor = versionParts.size() > 1 ? versionParts[1].toInteger() : 0
+def patch = versionParts.size() > 2 ? versionParts[2].toInteger() : 0
+def calculatedVersionCode = major * 1000000 + minor * 1000 + patch
+def appVersionCode = (System.getenv('MIKU_VERSION_CODE') ?: '').trim()
+        .with { it.isEmpty() ? calculatedVersionCode : it.toInteger() }
+
+def signingEnvironment = [
+        'ANDROID_KEYSTORE_FILE': System.getenv('ANDROID_KEYSTORE_FILE'),
+        'ANDROID_KEYSTORE_PASSWORD': System.getenv('ANDROID_KEYSTORE_PASSWORD'),
+        'ANDROID_KEY_ALIAS': System.getenv('ANDROID_KEY_ALIAS'),
+        'ANDROID_KEY_PASSWORD': System.getenv('ANDROID_KEY_PASSWORD')
+].collectEntries { name, value -> [(name): value?.trim()] }
+def hasReleaseSigning = signingEnvironment.values().every { value -> value != null && !value.isEmpty() }
+def releaseSigningRequested = signingEnvironment.values().any { value -> value != null && !value.isEmpty() }
+def requireReleaseSigning = ['true', '1', 'yes'].contains(
+        (System.getenv('ANDROID_REQUIRE_RELEASE_SIGNING') ?: '').trim().toLowerCase()
+)
+def allowDebugRelease = ['true', '1', 'yes'].contains(
+        (System.getenv('ANDROID_ALLOW_DEBUG_RELEASE') ?: '').trim().toLowerCase()
+)
+def releaseTaskRequested = gradle.startParameter.taskNames.any { taskName ->
+    taskName.toLowerCase().contains('release')
+}
+
+if (!allowDebugRelease && (requireReleaseSigning || releaseSigningRequested) && !hasReleaseSigning) {
+    throw new GradleException(
+            'Release signing is incomplete. Set ANDROID_KEYSTORE_FILE, ' +
+            'ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, and ANDROID_KEY_PASSWORD.'
+    )
+}
+if (releaseTaskRequested && !hasReleaseSigning && !allowDebugRelease) {
+    throw new GradleException(
+            'Release APKs must be signed with the persistent release keystore. ' +
+            'Configure the Android signing environment or explicitly set ' +
+            'ANDROID_ALLOW_DEBUG_RELEASE=true for local-only testing.'
+    )
+}
+
 android {
     namespace 'com.wails.app'
     compileSdk 35
@@ -14,8 +67,8 @@ android {
         applicationId "com.wails.app"
         minSdk 21
         targetSdk 35
-        versionCode 1
-        versionName "1.0"
+        versionCode appVersionCode
+        versionName appVersionName
 
         // Physical devices are arm64-v8a. x86_64 is only needed for the Android
         // Emulator, so it's restricted to debug builds (see buildTypes) to keep
@@ -25,19 +78,15 @@ android {
         }
     }
 
-    def keystoreFile = System.getenv("ANDROID_KEYSTORE_FILE")
-    def hasKeystore = keystoreFile != null && !keystoreFile.trim().isEmpty()
-
     signingConfigs {
-        // A real keystore can be provided via environment variables; without
-        // one, release builds are signed with the debug keystore so they can
-        // be installed for testing (not suitable for Play Store uploads).
+        // Every distributable APK must use the same private key as previous
+        // releases. The CI workflows provide this keystore from GitHub secrets.
         release {
-            if (hasKeystore) {
-                storeFile file(keystoreFile)
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEY_ALIAS")
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            if (hasReleaseSigning) {
+                storeFile file(signingEnvironment['ANDROID_KEYSTORE_FILE'])
+                storePassword signingEnvironment['ANDROID_KEYSTORE_PASSWORD']
+                keyAlias signingEnvironment['ANDROID_KEY_ALIAS']
+                keyPassword signingEnvironment['ANDROID_KEY_PASSWORD']
             }
         }
     }
@@ -46,7 +95,9 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig hasKeystore ? signingConfigs.release : signingConfigs.debug
+            // Debug signing is available only when explicitly requested for a
+            // local/PR test build; distributable builds always use the release key.
+            signingConfig hasReleaseSigning ? signingConfigs.release : signingConfigs.debug
         }
         debug {
             debuggable true

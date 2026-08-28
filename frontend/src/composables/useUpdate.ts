@@ -83,6 +83,7 @@ export function useUpdate() {
   async function downloadUpdate(): Promise<string | null> {
     const info = updateInfo.value
     if (!info?.available || !info.downloadUrl) return null
+    if (downloading.value) return downloadedApkPath.value
 
     await ensureLoaded()
     if (!UpdateService) return null
@@ -92,6 +93,7 @@ export function useUpdate() {
     downloaded.value = 0
     downloadTotal.value = 0
     downloadSpeed.value = 0
+    downloadedApkPath.value = null
     error.value = null
 
     let lastBytes = 0
