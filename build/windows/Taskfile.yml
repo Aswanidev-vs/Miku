@@ -97,11 +97,12 @@ tasks:
   package:
     summary: Packages the application
     cmds:
-      - task: '{{if eq (.FORMAT | default "nsis") "msix"}}create:msix:package{{else}}create:nsis:installer{{end}}'
+      - task: '{{if eq (.FORMAT | default "inno") "msix"}}create:msix:package{{else if eq (.FORMAT | default "inno") "nsis"}}create:nsis:installer{{else}}create:inno:installer{{end}}'
         vars:
           INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
+          VERSION: '{{.VERSION}}'
     vars:
-      FORMAT: '{{.FORMAT | default "nsis"}}'
+      FORMAT: '{{.FORMAT | default "inno"}}'
       INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
 
   generate:syso:
@@ -133,6 +134,35 @@ tasks:
       ARCH: '{{.ARCH | default ARCH}}'
       ARG_FLAG: '{{if eq .ARCH "amd64"}}AMD64{{else}}ARM64{{end}}'
       INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
+
+  create:inno:installer:
+    summary: Creates an Inno Setup installer
+    desc: |
+      Builds the Windows executable and packages it with Inno Setup.
+      The installer presents a directory picker with `{autopf}\\Miku` as
+      the default. Users can choose another drive or directory, such as
+      `E:\\Miku`; Inno Setup creates the selected directory automatically.
+      Set ISCC to override the Inno Setup compiler command or path.
+    dir: build/windows/inno
+    deps:
+      - task: build
+        vars:
+          ARCH: '{{.ARCH | default "amd64"}}'
+          DEV: '{{.DEV}}'
+          EXTRA_TAGS: '{{.EXTRA_TAGS}}'
+          OBFUSCATED: '{{.OBFUSCATED}}'
+          GARBLE_ARGS: '{{.GARBLE_ARGS}}'
+    preconditions:
+      - sh: '{{if eq OS "windows"}}where.exe powershell{{else}}false{{end}}'
+        msg: "PowerShell is required to build the Inno Setup installer."
+    cmds:
+      # Wails supplies the WebView2 bootstrapper used by the Inno script.
+      - wails3 generate webview2bootstrapper -dir "{{.ROOT_DIR}}/build/windows/inno"
+      - powershell -NoProfile -ExecutionPolicy Bypass -File "{{.ROOT_DIR}}/build/windows/inno/build.ps1" -Version "{{.VERSION}}" -Iscc "{{.ISCC}}"
+    vars:
+      ARCH: '{{.ARCH | default "amd64"}}'
+      ISCC: '{{.ISCC | default "iscc"}}'
+      VERSION: '{{.VERSION}}'
 
   create:msix:package:
     summary: Creates an MSIX package

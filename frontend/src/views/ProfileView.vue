@@ -16,6 +16,7 @@ import HeatmapCalendar from '../components/profile/HeatmapCalendar.vue'
 import ActivityItem from '../components/feed/ActivityItem.vue'
 import AppearanceSettings from '../components/settings/AppearanceSettings.vue'
 import AniListPreferences from '../components/settings/AniListPreferences.vue'
+import { renderMarkdown } from '../utils/markdown'
 import type { User, TextActivity, ListActivity } from '../types'
 
 const authStore = useAuthStore()
@@ -370,6 +371,23 @@ function handleSocialSelect(u: User) {
           <span class="switch-knob" />
         </button>
       </div>
+
+      <div class="setting-row" :class="{ disabled: !isLoggedIn }">
+        <div class="setting-text">
+          <span class="setting-label">About Me</span>
+          <span class="setting-hint">Show your About Me bio on profile</span>
+        </div>
+        <button
+          class="switch"
+          :class="{ on: settings.showAbout }"
+          role="switch"
+          :aria-checked="settings.showAbout"
+          :disabled="!isLoggedIn"
+          @click="toggle('showAbout')"
+        >
+          <span class="switch-knob" />
+        </button>
+      </div>
     </section>
 
     <!-- Appearance (theme + accent) -->
@@ -380,9 +398,9 @@ function handleSocialSelect(u: User) {
 
     <!-- Profile (when signed in) — deferred: mounts 300ms after settings for faster initial paint -->
     <template v-if="isLoggedIn && user && showStats">
-      <section v-if="user.about" class="settings-group">
+      <section v-if="settings.showAbout && user.about" class="settings-group">
         <h3 class="group-title">About Me</h3>
-        <p class="about-me">{{ user.about }}</p>
+        <div class="about-me" v-html="renderMarkdown(user.about)"></div>
       </section>
       <section class="settings-group">
         <h3 class="group-title">Social</h3>
@@ -452,6 +470,9 @@ function handleSocialSelect(u: User) {
   min-height: 100%;
   background: var(--bg-deepest);
   padding-bottom: var(--space-xl);
+  max-width: 860px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .settings-header {
@@ -620,9 +641,76 @@ function handleSocialSelect(u: User) {
 .about-me {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
-  white-space: pre-line;
-  line-height: var(--line-height-relaxed, 1.6);
+  line-height: var(--line-height-relaxed, 1.7);
   overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.about-me :deep(center) {
+  text-align: center;
+  display: block;
+}
+
+.about-me :deep(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  margin: var(--space-xs) auto;
+  display: block;
+}
+
+.about-me :deep(a) {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.about-me :deep(blockquote) {
+  border-left: 3px solid var(--color-primary);
+  padding-left: var(--space-md);
+  margin: var(--space-sm) 0;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.about-me :deep(pre) {
+  background: var(--bg-deep);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}
+
+.about-me :deep(code) {
+  font-family: var(--font-mono);
+  background: var(--bg-deep);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.about-me :deep(hr) {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: var(--space-md) 0;
+}
+
+.about-me :deep(.spoiler) {
+  background: var(--bg-elevated);
+  color: transparent;
+  border-radius: var(--radius-xs);
+  padding: 0 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.about-me :deep(.spoiler:hover),
+.about-me :deep(.spoiler.revealed) {
+  color: var(--text-primary);
+  background: var(--bg-hover);
 }
 
 /* Recent Activity */

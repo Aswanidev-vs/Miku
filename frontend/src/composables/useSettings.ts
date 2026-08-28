@@ -29,6 +29,7 @@ export interface Settings {
   showTopStudios: boolean
   showTopStaff: boolean
   showTopVoiceActors: boolean
+  showAbout: boolean
 }
 
 const defaults: Settings = {
@@ -47,6 +48,7 @@ const defaults: Settings = {
   showTopStudios: true,
   showTopStaff: true,
   showTopVoiceActors: true,
+  showAbout: true,
 }
 
 /* ---------- Pure theme helpers (unit-tested, no DOM access) ---------- */

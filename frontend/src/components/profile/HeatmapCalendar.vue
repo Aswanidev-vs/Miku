@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, nextTick, watch } from 'vue'
 import type { Activity } from '../../types'
 
 const props = defineProps<{
@@ -10,8 +10,21 @@ const CELL_SIZE = 12
 const CELL_GAP = 3
 const WEEKS = 52
 const WEEK_DAYS = 7
+const HEADER_OFFSET = 16
 
 const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const scrollContainer = ref<HTMLElement | null>(null)
+
+function scrollToLatest() {
+  nextTick(() => {
+    if (scrollContainer.value) {
+      scrollContainer.value.scrollLeft = scrollContainer.value.scrollWidth
+    }
+  })
+}
+
+onMounted(scrollToLatest)
+watch(() => props.activities.length, scrollToLatest)
 
 function getActivityDate(activity: Activity): string {
   const date = new Date(activity.createdAt * 1000)
@@ -25,6 +38,29 @@ const activityMap = computed(() => {
     map[date] = (map[date] || 0) + 1
   }
   return map
+})
+
+const monthLabels = computed(() => {
+  const labels: { text: string; x: number }[] = []
+  let lastMonth = -1
+  const today = new Date()
+  const startDate = new Date(today)
+  startDate.setDate(startDate.getDate() - (WEEKS * WEEK_DAYS - 1))
+  startDate.setDate(startDate.getDate() - startDate.getDay())
+
+  for (let week = 0; week < WEEKS; week++) {
+    const date = new Date(startDate)
+    date.setDate(date.getDate() + week * WEEK_DAYS)
+    const month = date.getMonth()
+    if (month !== lastMonth && week < WEEKS - 2) {
+      lastMonth = month
+      labels.push({
+        text: date.toLocaleDateString('en-US', { month: 'short' }),
+        x: week * (CELL_SIZE + CELL_GAP),
+      })
+    }
+  }
+  return labels
 })
 
 const heatmapData = computed(() => {
@@ -45,7 +81,7 @@ const heatmapData = computed(() => {
         date: dateStr,
         count,
         x: week * (CELL_SIZE + CELL_GAP),
-        y: day * (CELL_SIZE + CELL_GAP),
+        y: HEADER_OFFSET + day * (CELL_SIZE + CELL_GAP),
       })
     }
   }
@@ -90,7 +126,7 @@ function formatTooltip(date: string, count: number): string {
       </div>
     </div>
 
-    <div class="heatmap-scroll">
+    <div ref="scrollContainer" class="heatmap-scroll">
       <div class="heatmap-wrapper">
         <div class="day-labels">
           <span v-for="(label, i) in dayLabels" :key="i" class="day-label">
@@ -100,8 +136,19 @@ function formatTooltip(date: string, count: number): string {
         <svg
           class="heatmap-svg"
           :width="WEEKS * (CELL_SIZE + CELL_GAP)"
-          :height="WEEK_DAYS * (CELL_SIZE + CELL_GAP)"
+          :height="WEEK_DAYS * (CELL_SIZE + CELL_GAP) + HEADER_OFFSET"
         >
+          <!-- Month labels on top -->
+          <text
+            v-for="(m, i) in monthLabels"
+            :key="i"
+            :x="m.x"
+            :y="10"
+            class="month-label"
+          >
+            {{ m.text }}
+          </text>
+          <!-- Heatmap grid cells -->
           <rect
             v-for="(cell, i) in heatmapData"
             :key="i"
@@ -129,20 +176,24 @@ function formatTooltip(date: string, count: number): string {
 
 <style scoped>
 .heatmap-container {
-  background: var(--bg-surface);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-top: var(--space-md);
+  width: 100%;
 }
 
 .heatmap-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-sm);
   margin-bottom: var(--space-md);
 }
 
 .heatmap-title {
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
 }
@@ -166,8 +217,28 @@ function formatTooltip(date: string, count: number): string {
 
 .heatmap-scroll {
   overflow-x: auto;
-  margin: 0 calc(-1 * var(--space-lg));
-  padding: 0 var(--space-lg);
+  margin: 0 calc(-1 * var(--space-md));
+  padding: var(--space-xs) var(--space-md);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.heatmap-scroll::-webkit-scrollbar {
+  height: 5px;
+}
+
+.heatmap-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.heatmap-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-full);
+}
+
+.heatmap-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
 
 .heatmap-wrapper {
@@ -180,7 +251,7 @@ function formatTooltip(date: string, count: number): string {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  padding-top: 0;
+  padding-top: 16px;
 }
 
 .day-label {
@@ -193,12 +264,18 @@ function formatTooltip(date: string, count: number): string {
   padding-right: 4px;
 }
 
+.month-label {
+  font-size: 9px;
+  fill: var(--text-muted);
+  font-family: inherit;
+}
+
 .heatmap-svg {
   display: block;
 }
 
 .heatmap-cell {
-  transition: opacity var(--transition-fast);
+  transition: opacity var(--transition-fast), stroke var(--transition-fast);
 }
 
 .heatmap-cell:hover {
@@ -208,19 +285,26 @@ function formatTooltip(date: string, count: number): string {
 }
 
 .level-0 {
-  fill: var(--bg-elevated);
+  fill: var(--bg-hover);
+  stroke: var(--border-subtle);
+  stroke-width: 0.5;
+}
+
+.legend-cell.level-0 {
+  background: var(--bg-hover);
+  border: 1px solid var(--border-subtle);
 }
 
 .level-1 {
-  fill: rgba(156, 39, 176, 0.25);
+  fill: rgba(156, 39, 176, 0.35);
 }
 
 .level-2 {
-  fill: rgba(156, 39, 176, 0.45);
+  fill: rgba(156, 39, 176, 0.55);
 }
 
 .level-3 {
-  fill: rgba(156, 39, 176, 0.65);
+  fill: rgba(156, 39, 176, 0.75);
 }
 
 .level-4 {
