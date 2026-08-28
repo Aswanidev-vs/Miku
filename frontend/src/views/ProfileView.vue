@@ -103,9 +103,20 @@ function openUser(activity: TextActivity | ListActivity) {
   }
 }
 
+watch(
+  () => settings.value.showRecentActivity,
+  (enabled) => {
+    if (enabled && isLoggedIn.value && user.value && profileActivities.value.length === 0) {
+      loadHistoryPage(1, false)
+    }
+  }
+)
+
 onMounted(async () => {
   if (isLoggedIn.value && user.value) {
-    loadHistoryPage(1, false)
+    if (settings.value.showRecentActivity) {
+      loadHistoryPage(1, false)
+    }
     userStore.fetchFollowing(user.value.id)
     userStore.fetchFollowers(user.value.id)
     if (settings.value.autoSync) animeStore.startSync(user.value.id)
@@ -257,6 +268,23 @@ function handleSocialSelect(u: User) {
           <span class="switch-knob" />
         </button>
       </div>
+
+      <div class="setting-row" :class="{ disabled: !isLoggedIn }">
+        <div class="setting-text">
+          <span class="setting-label">Recent activity</span>
+          <span class="setting-hint">Show your recent activity feed on profile</span>
+        </div>
+        <button
+          class="switch"
+          :class="{ on: settings.showRecentActivity }"
+          role="switch"
+          :aria-checked="settings.showRecentActivity"
+          :disabled="!isLoggedIn"
+          @click="toggle('showRecentActivity')"
+        >
+          <span class="switch-knob" />
+        </button>
+      </div>
     </section>
 
     <!-- Appearance (theme + accent) -->
@@ -283,7 +311,8 @@ function handleSocialSelect(u: User) {
         <HeatmapCalendar :activities="userStore.heatmapActivities" />
         <UserFavorites v-if="user.favourites" :favorites="user.favourites" />
       </section>
-      <section class="settings-group">
+      <!-- Recent Activity (when enabled in preferences) -->
+      <section v-if="settings.showRecentActivity" class="settings-group">
         <h3 class="group-title">Recent Activity</h3>
         <div v-if="profileActivities.length" class="activity-history">
           <ActivityItem

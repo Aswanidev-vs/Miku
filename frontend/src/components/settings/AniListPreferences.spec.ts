@@ -67,6 +67,7 @@ describe('AniListPreferences', () => {
     set('scoreFormat', 'ACCOUNT')
     set('defaultTab', '/')
     set('adultContent', null)
+    set('showRecentActivity', false)
     vi.mocked(gqlMutate).mockReset()
     await nextTick()
   })

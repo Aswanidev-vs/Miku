@@ -9,7 +9,7 @@ import {
 import { useAuthStore, useUserStore } from '../../stores'
 import { effectiveIsAdult } from '../../utils/mediaDisplay'
 
-const { settings, set } = useSettings()
+const { settings, set, toggle } = useSettings()
 const authStore = useAuthStore()
 const userStore = useUserStore()
 

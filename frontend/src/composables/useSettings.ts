@@ -23,6 +23,7 @@ export interface Settings {
   titleLanguage: TitleLanguagePref
   scoreFormat: ScoreFormatPref
   adultContent: boolean | null
+  showRecentActivity: boolean
 }
 
 const defaults: Settings = {
@@ -35,6 +36,7 @@ const defaults: Settings = {
   titleLanguage: 'ACCOUNT', // ACCOUNT = follow the AniList account preference
   scoreFormat: 'ACCOUNT',
   adultContent: null, // null = follow the AniList account setting
+  showRecentActivity: false, // Default is false (turned off)
 }
 
 /* ---------- Pure theme helpers (unit-tested, no DOM access) ---------- */
