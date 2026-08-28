@@ -24,6 +24,11 @@ export interface Settings {
   scoreFormat: ScoreFormatPref
   adultContent: boolean | null
   showRecentActivity: boolean
+  showTopGenres: boolean
+  showTopTags: boolean
+  showTopStudios: boolean
+  showTopStaff: boolean
+  showTopVoiceActors: boolean
 }
 
 const defaults: Settings = {
@@ -37,6 +42,11 @@ const defaults: Settings = {
   scoreFormat: 'ACCOUNT',
   adultContent: null, // null = follow the AniList account setting
   showRecentActivity: false, // Default is false (turned off)
+  showTopGenres: true,
+  showTopTags: true,
+  showTopStudios: true,
+  showTopStaff: true,
+  showTopVoiceActors: true,
 }
 
 /* ---------- Pure theme helpers (unit-tested, no DOM access) ---------- */

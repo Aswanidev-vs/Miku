@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { usePlatform } from '../../composables/usePlatform'
+import { useSettings } from '../../composables/useSettings'
 import type {
   GenreStat,
   StaffStat,
@@ -15,6 +16,7 @@ const props = defineProps<{
 }>()
 
 const { isMobile } = usePlatform()
+const { settings } = useSettings()
 const activeTab = ref<'anime' | 'manga'>('anime')
 
 export interface StatItem {
@@ -99,14 +101,17 @@ const currentVoiceActors = computed(() =>
 const hasAnyData = computed(() => {
   if (activeTab.value === 'anime') {
     return (
-      currentGenres.value.length > 0 ||
-      currentTags.value.length > 0 ||
-      currentStudios.value.length > 0 ||
-      currentStaff.value.length > 0 ||
-      currentVoiceActors.value.length > 0
+      (settings.value.showTopGenres && currentGenres.value.length > 0) ||
+      (settings.value.showTopTags && currentTags.value.length > 0) ||
+      (settings.value.showTopStudios && currentStudios.value.length > 0) ||
+      (settings.value.showTopStaff && currentStaff.value.length > 0) ||
+      (settings.value.showTopVoiceActors && currentVoiceActors.value.length > 0)
     )
   }
-  return currentGenres.value.length > 0 || currentTags.value.length > 0
+  return (
+    (settings.value.showTopGenres && currentGenres.value.length > 0) ||
+    (settings.value.showTopTags && currentTags.value.length > 0)
+  )
 })
 
 const openSections = ref<Record<string, boolean>>({
@@ -165,7 +170,7 @@ function getStudioPercent(count: number): number {
 
     <div v-if="hasAnyData" class="breakdown-content">
       <!-- 1. Top Genres: Responsive interlocking multi bar grid -->
-      <section v-if="currentGenres.length" class="breakdown-section">
+      <section v-if="settings.showTopGenres && currentGenres.length" class="breakdown-section">
         <component
           :is="isMobile ? 'button' : 'div'"
           :type="isMobile ? 'button' : undefined"
@@ -220,7 +225,7 @@ function getStudioPercent(count: number): number {
       </section>
 
       <!-- 2. Top Tags: Inline wrap-around chips -->
-      <section v-if="currentTags.length" class="breakdown-section">
+      <section v-if="settings.showTopTags && currentTags.length" class="breakdown-section">
         <component
           :is="isMobile ? 'button' : 'div'"
           :type="isMobile ? 'button' : undefined"
@@ -263,7 +268,7 @@ function getStudioPercent(count: number): number {
       </section>
 
       <!-- 3. Top Studios: Stacked progress bar (Anime only) -->
-      <section v-if="currentStudios.length" class="breakdown-section">
+      <section v-if="settings.showTopStudios && currentStudios.length" class="breakdown-section">
         <component
           :is="isMobile ? 'button' : 'div'"
           :type="isMobile ? 'button' : undefined"
@@ -321,7 +326,7 @@ function getStudioPercent(count: number): number {
       </section>
 
       <!-- 4. Top Staff: Ranked responsive cards (Anime only) -->
-      <section v-if="currentStaff.length" class="breakdown-section">
+      <section v-if="settings.showTopStaff && currentStaff.length" class="breakdown-section">
         <component
           :is="isMobile ? 'button' : 'div'"
           :type="isMobile ? 'button' : undefined"
@@ -377,7 +382,7 @@ function getStudioPercent(count: number): number {
       </section>
 
       <!-- 5. Top Voice Actors: Ranked responsive cards (Anime only) -->
-      <section v-if="currentVoiceActors.length" class="breakdown-section">
+      <section v-if="settings.showTopVoiceActors && currentVoiceActors.length" class="breakdown-section">
         <component
           :is="isMobile ? 'button' : 'div'"
           :type="isMobile ? 'button' : undefined"

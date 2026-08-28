@@ -285,6 +285,91 @@ function handleSocialSelect(u: User) {
           <span class="switch-knob" />
         </button>
       </div>
+
+      <div class="setting-row" :class="{ disabled: !isLoggedIn }">
+        <div class="setting-text">
+          <span class="setting-label">Top Genres</span>
+          <span class="setting-hint">Show top genres in your stats breakdown</span>
+        </div>
+        <button
+          class="switch"
+          :class="{ on: settings.showTopGenres }"
+          role="switch"
+          :aria-checked="settings.showTopGenres"
+          :disabled="!isLoggedIn"
+          @click="toggle('showTopGenres')"
+        >
+          <span class="switch-knob" />
+        </button>
+      </div>
+
+      <div class="setting-row" :class="{ disabled: !isLoggedIn }">
+        <div class="setting-text">
+          <span class="setting-label">Top Tags</span>
+          <span class="setting-hint">Show top tags in your stats breakdown</span>
+        </div>
+        <button
+          class="switch"
+          :class="{ on: settings.showTopTags }"
+          role="switch"
+          :aria-checked="settings.showTopTags"
+          :disabled="!isLoggedIn"
+          @click="toggle('showTopTags')"
+        >
+          <span class="switch-knob" />
+        </button>
+      </div>
+
+      <div class="setting-row" :class="{ disabled: !isLoggedIn }">
+        <div class="setting-text">
+          <span class="setting-label">Top Studios</span>
+          <span class="setting-hint">Show top studios in your stats breakdown</span>
+        </div>
+        <button
+          class="switch"
+          :class="{ on: settings.showTopStudios }"
+          role="switch"
+          :aria-checked="settings.showTopStudios"
+          :disabled="!isLoggedIn"
+          @click="toggle('showTopStudios')"
+        >
+          <span class="switch-knob" />
+        </button>
+      </div>
+
+      <div class="setting-row" :class="{ disabled: !isLoggedIn }">
+        <div class="setting-text">
+          <span class="setting-label">Top Staff</span>
+          <span class="setting-hint">Show top staff in your stats breakdown</span>
+        </div>
+        <button
+          class="switch"
+          :class="{ on: settings.showTopStaff }"
+          role="switch"
+          :aria-checked="settings.showTopStaff"
+          :disabled="!isLoggedIn"
+          @click="toggle('showTopStaff')"
+        >
+          <span class="switch-knob" />
+        </button>
+      </div>
+
+      <div class="setting-row" :class="{ disabled: !isLoggedIn }">
+        <div class="setting-text">
+          <span class="setting-label">Top Voice Actors</span>
+          <span class="setting-hint">Show top voice actors in your stats breakdown</span>
+        </div>
+        <button
+          class="switch"
+          :class="{ on: settings.showTopVoiceActors }"
+          role="switch"
+          :aria-checked="settings.showTopVoiceActors"
+          :disabled="!isLoggedIn"
+          @click="toggle('showTopVoiceActors')"
+        >
+          <span class="switch-knob" />
+        </button>
+      </div>
     </section>
 
     <!-- Appearance (theme + accent) -->
