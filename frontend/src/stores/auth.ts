@@ -134,6 +134,14 @@ export const useAuthStore = defineStore('auth', () => {
             }
             mediaListOptions {
               scoreFormat
+              animeList {
+                customLists
+                sectionOrder
+              }
+              mangaList {
+                customLists
+                sectionOrder
+              }
             }
             statistics {
               anime {

@@ -6,7 +6,8 @@ import { useAnimeStore } from '../stores/anime'
 import { useAuthStore } from '../stores/auth'
 import { useSettings } from '../composables/useSettings'
 import { preferredTitle } from '../utils/mediaDisplay'
-import type { ListStatus } from '../types'
+import ListEditorModal from '../components/anime/ListEditorModal.vue'
+import type { ListStatus, MediaListEntry } from '../types'
 
 const route = useRoute()
 const router = useRouter()
@@ -18,6 +19,7 @@ const media = computed(() => animeStore.currentMedia)
 const loading = computed(() => animeStore.loading)
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const loaded = ref(false)
+const showListEditorModal = ref(false)
 
 // Characters
 const showAllCharacters = ref(false)
@@ -217,6 +219,23 @@ function toggleStatusMenu() { showStatusMenu.value = !showStatusMenu.value; show
 function toggleScoreMenu() { showScoreMenu.value = !showScoreMenu.value; showStatusMenu.value = false; showProgressMenu.value = false }
 function toggleProgressMenu() { showProgressMenu.value = !showProgressMenu.value; showStatusMenu.value = false; showScoreMenu.value = false }
 function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = false; showProgressMenu.value = false }
+
+function openListEditor() {
+  closeMenus()
+  showListEditorModal.value = true
+}
+
+function handleEditorSaved(entry: MediaListEntry) {
+  listStatus.value = entry.status
+  listProgress.value = entry.progress ?? 0
+  listScore.value = entry.score ?? 0
+}
+
+function handleEditorDeleted() {
+  listStatus.value = null
+  listProgress.value = 0
+  listScore.value = 0
+}
 </script>
 
 <template>
@@ -272,15 +291,20 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
                 <span v-else>{{ listStatus ? statusOptions.find(o => o.value === listStatus)?.label || 'Set Status' : 'Add to List' }}</span>
                 <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9" /></svg>
               </button>
-              <div v-if="showStatusMenu" class="dropdown-menu">
-                <button
-                  v-for="opt in statusOptions"
-                  :key="opt.value"
-                  class="dropdown-item"
-                  :class="{ active: listStatus === opt.value }"
-                  @click="setStatus(opt.value)"
-                >
-                  {{ opt.label }}
+              <div v-if="showStatusMenu" class="dropdown-menu status-menu">
+                <div class="dropdown-status-list">
+                  <button
+                    v-for="opt in statusOptions"
+                    :key="opt.value"
+                    class="dropdown-item"
+                    :class="{ active: listStatus === opt.value }"
+                    @click="setStatus(opt.value)"
+                  >
+                    {{ opt.label }}
+                  </button>
+                </div>
+                <button class="btn-open-editor" @click="openListEditor">
+                  Open List Editor
                 </button>
               </div>
             </div>
@@ -504,6 +528,17 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
         <button class="btn btn-secondary" @click="goBack">Go Back</button>
       </div>
     </template>
+
+    <!-- List Editor Modal Dialog -->
+    <ListEditorModal
+      v-if="media"
+      :is-open="showListEditorModal"
+      :media="media"
+      :initial-entry="media.mediaListEntry"
+      @close="showListEditorModal = false"
+      @saved="handleEditorSaved"
+      @deleted="handleEditorDeleted"
+    />
   </div>
 </template>
 
@@ -672,15 +707,21 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
 .dropdown-menu {
   position: absolute;
   top: 100%;
-  left: 0; right: 0;
+  left: 0;
+  right: 0;
   margin-top: var(--space-xs);
   background: var(--bg-elevated);
-  border: 1px solid var(--bg-hover);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   z-index: 100;
-  max-height: 200px;
+  overflow: hidden;
+}
+
+.dropdown-status-list {
+  max-height: 220px;
   overflow-y: auto;
+  padding: 4px 0;
 }
 
 .dropdown-item {
@@ -694,11 +735,38 @@ function closeMenus() { showStatusMenu.value = false; showScoreMenu.value = fals
   font-family: var(--font-body);
   text-align: left;
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition: all var(--transition-fast);
 }
 
-.dropdown-item:hover { background: var(--bg-hover); color: var(--text-primary); }
-.dropdown-item.active { color: var(--color-primary-light); font-weight: var(--font-weight-semibold); }
+.dropdown-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.dropdown-item.active {
+  color: var(--color-primary-light);
+  font-weight: var(--font-weight-semibold);
+}
+
+.btn-open-editor {
+  display: block;
+  width: 100%;
+  padding: 10px var(--space-md);
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--color-primary);
+  color: var(--text-on-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  font-family: var(--font-body);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-open-editor:hover {
+  background: var(--color-primary-light);
+}
 
 .score-menu { right: 0; left: auto; min-width: 60px; }
 
