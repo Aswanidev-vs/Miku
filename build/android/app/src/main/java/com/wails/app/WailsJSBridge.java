@@ -1,8 +1,11 @@
 package com.wails.app;
 
+import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
+import android.provider.Settings;
 import android.util.Log;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -29,6 +32,7 @@ public class WailsJSBridge {
 
     private final WailsBridge bridge;
     private final WebView webView;
+    private volatile String pendingInstallPath;
 
     public WailsJSBridge(WailsBridge bridge, WebView webView) {
         this.bridge = bridge;
@@ -180,40 +184,87 @@ public class WailsJSBridge {
         }
     }
 
-    /** Launch Android's package installer for an APK downloaded into app storage. */
+    /**
+     * Launch Android's package installer for an APK downloaded into app storage.
+     * If Android has not allowed this app to install unknown apps yet, open the
+     * system setting and resume the install when the user returns.
+     */
     @JavascriptInterface
     public boolean installApk(String apkPath) {
         Context context = webView.getContext();
         File apk = new File(apkPath);
-        final Uri apkUri;
+        if (!apk.isFile() || !apk.canRead()) {
+            Log.e(TAG, "APK does not exist or is not readable: " + apkPath);
+            return false;
+        }
+
         try {
-            apkUri = FileProvider.getUriForFile(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                    && !context.getPackageManager().canRequestPackageInstalls()) {
+                pendingInstallPath = apk.getAbsolutePath();
+                Intent settingsIntent = new Intent(
+                        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:" + context.getPackageName())
+                );
+                settingsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(settingsIntent);
+                return true;
+            }
+
+            pendingInstallPath = null;
+            return launchInstaller(context, apk);
+        } catch (Exception e) {
+            Log.w(TAG, "Package installer intent failed; trying system APK viewer", e);
+            pendingInstallPath = null;
+            return launchInstallerFallback(context, apk);
+        }
+    }
+
+    /** Retry an APK install after returning from Android's unknown-app setting. */
+    public void resumePendingInstall() {
+        String apkPath = pendingInstallPath;
+        if (apkPath == null) {
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                && !webView.getContext().getPackageManager().canRequestPackageInstalls()) {
+            return;
+        }
+
+        pendingInstallPath = null;
+        installApk(apkPath);
+    }
+
+    private boolean launchInstaller(Context context, File apk) throws Exception {
+        Uri apkUri = FileProvider.getUriForFile(
+                context,
+                context.getPackageName() + ".fileprovider",
+                apk
+        );
+        Intent intent = new Intent(Intent.ACTION_INSTALL_PACKAGE);
+        intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+        intent.setClipData(ClipData.newRawUri("Miku update", apkUri));
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(intent);
+        return true;
+    }
+
+    private boolean launchInstallerFallback(Context context, File apk) {
+        try {
+            Uri apkUri = FileProvider.getUriForFile(
                     context,
                     context.getPackageName() + ".fileprovider",
                     apk
             );
-            Intent intent = new Intent(Intent.ACTION_INSTALL_PACKAGE);
-            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(intent);
+            Intent fallback = new Intent(Intent.ACTION_VIEW);
+            fallback.setDataAndType(apkUri, "application/vnd.android.package-archive");
+            fallback.setClipData(ClipData.newRawUri("Miku update", apkUri));
+            fallback.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(fallback);
             return true;
-        } catch (Exception e) {
-            Log.w(TAG, "Package installer intent failed; trying system APK viewer", e);
-            try {
-                Uri fallbackUri = FileProvider.getUriForFile(
-                        context,
-                        context.getPackageName() + ".fileprovider",
-                        apk
-                );
-                Intent fallback = new Intent(Intent.ACTION_VIEW);
-                fallback.setDataAndType(fallbackUri, "application/vnd.android.package-archive");
-                fallback.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-                context.startActivity(fallback);
-                return true;
-            } catch (Exception fallbackError) {
-                Log.e(TAG, "Failed to launch Android APK installer fallback", fallbackError);
-                return false;
-            }
+        } catch (Exception fallbackError) {
+            Log.e(TAG, "Failed to launch Android APK installer fallback", fallbackError);
+            return false;
         }
     }
 

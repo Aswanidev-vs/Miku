@@ -172,6 +172,7 @@ The compiled binary will be placed in the `build` directory.
 - The app includes a `network_security_config.xml` that allows cleartext HTTP to `localhost` for the OAuth callback
 - OAuth on Android uses Chrome Custom Tabs redirecting to `http://localhost:43219/callback` (there is no custom-scheme deep link — Chrome Custom Tabs cannot navigate to custom-scheme URLs)
 - Debug builds keep the `x86_64` ABI so the app also runs in the Android Emulator; release/device APKs are `arm64-v8a` only
+- APK updates downloaded from GitHub use Android's system package installer. On the first update, Android may ask you to allow Miku to install unknown apps; after that setting is enabled, the updater resumes automatically.
 
 ### Build Size Optimizations
 
