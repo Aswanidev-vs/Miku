@@ -199,6 +199,38 @@ wails3 task android:run
 - **Debug APK**: `build/android/app/build/outputs/apk/debug/app-debug.apk`
 - **Release APK**: `build/android/app/build/outputs/apk/release/app-release.apk` (also copied to `bin/miku.apk`)
 
+### Release signing and seamless updates
+
+The Android application ID is intentionally kept as `com.wails.app`. Android
+can install a new APK over an existing installation only when the application
+ID and signing certificate match, and the new `versionCode` is higher. Release
+version metadata is read from `main.go`; for example, `0.12.0` produces a
+`versionCode` of `12000`.
+
+Never publish a release APK signed with a debug key. Debug keystores are
+machine-specific, so a new CI runner would make the same package look like a
+different app. Release builds require these repository secrets:
+
+- `ANDROID_KEYSTORE_BASE64` — base64-encoded copy of the persistent release keystore
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+Create the keystore once, store it securely, and add its base64 output as a
+GitHub Actions secret. Do not commit the keystore or its passwords:
+
+```bash
+keytool -genkeypair -v -keystore miku-release.keystore \
+  -alias miku-release -keyalg RSA -keysize 4096 -validity 10000
+base64 -w 0 miku-release.keystore
+```
+
+After this setup, published APKs remain installable as updates without users
+uninstalling the previous version. An APK already installed with an unknown,
+different signing key cannot be repaired by Java, XML, or the installer intent;
+Android requires a one-time uninstall unless the original private key can be
+recovered and used for the next release.
+
 ## AniList API Setup
 
 Miku uses the AniList GraphQL API with OAuth2 authentication. The app runs a local HTTP server on port 43219 to receive the OAuth callback — this works on both desktop and Android (Chrome Custom Tabs redirect to `http://localhost:43219/callback` on the device).

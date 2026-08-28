@@ -186,7 +186,7 @@ tasks:
         echo "APK created: {{.BIN_DIR}}/{{.APP_NAME}}.apk"
 
   assemble:apk:release:
-    summary: Assembles a release APK using Gradle (signed with the debug keystore unless ANDROID_KEYSTORE_FILE is set)
+    summary: Assembles a release APK using the configured persistent release key
     preconditions:
       - sh: 'command -v java >/dev/null || [ -n "$JAVA_HOME" ]'
         msg: "Java not found. Install a JDK (e.g. brew install openjdk@21) and/or set JAVA_HOME"
@@ -216,7 +216,7 @@ tasks:
         echo "AAB created: {{.BIN_DIR}}/{{.APP_NAME}}.aab"
 
   assemble:aab:release:
-    summary: Assembles a release AAB for Play Store upload (signed with the debug keystore unless ANDROID_KEYSTORE_FILE is set)
+    summary: Assembles a release AAB for Play Store upload using the configured persistent release key
     preconditions:
       - sh: 'command -v java >/dev/null || [ -n "$JAVA_HOME" ]'
         msg: "Java not found. Install a JDK (e.g. brew install openjdk@21) and/or set JAVA_HOME"
