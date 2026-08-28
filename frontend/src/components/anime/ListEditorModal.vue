@@ -80,11 +80,18 @@ const availableCustomLists = computed(() => {
   return Array.from(listSet)
 })
 
-function fuzzyDateToString(date?: FuzzyDate): string {
-  if (!date?.year || !date?.month || !date?.day) return ''
-  const m = String(date.month).padStart(2, '0')
-  const d = String(date.day).padStart(2, '0')
-  return `${date.year}-${m}-${d}`
+function fuzzyDateToString(date?: FuzzyDate | any): string {
+  if (!date) return ''
+  if (typeof date === 'string') {
+    return date.length >= 10 ? date.slice(0, 10) : date
+  }
+  if (date.year) {
+    const y = String(date.year)
+    const m = date.month ? String(date.month).padStart(2, '0') : '01'
+    const d = date.day ? String(date.day).padStart(2, '0') : '01'
+    return `${y}-${m}-${d}`
+  }
+  return ''
 }
 
 function stringToFuzzyDate(str?: string): FuzzyDate | undefined {
@@ -98,9 +105,35 @@ function stringToFuzzyDate(str?: string): FuzzyDate | undefined {
   }
 }
 
+function getEffectiveEntry(): MediaListEntry | null {
+  let entry = props.initialEntry || props.media.mediaListEntry || null
+
+  if (animeStore.myList?.lists) {
+    for (const list of animeStore.myList.lists) {
+      const found = list.entries.find(e => e.mediaId === props.media.id || e.media?.id === props.media.id)
+      if (found) {
+        if (!entry) {
+          entry = found
+        } else {
+          entry = {
+            ...found,
+            ...entry,
+            startedAt: entry.startedAt?.year ? entry.startedAt : found.startedAt,
+            completedAt: entry.completedAt?.year ? entry.completedAt : found.completedAt,
+            customLists: entry.customLists ?? found.customLists,
+            notes: entry.notes ?? found.notes,
+          }
+        }
+        break
+      }
+    }
+  }
+  return entry
+}
+
 // Synchronize form when modal opens or initialEntry changes
 function populateForm() {
-  const entry = props.initialEntry || props.media.mediaListEntry
+  const entry = getEffectiveEntry()
   isFavourite.value = !!props.media.isFavourite
 
   if (entry) {
@@ -145,11 +178,11 @@ watch(() => props.isOpen, (open) => {
   }
 }, { immediate: true })
 
-watch(() => props.initialEntry, () => {
+watch(() => [props.initialEntry, props.media.mediaListEntry], () => {
   if (props.isOpen) {
     populateForm()
   }
-})
+}, { deep: true })
 
 // Auto-fill dates or progress on status change (e.g. COMPLETED sets finishDate and max progress)
 function onStatusChange() {

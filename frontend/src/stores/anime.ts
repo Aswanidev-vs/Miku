@@ -131,6 +131,10 @@ query ($userId: Int, $status: MediaListStatus) {
           month
           day
         }
+        notes
+        private
+        hiddenFromStatusLists
+        customLists
         media {
           id
           title {
