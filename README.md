@@ -70,13 +70,16 @@ Miku is a feature-rich AniList client that delivers a premium anime and manga tr
 - **Smooth Animations** — Page transitions, skeleton loading, micro-interactions
 - **Virtual Scrolling** — Optimized list rendering for smooth 60 FPS performance
 - **Mobile-First Design** — Optimized for Android and desktop
-- **Pull-to-Refresh** — Touch-based on mobile, manual button on desktop; available on Discover, My List, and Feed
+- **Pull-to-Refresh** — Touch-based on mobile, manual button on desktop; available on Discover, My List, and Feed. Direction-locked to prevent conflicts with horizontal pill filters
 
 ### Personalization Settings
 - **Title Language** — Choose romaji / English / native titles, or follow your AniList account setting
 - **Score Format** — 100-point, 10-point, 10-point decimal, 5-star, or 3-point display
 - **Default Tab** — Start the app on Discover, Search, My List, Feed, or Profile
 - **Adult Content Toggle** — Filter adult titles in browse/search, defaulting to your AniList account setting
+- **Recent Activity Toggle** — Show or hide the recent activity feed on your profile (off by default)
+- **Stats Breakdown Toggles** — Individually show or hide Top Genres, Top Tags, Top Studios, Top Staff, and Top Voice Actors sections (all on by default)
+- **Collapsible Stats on Mobile** — Stats breakdown sections (genres, tags, studios, staff, voice actors) use collapsible dropdown headers on mobile for a cleaner view; desktop keeps them always expanded
 
 ### Technical
 - **GraphQL API** — Efficient data fetching with AniList's GraphQL API
@@ -448,6 +451,12 @@ This project uses GitHub Actions for automated builds. See [`.github/workflows/b
 - **Profile Overhaul** — Stats breakdowns (genres, tags, studios, staff, voice actors), character/staff favorites, Following/Followers section, About Me, and browsable activity history
 - **AniList Preferences** — Title language, score format, default tab, and adult content settings (with account-default fallbacks)
 - **Feed Pull-to-Refresh** — Feed tab now supports the mobile gesture + desktop refresh button
+- **Collapsible Stats on Mobile** — Stats breakdown sections collapse/expand via dropdown headers with animated chevrons on mobile; desktop keeps them permanently expanded
+- **Recent Activity Toggle** — New toggle in Preferences (default off) to show or hide the recent activity feed on profile; activity data is only fetched when enabled
+- **Stats Visibility Toggles** — Individual toggles in Preferences for Top Genres, Top Tags, Top Studios, Top Staff, and Top Voice Actors (all on by default); disabling a toggle hides the corresponding section from the stats breakdown
+
+#### Bug Fixes
+- **Pull-to-Refresh on My List** — Fixed dual pull-to-refresh zones and scroll-gets-stuck bug caused by incorrect scroll container detection and missing gesture direction locking; horizontal swipes on filter pills and downward scrolling no longer accidentally trigger refresh
 
 #### Testing
 - **Go** — testify suites for the GraphQL client (integration + chaos), OAuth2 flow, token store, and platform service

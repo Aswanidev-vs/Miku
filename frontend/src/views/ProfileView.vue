@@ -103,9 +103,20 @@ function openUser(activity: TextActivity | ListActivity) {
   }
 }
 
+watch(
+  () => settings.value.showRecentActivity,
+  (enabled) => {
+    if (enabled && isLoggedIn.value && user.value && profileActivities.value.length === 0) {
+      loadHistoryPage(1, false)
+    }
+  }
+)
+
 onMounted(async () => {
   if (isLoggedIn.value && user.value) {
-    loadHistoryPage(1, false)
+    if (settings.value.showRecentActivity) {
+      loadHistoryPage(1, false)
+    }
     userStore.fetchFollowing(user.value.id)
     userStore.fetchFollowers(user.value.id)
     if (settings.value.autoSync) animeStore.startSync(user.value.id)
@@ -257,6 +268,108 @@ function handleSocialSelect(u: User) {
           <span class="switch-knob" />
         </button>
       </div>
+
+      <div class="setting-row" :class="{ disabled: !isLoggedIn }">
+        <div class="setting-text">
+          <span class="setting-label">Recent activity</span>
+          <span class="setting-hint">Show your recent activity feed on profile</span>
+        </div>
+        <button
+          class="switch"
+          :class="{ on: settings.showRecentActivity }"
+          role="switch"
+          :aria-checked="settings.showRecentActivity"
+          :disabled="!isLoggedIn"
+          @click="toggle('showRecentActivity')"
+        >
+          <span class="switch-knob" />
+        </button>
+      </div>
+
+      <div class="setting-row" :class="{ disabled: !isLoggedIn }">
+        <div class="setting-text">
+          <span class="setting-label">Top Genres</span>
+          <span class="setting-hint">Show top genres in your stats breakdown</span>
+        </div>
+        <button
+          class="switch"
+          :class="{ on: settings.showTopGenres }"
+          role="switch"
+          :aria-checked="settings.showTopGenres"
+          :disabled="!isLoggedIn"
+          @click="toggle('showTopGenres')"
+        >
+          <span class="switch-knob" />
+        </button>
+      </div>
+
+      <div class="setting-row" :class="{ disabled: !isLoggedIn }">
+        <div class="setting-text">
+          <span class="setting-label">Top Tags</span>
+          <span class="setting-hint">Show top tags in your stats breakdown</span>
+        </div>
+        <button
+          class="switch"
+          :class="{ on: settings.showTopTags }"
+          role="switch"
+          :aria-checked="settings.showTopTags"
+          :disabled="!isLoggedIn"
+          @click="toggle('showTopTags')"
+        >
+          <span class="switch-knob" />
+        </button>
+      </div>
+
+      <div class="setting-row" :class="{ disabled: !isLoggedIn }">
+        <div class="setting-text">
+          <span class="setting-label">Top Studios</span>
+          <span class="setting-hint">Show top studios in your stats breakdown</span>
+        </div>
+        <button
+          class="switch"
+          :class="{ on: settings.showTopStudios }"
+          role="switch"
+          :aria-checked="settings.showTopStudios"
+          :disabled="!isLoggedIn"
+          @click="toggle('showTopStudios')"
+        >
+          <span class="switch-knob" />
+        </button>
+      </div>
+
+      <div class="setting-row" :class="{ disabled: !isLoggedIn }">
+        <div class="setting-text">
+          <span class="setting-label">Top Staff</span>
+          <span class="setting-hint">Show top staff in your stats breakdown</span>
+        </div>
+        <button
+          class="switch"
+          :class="{ on: settings.showTopStaff }"
+          role="switch"
+          :aria-checked="settings.showTopStaff"
+          :disabled="!isLoggedIn"
+          @click="toggle('showTopStaff')"
+        >
+          <span class="switch-knob" />
+        </button>
+      </div>
+
+      <div class="setting-row" :class="{ disabled: !isLoggedIn }">
+        <div class="setting-text">
+          <span class="setting-label">Top Voice Actors</span>
+          <span class="setting-hint">Show top voice actors in your stats breakdown</span>
+        </div>
+        <button
+          class="switch"
+          :class="{ on: settings.showTopVoiceActors }"
+          role="switch"
+          :aria-checked="settings.showTopVoiceActors"
+          :disabled="!isLoggedIn"
+          @click="toggle('showTopVoiceActors')"
+        >
+          <span class="switch-knob" />
+        </button>
+      </div>
     </section>
 
     <!-- Appearance (theme + accent) -->
@@ -283,7 +396,8 @@ function handleSocialSelect(u: User) {
         <HeatmapCalendar :activities="userStore.heatmapActivities" />
         <UserFavorites v-if="user.favourites" :favorites="user.favourites" />
       </section>
-      <section class="settings-group">
+      <!-- Recent Activity (when enabled in preferences) -->
+      <section v-if="settings.showRecentActivity" class="settings-group">
         <h3 class="group-title">Recent Activity</h3>
         <div v-if="profileActivities.length" class="activity-history">
           <ActivityItem

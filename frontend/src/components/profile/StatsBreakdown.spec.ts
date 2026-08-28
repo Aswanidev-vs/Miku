@@ -107,5 +107,21 @@ describe('StatsBreakdown', () => {
     expect(wrapper.text()).toContain('No data yet')
     expect(wrapper.find('.breakdown-section').exists()).toBe(false)
   })
+
+  it('keeps headers static and always expanded on desktop', async () => {
+    const wrapper = mount(StatsBreakdown, {
+      props: { statistics },
+      attachTo: document.body,
+    })
+    const genreHeader = wrapper.find('.section-header')
+    expect(genreHeader.classes()).not.toContain('mobile-toggle')
+    expect(wrapper.find('.section-chevron').exists()).toBe(false)
+    expect(wrapper.find('.section-dropdown-body').isVisible()).toBe(true)
+
+    // Clicking header on desktop does not collapse
+    await genreHeader.trigger('click')
+    expect(wrapper.find('.section-dropdown-body').isVisible()).toBe(true)
+    wrapper.unmount()
+  })
 })
 

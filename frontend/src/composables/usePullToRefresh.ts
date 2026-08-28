@@ -14,24 +14,22 @@ export function usePullToRefresh(
   const showRefreshBtn = ref(false)
 
   let scrollContainer: HTMLElement | null = null
+  let startX = 0
   let startY = 0
-  let currentY = 0
   let pulling = false
+  let gestureDetermined = false
 
   function findScrollContainer(el: HTMLElement): HTMLElement | null {
     let current: HTMLElement | null = el.parentElement
-    while (current && current !== document.body) {
+    while (current && current !== document.documentElement) {
       const style = getComputedStyle(current)
       const overflowY = style.overflowY
-      if (
-        (overflowY === 'auto' || overflowY === 'scroll') &&
-        current.scrollHeight > current.clientHeight
-      ) {
+      if (overflowY === 'auto' || overflowY === 'scroll') {
         return current
       }
       current = current.parentElement
     }
-    return document.body
+    return (document.querySelector('.main-content') as HTMLElement) || document.documentElement || document.body
   }
 
   // ---- Touch (mobile) ----
@@ -45,25 +43,56 @@ export function usePullToRefresh(
     if (!scrollContainer) return
     if (scrollContainer.scrollTop > 5) return
 
-    startY = e.touches[0].clientY
+    startX = e.touches[0]?.clientX ?? 0
+    startY = e.touches[0]?.clientY ?? 0
     pulling = true
+    gestureDetermined = false
   }
 
   function onTouchMove(e: TouchEvent) {
-    if (!pulling || refreshing.value) return
-    currentY = e.touches[0].clientY
-    const delta = (currentY - startY) / resistance
+    if (!pulling || refreshing.value || !scrollContainer) return
+
+    // If container has scrolled down, abort pull-to-refresh
+    if (scrollContainer.scrollTop > 5) {
+      pulling = false
+      pullingDown.value = 0
+      return
+    }
+
+    const currentX = e.touches[0]?.clientX ?? 0
+    const currentY = e.touches[0]?.clientY ?? 0
+    const rawDeltaX = currentX - startX
+    const rawDeltaY = currentY - startY
+
+    // Determine if gesture is horizontal (like scrolling tabs) or scrolling down
+    if (!gestureDetermined) {
+      if (Math.abs(rawDeltaX) > 5 || Math.abs(rawDeltaY) > 5) {
+        gestureDetermined = true
+        // If horizontal movement is greater, or finger is moving up (scrolling down), cancel PTR
+        if (Math.abs(rawDeltaX) > Math.abs(rawDeltaY) || rawDeltaY <= 0) {
+          pulling = false
+          pullingDown.value = 0
+          return
+        }
+      } else {
+        return
+      }
+    }
+
+    const delta = rawDeltaY / resistance
     if (delta > 0) {
       pullingDown.value = Math.min(delta, threshold * 1.5)
       e.preventDefault()
     } else {
       pullingDown.value = 0
+      pulling = false
     }
   }
 
   async function onTouchEnd() {
     if (!pulling) return
     pulling = false
+    gestureDetermined = false
 
     if (pullingDown.value >= threshold && !refreshing.value) {
       refreshing.value = true

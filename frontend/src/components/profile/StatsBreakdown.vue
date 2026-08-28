@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { usePlatform } from '../../composables/usePlatform'
+import { useSettings } from '../../composables/useSettings'
 import type {
   GenreStat,
   StaffStat,
@@ -13,6 +15,8 @@ const props = defineProps<{
   statistics: UserStatistics
 }>()
 
+const { isMobile } = usePlatform()
+const { settings } = useSettings()
 const activeTab = ref<'anime' | 'manga'>('anime')
 
 export interface StatItem {
@@ -97,15 +101,36 @@ const currentVoiceActors = computed(() =>
 const hasAnyData = computed(() => {
   if (activeTab.value === 'anime') {
     return (
-      currentGenres.value.length > 0 ||
-      currentTags.value.length > 0 ||
-      currentStudios.value.length > 0 ||
-      currentStaff.value.length > 0 ||
-      currentVoiceActors.value.length > 0
+      (settings.value.showTopGenres && currentGenres.value.length > 0) ||
+      (settings.value.showTopTags && currentTags.value.length > 0) ||
+      (settings.value.showTopStudios && currentStudios.value.length > 0) ||
+      (settings.value.showTopStaff && currentStaff.value.length > 0) ||
+      (settings.value.showTopVoiceActors && currentVoiceActors.value.length > 0)
     )
   }
-  return currentGenres.value.length > 0 || currentTags.value.length > 0
+  return (
+    (settings.value.showTopGenres && currentGenres.value.length > 0) ||
+    (settings.value.showTopTags && currentTags.value.length > 0)
+  )
 })
+
+const openSections = ref<Record<string, boolean>>({
+  genres: true,
+  tags: true,
+  studios: true,
+  staff: true,
+  voiceActors: true,
+})
+
+function isSectionOpen(key: string): boolean {
+  if (!isMobile.value) return true
+  return openSections.value[key] !== false
+}
+
+function toggleSection(key: string) {
+  if (!isMobile.value) return
+  openSections.value[key] = !isSectionOpen(key)
+}
 
 // Calculations for relative bars
 function getBarWidth(items: StatItem[], count: number): string {
@@ -145,115 +170,211 @@ function getStudioPercent(count: number): number {
 
     <div v-if="hasAnyData" class="breakdown-content">
       <!-- 1. Top Genres: Responsive interlocking multi bar grid -->
-      <section v-if="currentGenres.length" class="breakdown-section">
-        <div class="section-header">
-          <h4 class="breakdown-section-title">Top Genres</h4>
-          <span class="section-badge">{{ currentGenres.length }} genres</span>
-        </div>
-        <div class="genre-grid">
-          <div
-            v-for="(genre, idx) in currentGenres"
-            :key="genre.name"
-            class="genre-cell"
-            :style="{ '--accent-color': getColor(idx) }"
+      <section v-if="settings.showTopGenres && currentGenres.length" class="breakdown-section">
+        <component
+          :is="isMobile ? 'button' : 'div'"
+          :type="isMobile ? 'button' : undefined"
+          class="section-header"
+          :class="{ 'mobile-toggle': isMobile, 'is-open': isSectionOpen('genres') }"
+          :aria-expanded="isMobile ? isSectionOpen('genres') : undefined"
+          @click="toggleSection('genres')"
+        >
+          <div class="section-header-left">
+            <h4 class="breakdown-section-title">Top Genres</h4>
+            <span class="section-badge">{{ currentGenres.length }} genres</span>
+          </div>
+          <svg
+            v-if="isMobile"
+            class="section-chevron"
+            :class="{ rotated: isSectionOpen('genres') }"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
           >
-            <div class="genre-info">
-              <span class="genre-rank">#{{ idx + 1 }}</span>
-              <span class="genre-name" :title="genre.name">{{ genre.name }}</span>
-              <span class="genre-count">{{ genre.count.toLocaleString() }}</span>
-            </div>
-            <div class="genre-track">
-              <div
-                class="genre-bar breakdown-bar"
-                :style="{
-                  width: getBarWidth(currentGenres, genre.count),
-                  background: getColor(idx),
-                }"
-              />
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </component>
+        <div v-show="isSectionOpen('genres')" class="section-dropdown-body">
+          <div class="genre-grid">
+            <div
+              v-for="(genre, idx) in currentGenres"
+              :key="genre.name"
+              class="genre-cell"
+              :style="{ '--accent-color': getColor(idx) }"
+            >
+              <div class="genre-info">
+                <span class="genre-rank">#{{ idx + 1 }}</span>
+                <span class="genre-name" :title="genre.name">{{ genre.name }}</span>
+                <span class="genre-count">{{ genre.count.toLocaleString() }}</span>
+              </div>
+              <div class="genre-track">
+                <div
+                  class="genre-bar breakdown-bar"
+                  :style="{
+                    width: getBarWidth(currentGenres, genre.count),
+                    background: getColor(idx),
+                  }"
+                />
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       <!-- 2. Top Tags: Inline wrap-around chips -->
-      <section v-if="currentTags.length" class="breakdown-section">
-        <div class="section-header">
-          <h4 class="breakdown-section-title">Top Tags</h4>
-          <span class="section-badge">{{ currentTags.length }} tags</span>
-        </div>
-        <div class="tags-chips-wrap">
-          <span
-            v-for="(tag, idx) in currentTags"
-            :key="tag.name"
-            class="tag-chip"
-            :style="{ '--chip-color': getColor(idx) }"
+      <section v-if="settings.showTopTags && currentTags.length" class="breakdown-section">
+        <component
+          :is="isMobile ? 'button' : 'div'"
+          :type="isMobile ? 'button' : undefined"
+          class="section-header"
+          :class="{ 'mobile-toggle': isMobile, 'is-open': isSectionOpen('tags') }"
+          :aria-expanded="isMobile ? isSectionOpen('tags') : undefined"
+          @click="toggleSection('tags')"
+        >
+          <div class="section-header-left">
+            <h4 class="breakdown-section-title">Top Tags</h4>
+            <span class="section-badge">{{ currentTags.length }} tags</span>
+          </div>
+          <svg
+            v-if="isMobile"
+            class="section-chevron"
+            :class="{ rotated: isSectionOpen('tags') }"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
           >
-            <span class="tag-chip-name">{{ tag.name }}</span>
-            <span class="tag-chip-count">{{ tag.count }}</span>
-          </span>
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </component>
+        <div v-show="isSectionOpen('tags')" class="section-dropdown-body">
+          <div class="tags-chips-wrap">
+            <span
+              v-for="(tag, idx) in currentTags"
+              :key="tag.name"
+              class="tag-chip"
+              :style="{ '--chip-color': getColor(idx) }"
+            >
+              <span class="tag-chip-name">{{ tag.name }}</span>
+              <span class="tag-chip-count">{{ tag.count }}</span>
+            </span>
+          </div>
         </div>
       </section>
 
       <!-- 3. Top Studios: Stacked progress bar (Anime only) -->
-      <section v-if="currentStudios.length" class="breakdown-section">
-        <div class="section-header">
-          <h4 class="breakdown-section-title">Top Studios</h4>
-          <span class="section-badge">{{ currentStudios.length }} studios</span>
-        </div>
-        <!-- Stacked Segment Bar -->
-        <div class="stacked-bar-container">
-          <div
-            v-for="(studio, idx) in currentStudios"
-            :key="studio.name"
-            class="stacked-bar-segment"
-            :style="{
-              width: `${getStudioPercent(studio.count)}%`,
-              backgroundColor: getColor(idx),
-            }"
-            :title="`${studio.name}: ${studio.count} (${getStudioPercent(studio.count).toFixed(1)}%)`"
-          />
-        </div>
-        <!-- Studio Legend / Grid -->
-        <div class="studio-legend-grid">
-          <div
-            v-for="(studio, idx) in currentStudios"
-            :key="studio.name"
-            class="studio-legend-item"
+      <section v-if="settings.showTopStudios && currentStudios.length" class="breakdown-section">
+        <component
+          :is="isMobile ? 'button' : 'div'"
+          :type="isMobile ? 'button' : undefined"
+          class="section-header"
+          :class="{ 'mobile-toggle': isMobile, 'is-open': isSectionOpen('studios') }"
+          :aria-expanded="isMobile ? isSectionOpen('studios') : undefined"
+          @click="toggleSection('studios')"
+        >
+          <div class="section-header-left">
+            <h4 class="breakdown-section-title">Top Studios</h4>
+            <span class="section-badge">{{ currentStudios.length }} studios</span>
+          </div>
+          <svg
+            v-if="isMobile"
+            class="section-chevron"
+            :class="{ rotated: isSectionOpen('studios') }"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
           >
-            <span class="legend-dot" :style="{ backgroundColor: getColor(idx) }" />
-            <span class="legend-name" :title="studio.name">{{ studio.name }}</span>
-            <span class="legend-count">{{ studio.count }}</span>
-            <span class="legend-pct">{{ getStudioPercent(studio.count).toFixed(0) }}%</span>
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </component>
+        <div v-show="isSectionOpen('studios')" class="section-dropdown-body">
+          <!-- Stacked Segment Bar -->
+          <div class="stacked-bar-container">
+            <div
+              v-for="(studio, idx) in currentStudios"
+              :key="studio.name"
+              class="stacked-bar-segment"
+              :style="{
+                width: `${getStudioPercent(studio.count)}%`,
+                backgroundColor: getColor(idx),
+              }"
+              :title="`${studio.name}: ${studio.count} (${getStudioPercent(studio.count).toFixed(1)}%)`"
+            />
+          </div>
+          <!-- Studio Legend / Grid -->
+          <div class="studio-legend-grid">
+            <div
+              v-for="(studio, idx) in currentStudios"
+              :key="studio.name"
+              class="studio-legend-item"
+            >
+              <span class="legend-dot" :style="{ backgroundColor: getColor(idx) }" />
+              <span class="legend-name" :title="studio.name">{{ studio.name }}</span>
+              <span class="legend-count">{{ studio.count }}</span>
+              <span class="legend-pct">{{ getStudioPercent(studio.count).toFixed(0) }}%</span>
+            </div>
           </div>
         </div>
       </section>
 
       <!-- 4. Top Staff: Ranked responsive cards (Anime only) -->
-      <section v-if="currentStaff.length" class="breakdown-section">
-        <div class="section-header">
-          <h4 class="breakdown-section-title">Top Staff</h4>
-          <span class="section-badge">{{ currentStaff.length }} staff</span>
-        </div>
-        <div class="people-grid">
-          <div
-            v-for="(person, idx) in currentStaff"
-            :key="person.name"
-            class="people-card"
+      <section v-if="settings.showTopStaff && currentStaff.length" class="breakdown-section">
+        <component
+          :is="isMobile ? 'button' : 'div'"
+          :type="isMobile ? 'button' : undefined"
+          class="section-header"
+          :class="{ 'mobile-toggle': isMobile, 'is-open': isSectionOpen('staff') }"
+          :aria-expanded="isMobile ? isSectionOpen('staff') : undefined"
+          @click="toggleSection('staff')"
+        >
+          <div class="section-header-left">
+            <h4 class="breakdown-section-title">Top Staff</h4>
+            <span class="section-badge">{{ currentStaff.length }} staff</span>
+          </div>
+          <svg
+            v-if="isMobile"
+            class="section-chevron"
+            :class="{ rotated: isSectionOpen('staff') }"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
           >
-            <div class="people-rank-badge">{{ idx + 1 }}</div>
-            <div class="people-details">
-              <span class="people-name" :title="person.name">{{ person.name }}</span>
-              <div class="people-sub">
-                <span class="people-count">{{ person.count }} {{ person.count === 1 ? 'entry' : 'entries' }}</span>
-              </div>
-              <div class="people-track">
-                <div
-                  class="people-bar"
-                  :style="{
-                    width: getBarWidth(currentStaff, person.count),
-                    background: getColor(idx + 1),
-                  }"
-                />
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </component>
+        <div v-show="isSectionOpen('staff')" class="section-dropdown-body">
+          <div class="people-grid">
+            <div
+              v-for="(person, idx) in currentStaff"
+              :key="person.name"
+              class="people-card"
+            >
+              <div class="people-rank-badge">{{ idx + 1 }}</div>
+              <div class="people-details">
+                <span class="people-name" :title="person.name">{{ person.name }}</span>
+                <div class="people-sub">
+                  <span class="people-count">{{ person.count }} {{ person.count === 1 ? 'entry' : 'entries' }}</span>
+                </div>
+                <div class="people-track">
+                  <div
+                    class="people-bar"
+                    :style="{
+                      width: getBarWidth(currentStaff, person.count),
+                      background: getColor(idx + 1),
+                    }"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -261,31 +382,55 @@ function getStudioPercent(count: number): number {
       </section>
 
       <!-- 5. Top Voice Actors: Ranked responsive cards (Anime only) -->
-      <section v-if="currentVoiceActors.length" class="breakdown-section">
-        <div class="section-header">
-          <h4 class="breakdown-section-title">Top Voice Actors</h4>
-          <span class="section-badge">{{ currentVoiceActors.length }} actors</span>
-        </div>
-        <div class="people-grid">
-          <div
-            v-for="(va, idx) in currentVoiceActors"
-            :key="va.name"
-            class="people-card"
+      <section v-if="settings.showTopVoiceActors && currentVoiceActors.length" class="breakdown-section">
+        <component
+          :is="isMobile ? 'button' : 'div'"
+          :type="isMobile ? 'button' : undefined"
+          class="section-header"
+          :class="{ 'mobile-toggle': isMobile, 'is-open': isSectionOpen('voiceActors') }"
+          :aria-expanded="isMobile ? isSectionOpen('voiceActors') : undefined"
+          @click="toggleSection('voiceActors')"
+        >
+          <div class="section-header-left">
+            <h4 class="breakdown-section-title">Top Voice Actors</h4>
+            <span class="section-badge">{{ currentVoiceActors.length }} actors</span>
+          </div>
+          <svg
+            v-if="isMobile"
+            class="section-chevron"
+            :class="{ rotated: isSectionOpen('voiceActors') }"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
           >
-            <div class="people-rank-badge va-badge">{{ idx + 1 }}</div>
-            <div class="people-details">
-              <span class="people-name" :title="va.name">{{ va.name }}</span>
-              <div class="people-sub">
-                <span class="people-count">{{ va.count }} {{ va.count === 1 ? 'role' : 'roles' }}</span>
-              </div>
-              <div class="people-track">
-                <div
-                  class="people-bar"
-                  :style="{
-                    width: getBarWidth(currentVoiceActors, va.count),
-                    background: getColor(idx + 2),
-                  }"
-                />
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </component>
+        <div v-show="isSectionOpen('voiceActors')" class="section-dropdown-body">
+          <div class="people-grid">
+            <div
+              v-for="(va, idx) in currentVoiceActors"
+              :key="va.name"
+              class="people-card"
+            >
+              <div class="people-rank-badge va-badge">{{ idx + 1 }}</div>
+              <div class="people-details">
+                <span class="people-name" :title="va.name">{{ va.name }}</span>
+                <div class="people-sub">
+                  <span class="people-count">{{ va.count }} {{ va.count === 1 ? 'role' : 'roles' }}</span>
+                </div>
+                <div class="people-track">
+                  <div
+                    class="people-bar"
+                    :style="{
+                      width: getBarWidth(currentVoiceActors, va.count),
+                      background: getColor(idx + 2),
+                    }"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -342,7 +487,7 @@ function getStudioPercent(count: number): number {
 .breakdown-section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
 }
 
 .section-header {
@@ -350,6 +495,33 @@ function getStudioPercent(count: number): number {
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--space-xs);
+  background: transparent;
+  border: none;
+  text-align: left;
+  width: 100%;
+}
+
+.section-header.mobile-toggle {
+  padding: var(--space-xs) var(--space-sm);
+  margin-left: calc(-1 * var(--space-sm));
+  margin-right: calc(-1 * var(--space-sm));
+  width: calc(100% + var(--space-sm) * 2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.section-header.mobile-toggle:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+}
+
+.section-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
 }
 
 .breakdown-section-title {
@@ -364,6 +536,29 @@ function getStudioPercent(count: number): number {
   font-size: var(--font-size-xs);
   color: var(--text-muted);
   font-weight: var(--font-weight-medium);
+  background: var(--bg-elevated);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.section-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  transition: transform var(--transition-fast), color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.section-header.mobile-toggle:hover .section-chevron {
+  color: var(--color-primary);
+}
+
+.section-chevron.rotated {
+  transform: rotate(180deg);
+}
+
+.section-dropdown-body {
+  margin-top: var(--space-xs);
 }
 
 /* 1. Genres - Responsive Interlocking Multi-bar Grid */
