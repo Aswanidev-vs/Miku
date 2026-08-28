@@ -158,6 +158,57 @@ query ($userId: Int, $status: MediaListStatus) {
 }
 `
 
+const USER_FAVOURITES_QUERY = `
+query ($userId: Int) {
+  User(id: $userId) {
+    favourites {
+      anime {
+        nodes {
+          id
+          title {
+            romaji
+            english
+            native
+            userPreferred
+          }
+          coverImage {
+            large
+            medium
+          }
+          format
+          episodes
+          status
+          averageScore
+          genres
+          nextAiringEpisode { episode airingAt timeUntilAiring }
+        }
+      }
+      manga {
+        nodes {
+          id
+          title {
+            romaji
+            english
+            native
+            userPreferred
+          }
+          coverImage {
+            large
+            medium
+          }
+          format
+          chapters
+          volumes
+          status
+          averageScore
+          genres
+        }
+      }
+    }
+  }
+}
+`
+
 // Fast query: banner, cover, title, meta, list entry — shown immediately
 const MEDIA_DETAILS_FAST = `
 query ($id: Int) {
@@ -323,6 +374,7 @@ export const useAnimeStore = defineStore('anime', () => {
   const myList = ref<MediaListCollection | null>(null)
   const currentMedia = ref<Media | null>(null)
   const genreRecommendations = ref<Media[]>([])
+  const favourites = ref<{ anime: Media[]; manga: Media[] }>({ anime: [], manga: [] })
   const pageInfo = ref<PageInfo | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -391,10 +443,6 @@ export const useAnimeStore = defineStore('anime', () => {
     } finally {
       loading.value = false
     }
-  }
-
-  function clearMyList() {
-    myList.value = null
   }
 
   async function updateEntry(
@@ -480,6 +528,13 @@ export const useAnimeStore = defineStore('anime', () => {
           ...currentMedia.value,
           isFavourite: isNowFav,
         }
+      }
+      if (isNowFav) {
+        if (currentMedia.value && !favourites.value.anime.some(a => a.id === animeId)) {
+          favourites.value.anime.unshift(currentMedia.value)
+        }
+      } else {
+        favourites.value.anime = favourites.value.anime.filter(a => a.id !== animeId)
       }
       return isNowFav
     } catch (e) {
@@ -606,6 +661,27 @@ export const useAnimeStore = defineStore('anime', () => {
     }
   }
 
+  async function fetchFavourites(userId: number) {
+    try {
+      const response = await gqlQuery(USER_FAVOURITES_QUERY, { userId })
+      const favs = response?.data?.User?.favourites
+      favourites.value = {
+        anime: (favs?.anime?.nodes || []) as Media[],
+        manga: (favs?.manga?.nodes || []) as Media[],
+      }
+      return favourites.value
+    } catch (e) {
+      console.error('Failed to fetch favourites:', e)
+      return favourites.value
+    }
+  }
+
+  function clearMyList() {
+    myList.value = null
+    favourites.value = { anime: [], manga: [] }
+    stopSync()
+  }
+
   function clearSearch() {
     searchResults.value = []
     pageInfo.value = null
@@ -625,9 +701,11 @@ export const useAnimeStore = defineStore('anime', () => {
     syncUserId = userId
     // Immediately fetch fresh data
     fetchMyList(userId)
+    fetchFavourites(userId)
     // Then poll at interval
     syncTimer = setInterval(() => {
       fetchMyList(userId)
+      fetchFavourites(userId)
       fetchTrending(1, 20)
     }, intervalMs)
   }
@@ -646,12 +724,14 @@ export const useAnimeStore = defineStore('anime', () => {
     myList,
     currentMedia,
     genreRecommendations,
+    favourites,
     pageInfo,
     loading,
     error,
     fetchTrending,
     search,
     fetchMyList,
+    fetchFavourites,
     clearMyList,
     updateEntry,
     saveListEntry,
