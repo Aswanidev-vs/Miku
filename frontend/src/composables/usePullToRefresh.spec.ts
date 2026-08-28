@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { usePullToRefresh } from './usePullToRefresh'
 
 // jsdom cannot construct real TouchEvents, so we dispatch plain Events with a
-// stubbed `touches` list — the composable only reads e.touches[0].clientY.
-function touchEvent(type: string, clientY: number): Event {
+// stubbed `touches` list.
+function touchEvent(type: string, clientY: number, clientX = 0): Event {
   const e = new Event(type, { cancelable: true })
-  Object.defineProperty(e, 'touches', { value: [{ clientY }] })
+  Object.defineProperty(e, 'touches', { value: [{ clientY, clientX }] })
   return e
 }
 
@@ -130,5 +130,29 @@ describe('usePullToRefresh', () => {
     h.setupListeners(el)
     // jsdom never scrolls, so scrollTop is 0 -> button visible
     expect(h.showRefreshBtn.value).toBe(true)
+  })
+
+  it('cancels pull when gesture is predominantly horizontal', () => {
+    const h = usePullToRefresh(async () => {})
+    h.setupListeners(el)
+
+    el.dispatchEvent(touchEvent('touchstart', 100, 100))
+    // Move 50px right, only 10px down
+    el.dispatchEvent(touchEvent('touchmove', 110, 150))
+    expect(h.pullingDown.value).toBe(0)
+  })
+
+  it('cancels pull when initial vertical gesture is moving up (scrolling down)', () => {
+    const h = usePullToRefresh(async () => {})
+    h.setupListeners(el)
+
+    el.dispatchEvent(touchEvent('touchstart', 100, 0))
+    // Move up (finger Y decreases)
+    el.dispatchEvent(touchEvent('touchmove', 80, 0))
+    expect(h.pullingDown.value).toBe(0)
+
+    // Subsequent move down within same touch should not pull
+    el.dispatchEvent(touchEvent('touchmove', 150, 0))
+    expect(h.pullingDown.value).toBe(0)
   })
 })
