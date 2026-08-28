@@ -82,11 +82,44 @@ const statusOptions: { label: string; value: ListStatus }[] = [
 
 const scoreOptions = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
+const currentTime = ref(Math.floor(Date.now() / 1000))
+let countdownTimer: ReturnType<typeof setInterval> | null = null
+
+const airingCountdown = computed(() => {
+  const airing = media.value?.nextAiringEpisode
+  if (!airing) return ''
+
+  let remaining = 0
+  if (airing.airingAt) {
+    remaining = Math.max(0, airing.airingAt - currentTime.value)
+  } else if (airing.timeUntilAiring) {
+    remaining = Math.max(0, airing.timeUntilAiring)
+  }
+
+  if (remaining <= 0) return 'Airing now'
+
+  const days = Math.floor(remaining / 86400)
+  const hours = Math.floor((remaining % 86400) / 3600)
+  const minutes = Math.floor((remaining % 3600) / 60)
+  const seconds = remaining % 60
+
+  const parts: string[] = []
+  if (days > 0) parts.push(`${days}d`)
+  if (hours > 0 || days > 0) parts.push(`${hours}h`)
+  parts.push(`${minutes}m`)
+  parts.push(`${String(seconds).padStart(2, '0')}s`)
+
+  return `in ${parts.join(' ')}`
+})
+
 onMounted(() => {
   const id = Number(route.params.id)
   if (id) {
     animeStore.fetchDetails(id).finally(() => { loaded.value = true })
   }
+  countdownTimer = setInterval(() => {
+    currentTime.value = Math.floor(Date.now() / 1000)
+  }, 1000)
 })
 
 // Re-fetch when navigating between media (same component, different route)
@@ -113,6 +146,10 @@ watch(media, (m) => {
 }, { immediate: true })
 
 onUnmounted(() => {
+  if (countdownTimer) {
+    clearInterval(countdownTimer)
+    countdownTimer = null
+  }
   animeStore.clearCurrentMedia()
 })
 
@@ -304,7 +341,7 @@ function handleEditorDeleted() {
                   </button>
                 </div>
                 <button class="btn-open-editor" @click="openListEditor">
-                  Open List Editor
+                  List Editor
                 </button>
               </div>
             </div>
@@ -377,7 +414,7 @@ function handleEditorDeleted() {
         <div v-if="media.nextAiringEpisode" class="airing-info">
           <span class="airing-label">Next Episode</span>
           <span class="airing-value">EP {{ media.nextAiringEpisode.episode }}</span>
-          <span class="airing-time">in {{ Math.floor(media.nextAiringEpisode.timeUntilAiring / 86400) }}d {{ Math.floor((media.nextAiringEpisode.timeUntilAiring % 86400) / 3600) }}h</span>
+          <span class="airing-time">{{ airingCountdown }}</span>
         </div>
 
         <!-- Description -->
@@ -759,7 +796,7 @@ function handleEditorDeleted() {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   font-family: var(--font-body);
-  text-align: center;
+  text-align: left;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
@@ -860,7 +897,12 @@ function handleEditorDeleted() {
 
 .airing-label { font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; }
 .airing-value { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-primary-light); }
-.airing-time { font-size: var(--font-size-xs); color: var(--text-muted); margin-left: auto; }
+.airing-time {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
 
 /* Sections */
 .detail-section { margin-bottom: var(--space-xl); }
