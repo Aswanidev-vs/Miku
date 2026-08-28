@@ -21,6 +21,9 @@ var assets embed.FS
 //go:embed .env
 var envContent string
 
+//go:embed build/appicon.png
+var appIcon []byte
+
 func main() {
 	// Parse embedded .env
 	envContentClean := strings.TrimPrefix(envContent, "\xef\xbb\xbf") // Strip UTF-8 BOM if present
@@ -95,7 +98,11 @@ func main() {
 	app = application.New(application.Options{
 		Name:        "Miku",
 		Description: "AniList Client",
+		Icon:        appIcon,
 		Services:    services,
+		Windows: application.WindowsOptions{
+			WndProcInterceptor: windowsIconInterceptor(),
+		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},
