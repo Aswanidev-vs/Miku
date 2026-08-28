@@ -7,6 +7,7 @@ import { useAuthStore } from '../stores/auth'
 import { useSettings } from '../composables/useSettings'
 import { usePlatform } from '../composables/usePlatform'
 import { preferredTitle } from '../utils/mediaDisplay'
+import { renderMarkdown } from '../utils/markdown'
 import ListEditorModal from '../components/anime/ListEditorModal.vue'
 import type { ListStatus, MediaListEntry } from '../types'
 
@@ -439,7 +440,7 @@ function handleEditorDeleted() {
         <!-- Description -->
         <div v-if="media.description" class="detail-section">
           <h3 class="section-title">Description</h3>
-          <p class="description-text">{{ cleanDescription(media.description) }}</p>
+          <div class="description-text" v-html="renderMarkdown(media.description)"></div>
         </div>
 
         <!-- Dates -->
@@ -941,7 +942,45 @@ function handleEditorDeleted() {
 .section-title.clickable:hover { color: var(--color-primary-light); }
 .toggle-label { font-size: var(--font-size-xs); color: var(--text-muted); font-weight: var(--font-weight-normal); }
 .character-count-badge { font-size: var(--font-size-xs); color: var(--text-muted); font-weight: var(--font-weight-normal); margin-left: var(--space-xs); }
-.description-text { font-size: var(--font-size-sm); color: var(--text-secondary); line-height: var(--line-height-relaxed); white-space: pre-line; }
+.description-text { font-size: var(--font-size-sm); color: var(--text-secondary); line-height: var(--line-height-relaxed); white-space: pre-line; word-break: break-word; }
+.description-text :deep(strong) {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-bold);
+}
+.description-text :deep(em) {
+  font-style: italic;
+}
+.description-text :deep(.md-bullet) {
+  color: var(--color-primary);
+  font-weight: bold;
+  display: inline-block;
+  margin-right: 4px;
+}
+.description-text :deep(.description-link),
+.description-text :deep(a) {
+  color: var(--color-primary-light);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+.description-text :deep(.description-link:hover),
+.description-text :deep(a:hover) {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+.description-text :deep(.spoiler) {
+  background: var(--bg-elevated);
+  color: transparent;
+  border-radius: var(--radius-xs);
+  padding: 0 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.description-text :deep(.spoiler:hover),
+.description-text :deep(.spoiler.revealed) {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
 
 /* Dates */
 .date-row { display: flex; gap: var(--space-xl); }

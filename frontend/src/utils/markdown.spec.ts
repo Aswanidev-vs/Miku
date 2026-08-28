@@ -8,6 +8,14 @@ describe('renderMarkdown', () => {
     expect(renderMarkdown('')).toBe('')
   })
 
+  it('renders bold with colons and special characters like __Agency:__ and **Non-anime roles:**', () => {
+    const input = '__Agency:__ I\'m Enterprise\n\n**Non-anime roles:**\n- Hator - Memento Mori (VG)'
+    const result = renderMarkdown(input)
+    expect(result).toContain('<strong>Agency:</strong> I\'m Enterprise')
+    expect(result).toContain('<strong>Non-anime roles:</strong>')
+    expect(result).toContain('<span class="md-bullet">•</span> Hator - Memento Mori (VG)')
+  })
+
   it('renders bold, italic, strikethrough, and headers', () => {
     const input = '# Title\n**bold** *italic* ~~strike~~'
     const result = renderMarkdown(input)
@@ -47,7 +55,7 @@ describe('renderMarkdown', () => {
   it('renders links securely', () => {
     const input = '[AniList](https://anilist.co)'
     const res = renderMarkdown(input)
-    expect(res).toContain('<a href="https://anilist.co" target="_blank" rel="noopener noreferrer">AniList</a>')
+    expect(res).toContain('<a href="https://anilist.co" data-url="https://anilist.co" class="description-link"')
   })
 
   it('sanitizes malicious script tags and event handlers', () => {

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, computed } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { gqlQuery } from '../api/graphql'
+import { Browser } from '@wailsio/runtime'
 import { useSettings } from '../composables/useSettings'
 import { preferredTitle } from '../utils/mediaDisplay'
-import { ref } from 'vue'
+import { renderMarkdown } from '../utils/markdown'
 
 const route = useRoute()
 const router = useRouter()
@@ -112,9 +113,33 @@ onUnmounted(() => {
 function goBack() { router.back() }
 function goToMedia(id: number) { router.push({ name: 'media-detail', params: { id } }) }
 function goToVA(id?: number) { if (id) router.push({ name: 'voice-actor', params: { id } }) }
-function cleanDescription(desc?: string): string {
-  if (!desc) return ''
-  return desc.replace(/<[^>]+>/g, '').replace(/\n{3,}/g, '\n\n').trim()
+
+function handleDescriptionClick(e: Event) {
+  const target = e.target as HTMLElement
+  if (target.classList.contains('description-link') || target.tagName.toLowerCase() === 'a') {
+    e.preventDefault()
+    const url = target.getAttribute('data-url') || target.getAttribute('href')
+    if (url) {
+      openUrl(url)
+    }
+  }
+}
+
+async function openUrl(url: string) {
+  const androidBridge = (window as Window & {
+    wails?: { platform?: () => string; openInBrowser?: (url: string) => void }
+  }).wails
+
+  if (androidBridge?.platform?.() === 'android' && androidBridge.openInBrowser) {
+    androidBridge.openInBrowser(url)
+    return
+  }
+
+  try {
+    await Browser.OpenURL(url)
+  } catch {
+    window.open(url, '_blank')
+  }
 }
 </script>
 
@@ -150,7 +175,7 @@ function cleanDescription(desc?: string): string {
 
       <div v-if="character.description" class="char-section">
         <h3 class="section-title">About</h3>
-        <p class="description-text">{{ cleanDescription(character.description) }}</p>
+        <div class="description-text" v-html="renderMarkdown(character.description)" @click="handleDescriptionClick"></div>
       </div>
 
       <div v-if="roles.length" class="char-section">
@@ -214,7 +239,43 @@ function cleanDescription(desc?: string): string {
 
 .char-section { padding: 0 var(--space-lg); margin-bottom: var(--space-xl); }
 .section-title { font-size: var(--font-size-md); font-weight: var(--font-weight-semibold); color: var(--text-primary); margin-bottom: var(--space-md); }
-.description-text { font-size: var(--font-size-sm); color: var(--text-secondary); line-height: var(--line-height-relaxed); white-space: pre-line; }
+.description-text { font-size: var(--font-size-sm); color: var(--text-secondary); line-height: var(--line-height-relaxed); white-space: pre-line; word-break: break-word; }
+.description-text :deep(strong) {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-bold);
+}
+.description-text :deep(em) {
+  font-style: italic;
+}
+.description-text :deep(.md-bullet) {
+  color: var(--color-primary);
+  font-weight: bold;
+  display: inline-block;
+  margin-right: 4px;
+}
+.description-text :deep(.description-link) {
+  color: var(--color-primary-light);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+.description-text :deep(.description-link:hover) {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+.description-text :deep(.spoiler) {
+  background: var(--bg-elevated);
+  color: transparent;
+  border-radius: var(--radius-xs);
+  padding: 0 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.description-text :deep(.spoiler:hover),
+.description-text :deep(.spoiler.revealed) {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
 .no-roles { font-size: var(--font-size-sm); color: var(--text-muted); text-align: center; }
 
 .role-list { display: flex; flex-direction: column; gap: var(--space-xs); }
