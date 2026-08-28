@@ -465,16 +465,23 @@ export const useAnimeStore = defineStore('anime', () => {
     }
   }
 
-  async function toggleFavourite(animeId: number) {
+  async function toggleFavourite(animeId: number): Promise<boolean> {
     try {
       const response = await gqlMutate(TOGGLE_FAVOURITE_MUTATION, { animeId })
+      const favNodes = response?.data?.ToggleFavourite?.anime?.nodes
+      let isNowFav: boolean
+      if (Array.isArray(favNodes)) {
+        isNowFav = favNodes.some((n: any) => n.id === animeId)
+      } else {
+        isNowFav = !currentMedia.value?.isFavourite
+      }
       if (currentMedia.value && currentMedia.value.id === animeId) {
         currentMedia.value = {
           ...currentMedia.value,
-          isFavourite: !currentMedia.value.isFavourite,
+          isFavourite: isNowFav,
         }
       }
-      return response?.data?.ToggleFavourite
+      return isNowFav
     } catch (e) {
       console.error('Failed to toggle favourite:', e)
       throw e

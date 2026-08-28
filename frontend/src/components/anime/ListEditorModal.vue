@@ -131,10 +131,19 @@ function getEffectiveEntry(): MediaListEntry | null {
   return entry
 }
 
+function checkIsFavourite(): boolean {
+  if (props.media.isFavourite !== undefined) return !!props.media.isFavourite
+  const userFavs = authStore.currentUser?.favourites?.anime?.nodes
+  if (userFavs && Array.isArray(userFavs)) {
+    return userFavs.some(f => f.id === props.media.id)
+  }
+  return false
+}
+
 // Synchronize form when modal opens or initialEntry changes
 function populateForm() {
   const entry = getEffectiveEntry()
-  isFavourite.value = !!props.media.isFavourite
+  isFavourite.value = checkIsFavourite()
 
   if (entry) {
     status.value = entry.status || 'CURRENT'
@@ -178,7 +187,7 @@ watch(() => props.isOpen, (open) => {
   }
 }, { immediate: true })
 
-watch(() => [props.initialEntry, props.media.mediaListEntry], () => {
+watch(() => [props.initialEntry, props.media.mediaListEntry, props.media.isFavourite], () => {
   if (props.isOpen) {
     populateForm()
   }
@@ -205,10 +214,12 @@ function onStatusChange() {
 async function handleToggleFavourite() {
   if (togglingFav.value) return
   togglingFav.value = true
+  const next = !isFavourite.value
+  isFavourite.value = next
   try {
     await animeStore.toggleFavourite(props.media.id)
-    isFavourite.value = !isFavourite.value
   } catch (e) {
+    isFavourite.value = !next
     console.error('Failed to toggle favourite:', e)
   } finally {
     togglingFav.value = false
@@ -311,12 +322,15 @@ function handleBackdropClick(e: MouseEvent) {
               <div class="header-actions">
                 <!-- Favourite Heart -->
                 <button
+                  type="button"
                   class="btn-heart"
-                  :class="{ active: isFavourite, loading: togglingFav }"
+                  :class="{ 'is-favourite': isFavourite, 'is-loading': togglingFav }"
                   :title="isFavourite ? 'Remove from Favourites' : 'Add to Favourites'"
-                  @click="handleToggleFavourite"
+                  :aria-label="isFavourite ? 'Remove from Favourites' : 'Add to Favourites'"
+                  :aria-pressed="isFavourite"
+                  @click.prevent.stop="handleToggleFavourite"
                 >
-                  <svg viewBox="0 0 24 24" :fill="isFavourite ? '#e85d75' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                   </svg>
                 </button>
@@ -655,30 +669,34 @@ function handleBackdropClick(e: MouseEvent) {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast);
   border-radius: var(--radius-full);
 }
 
 .btn-heart svg {
   width: 20px;
   height: 20px;
-  transition: all var(--transition-fast);
+  fill: none;
+  stroke: currentColor;
+  transition: fill var(--transition-fast), stroke var(--transition-fast);
 }
 
-.btn-heart:hover {
-  transform: scale(1.1);
-  color: var(--color-primary);
-  border-color: var(--color-primary-glow);
-}
-
-.btn-heart.active {
+/* Active / Favorited state (solid fill with user's accent color) */
+.btn-heart.is-favourite {
   color: var(--color-primary);
   border-color: var(--color-primary);
   background: var(--color-primary-subtle);
+  box-shadow: 0 0 12px var(--color-primary-glow);
 }
 
-.btn-heart.active svg {
-  filter: drop-shadow(0 0 6px var(--color-primary-glow));
+.btn-heart.is-favourite svg {
+  fill: var(--color-primary);
+  stroke: var(--color-primary);
+}
+
+.btn-heart.is-loading {
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 .btn-save {
