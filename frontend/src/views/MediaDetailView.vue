@@ -5,7 +5,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAnimeStore } from '../stores/anime'
 import { useAuthStore } from '../stores/auth'
 import { useSettings } from '../composables/useSettings'
+import { usePlatform } from '../composables/usePlatform'
 import { preferredTitle } from '../utils/mediaDisplay'
+import { renderMarkdown } from '../utils/markdown'
 import ListEditorModal from '../components/anime/ListEditorModal.vue'
 import type { ListStatus, MediaListEntry } from '../types'
 
@@ -14,6 +16,8 @@ const router = useRouter()
 const animeStore = useAnimeStore()
 const authStore = useAuthStore()
 const { settings } = useSettings()
+const { os } = usePlatform()
+const isWindows = computed(() => os.value === 'windows')
 
 const media = computed(() => animeStore.currentMedia)
 const loading = computed(() => animeStore.loading)
@@ -23,15 +27,30 @@ const showListEditorModal = ref(false)
 
 // Characters
 const showAllCharacters = ref(false)
+const characterLimit = ref(12)
+const CHARACTERS_PAGE_SIZE = 12
+
 const visibleCharacters = computed(() => {
-  if (!media.value?.characters?.edges) return []
+  const edges = media.value?.characters?.edges
+  if (!edges) return []
+  if (isWindows.value) {
+    return edges.slice(0, characterLimit.value)
+  }
   return showAllCharacters.value
-    ? media.value.characters.edges
-    : media.value.characters.edges.slice(0, 12)
+    ? edges
+    : edges.slice(0, 12)
 })
 const hasMoreCharacters = computed(() => {
-  return (media.value?.characters?.edges?.length || 0) > 12
+  const total = media.value?.characters?.edges?.length || 0
+  if (isWindows.value) {
+    return characterLimit.value < total
+  }
+  return total > 12
 })
+
+function loadMoreCharacters() {
+  characterLimit.value += CHARACTERS_PAGE_SIZE
+}
 
 // Recommendations - native recs + genre-based supplements, deduped & self-excluded
 const uniqueRecommendations = computed(() => {
@@ -127,6 +146,7 @@ watch(() => route.params.id, (newId) => {
   if (newId) {
     loaded.value = false
     showAllCharacters.value = false
+    characterLimit.value = 12
     animeStore.fetchDetails(Number(newId)).finally(() => { loaded.value = true })
   }
 })
@@ -420,7 +440,7 @@ function handleEditorDeleted() {
         <!-- Description -->
         <div v-if="media.description" class="detail-section">
           <h3 class="section-title">Description</h3>
-          <p class="description-text">{{ cleanDescription(media.description) }}</p>
+          <div class="description-text" v-html="renderMarkdown(media.description)"></div>
         </div>
 
         <!-- Dates -->
@@ -444,9 +464,14 @@ function handleEditorDeleted() {
 
         <!-- Characters -->
         <div v-if="media.characters?.edges?.length" class="detail-section">
-          <h3 class="section-title clickable" @click="showAllCharacters = !showAllCharacters">
+          <h3
+            class="section-title"
+            :class="{ clickable: !isWindows }"
+            @click="!isWindows && (showAllCharacters = !showAllCharacters)"
+          >
             Characters
-            <span class="toggle-label">{{ showAllCharacters ? 'show less' : `show all (${media.characters.edges.length})` }}</span>
+            <span v-if="!isWindows" class="toggle-label">{{ showAllCharacters ? 'show less' : `show all (${media.characters.edges.length})` }}</span>
+            <span v-else class="character-count-badge">({{ Math.min(characterLimit, media.characters.edges.length) }}/{{ media.characters.edges.length }})</span>
           </h3>
           <div class="character-list">
             <template v-for="edge in visibleCharacters" :key="edge.id">
@@ -506,6 +531,12 @@ function handleEditorDeleted() {
                 </div>
               </div>
             </template>
+          </div>
+          <!-- Windows: lazy load more button -->
+          <div v-if="isWindows && hasMoreCharacters" class="characters-load-more">
+            <button class="load-more-btn" type="button" @click="loadMoreCharacters">
+              Load more ({{ media.characters.edges.length - characterLimit }} remaining)
+            </button>
           </div>
         </div>
 
@@ -910,7 +941,46 @@ function handleEditorDeleted() {
 .section-title.clickable { cursor: pointer; display: flex; align-items: center; gap: var(--space-sm); }
 .section-title.clickable:hover { color: var(--color-primary-light); }
 .toggle-label { font-size: var(--font-size-xs); color: var(--text-muted); font-weight: var(--font-weight-normal); }
-.description-text { font-size: var(--font-size-sm); color: var(--text-secondary); line-height: var(--line-height-relaxed); white-space: pre-line; }
+.character-count-badge { font-size: var(--font-size-xs); color: var(--text-muted); font-weight: var(--font-weight-normal); margin-left: var(--space-xs); }
+.description-text { font-size: var(--font-size-sm); color: var(--text-secondary); line-height: var(--line-height-relaxed); white-space: pre-line; word-break: break-word; }
+.description-text :deep(strong) {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-bold);
+}
+.description-text :deep(em) {
+  font-style: italic;
+}
+.description-text :deep(.md-bullet) {
+  color: var(--color-primary);
+  font-weight: bold;
+  display: inline-block;
+  margin-right: 4px;
+}
+.description-text :deep(.description-link),
+.description-text :deep(a) {
+  color: var(--color-primary-light);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+.description-text :deep(.description-link:hover),
+.description-text :deep(a:hover) {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+.description-text :deep(.spoiler) {
+  background: var(--bg-elevated);
+  color: transparent;
+  border-radius: var(--radius-xs);
+  padding: 0 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.description-text :deep(.spoiler:hover),
+.description-text :deep(.spoiler.revealed) {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
 
 /* Dates */
 .date-row { display: flex; gap: var(--space-xl); }
@@ -944,6 +1014,30 @@ function handleEditorDeleted() {
 .va-info { display: flex; flex-direction: column; }
 .va-name { font-size: var(--font-size-xs); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
 .va-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
+
+.characters-load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-md);
+}
+
+.characters-load-more .load-more-btn {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.characters-load-more .load-more-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
 
 /* Relations */
 .relation-list { display: flex; gap: var(--space-sm); overflow-x: auto; padding-bottom: var(--space-sm); }

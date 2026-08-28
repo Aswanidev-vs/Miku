@@ -13,13 +13,16 @@ import (
 )
 
 // Version is the current app version. Bump before each release build.
-const Version = "0.12.4"
+const Version = "0.12.5"
 
 //go:embed all:frontend/dist
 var assets embed.FS
 
 //go:embed .env
 var envContent string
+
+//go:embed build/appicon.png
+var appIcon []byte
 
 func main() {
 	// Parse embedded .env
@@ -95,7 +98,11 @@ func main() {
 	app = application.New(application.Options{
 		Name:        "Miku",
 		Description: "AniList Client",
+		Icon:        appIcon,
 		Services:    services,
+		Windows: application.WindowsOptions{
+			WndProcInterceptor: windowsIconInterceptor(),
+		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},

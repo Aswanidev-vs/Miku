@@ -16,12 +16,16 @@ const { gridColumns } = usePlatform()
 // Section data
 const popularAnime = ref<Media[]>([])
 const seasonalAnime = ref<Media[]>([])
+const latestAnime = ref<Media[]>([])
+const latestManga = ref<Media[]>([])
 const topManga = ref<Media[]>([])
 const trendingAnime = computed(() => animeStore.trending)
 
 // Pagination state for each section (used by "load more")
 const popularPage = ref(1)
 const seasonalPage = ref(1)
+const latestAnimePage = ref(1)
+const latestMangaPage = ref(1)
 const mangaPage = ref(1)
 const loadingMore = ref(false)
 const allLoaded = ref(false)
@@ -30,6 +34,8 @@ const MAX_PAGES = 3 // each section loads up to 3 pages (36 items)
 // Whether a section's first page has been lazy-loaded yet
 const popularLoaded = ref(false)
 const seasonalLoaded = ref(false)
+const latestAnimeLoaded = ref(false)
+const latestMangaLoaded = ref(false)
 const mangaLoaded = ref(false)
 
 const QUERIES = {
@@ -70,6 +76,34 @@ const QUERIES = {
           coverImage { large medium color }
           format status episodes averageScore
           genres nextAiringEpisode { episode }
+        }
+        pageInfo { hasNextPage }
+      }
+    }
+  `,
+  latestAnime: `
+    query ($page: Int, $perPage: Int) {
+      Page(page: $page, perPage: $perPage) {
+        media(sort: ID_DESC, type: ANIME) {
+          id
+          title { romaji english native userPreferred }
+          coverImage { large medium color }
+          format status episodes averageScore
+          genres nextAiringEpisode { episode }
+        }
+        pageInfo { hasNextPage }
+      }
+    }
+  `,
+  latestManga: `
+    query ($page: Int, $perPage: Int) {
+      Page(page: $page, perPage: $perPage) {
+        media(sort: ID_DESC, type: MANGA) {
+          id
+          title { romaji english native userPreferred }
+          coverImage { large medium color }
+          format status chapters volumes averageScore
+          genres
         }
         pageInfo { hasNextPage }
       }
@@ -138,6 +172,40 @@ async function loadSeasonal() {
   }
 }
 
+async function loadLatestAnime() {
+  if (latestAnimeLoaded.value) return
+  try {
+    const r = await gqlQuery(QUERIES.latestAnime, { page: 1, perPage: 12 })
+    if (r?.data?.Page?.media?.length) {
+      latestAnime.value = r.data.Page.media
+      latestAnimeLoaded.value = true
+    } else {
+      console.warn('[Discover] Latest anime query returned empty results')
+      latestAnimeLoaded.value = false
+    }
+  } catch (err) {
+    console.warn('[Discover] Latest anime section failed to load:', err)
+    latestAnimeLoaded.value = false
+  }
+}
+
+async function loadLatestManga() {
+  if (latestMangaLoaded.value) return
+  try {
+    const r = await gqlQuery(QUERIES.latestManga, { page: 1, perPage: 12 })
+    if (r?.data?.Page?.media?.length) {
+      latestManga.value = r.data.Page.media
+      latestMangaLoaded.value = true
+    } else {
+      console.warn('[Discover] Latest manga query returned empty results')
+      latestMangaLoaded.value = false
+    }
+  } catch (err) {
+    console.warn('[Discover] Latest manga section failed to load:', err)
+    latestMangaLoaded.value = false
+  }
+}
+
 async function loadManga() {
   if (mangaLoaded.value) return
   try {
@@ -181,6 +249,30 @@ async function loadMoreSeasonal() {
   } catch { /* ignore */ }
 }
 
+async function loadMoreLatestAnime() {
+  if (latestAnimePage.value >= MAX_PAGES) return
+  const nextPage = latestAnimePage.value + 1
+  try {
+    const r = await gqlQuery(QUERIES.latestAnime, { page: nextPage, perPage: 12 })
+    if (r?.data?.Page?.media?.length) {
+      latestAnime.value = [...latestAnime.value, ...r.data.Page.media]
+      latestAnimePage.value = nextPage
+    }
+  } catch { /* ignore */ }
+}
+
+async function loadMoreLatestManga() {
+  if (latestMangaPage.value >= MAX_PAGES) return
+  const nextPage = latestMangaPage.value + 1
+  try {
+    const r = await gqlQuery(QUERIES.latestManga, { page: nextPage, perPage: 12 })
+    if (r?.data?.Page?.media?.length) {
+      latestManga.value = [...latestManga.value, ...r.data.Page.media]
+      latestMangaPage.value = nextPage
+    }
+  } catch { /* ignore */ }
+}
+
 async function loadMoreManga() {
   if (mangaPage.value >= MAX_PAGES) return
   const nextPage = mangaPage.value + 1
@@ -195,18 +287,17 @@ async function loadMoreManga() {
 
 // Load more for the NEXT section in sequence
 let nextSectionIndex = 0
-const sectionLoaders = [loadMorePopular, loadMoreSeasonal, loadMoreManga]
+const sectionLoaders = [loadMorePopular, loadMoreSeasonal, loadMoreLatestAnime, loadMoreLatestManga, loadMoreManga]
 
 async function loadMore() {
   if (loadingMore.value || allLoaded.value) return
   loadingMore.value = true
 
   try {
-    const maxCycles = sectionLoaders.length * MAX_PAGES
     for (let i = 0; i < sectionLoaders.length; i++) {
       const idx = (nextSectionIndex + i) % sectionLoaders.length
       const loader = sectionLoaders[idx]
-      const pageRef = [popularPage, seasonalPage, mangaPage][idx]
+      const pageRef = [popularPage, seasonalPage, latestAnimePage, latestMangaPage, mangaPage][idx]
       if (pageRef.value < MAX_PAGES) {
         await loader()
         nextSectionIndex = (idx + 1) % sectionLoaders.length
@@ -217,6 +308,8 @@ async function loadMore() {
     if (
       popularPage.value >= MAX_PAGES &&
       seasonalPage.value >= MAX_PAGES &&
+      latestAnimePage.value >= MAX_PAGES &&
+      latestMangaPage.value >= MAX_PAGES &&
       mangaPage.value >= MAX_PAGES
     ) {
       allLoaded.value = true
@@ -232,14 +325,20 @@ async function refreshDiscover() {
   animeStore.fetchTrending(1, 12)
   popularPage.value = 1
   seasonalPage.value = 1
+  latestAnimePage.value = 1
+  latestMangaPage.value = 1
   mangaPage.value = 1
   nextSectionIndex = 0
   allLoaded.value = false
   popularAnime.value = []
   seasonalAnime.value = []
+  latestAnime.value = []
+  latestManga.value = []
   topManga.value = []
   popularLoaded.value = false
   seasonalLoaded.value = false
+  latestAnimeLoaded.value = false
+  latestMangaLoaded.value = false
   mangaLoaded.value = false
   lazyObserver?.disconnect()
   nextTick(setupLazySections)
@@ -251,6 +350,8 @@ const viewRef = ref<HTMLElement | null>(null)
 // IntersectionObserver for lazy section loading
 const popularSectionRef = ref<HTMLElement | null>(null)
 const seasonalSectionRef = ref<HTMLElement | null>(null)
+const latestAnimeSectionRef = ref<HTMLElement | null>(null)
+const latestMangaSectionRef = ref<HTMLElement | null>(null)
 const mangaSectionRef = ref<HTMLElement | null>(null)
 let lazyObserver: IntersectionObserver | null = null
 
@@ -258,6 +359,8 @@ function setupLazySections() {
   const sections = [
     { ref: popularSectionRef, loaded: popularLoaded, load: loadPopular },
     { ref: seasonalSectionRef, loaded: seasonalLoaded, load: loadSeasonal },
+    { ref: latestAnimeSectionRef, loaded: latestAnimeLoaded, load: loadLatestAnime },
+    { ref: latestMangaSectionRef, loaded: latestMangaLoaded, load: loadLatestManga },
     { ref: mangaSectionRef, loaded: mangaLoaded, load: loadManga },
   ]
   // Find the scroll container (.main-content) to use as IntersectionObserver root
@@ -357,6 +460,24 @@ onUnmounted(() => {
         </div>
         <AnimeGrid v-if="seasonalAnime.length > 0" :items="seasonalAnime" :columns="gridColumns" />
         <AnimeGrid v-else-if="!seasonalLoaded" :items="[]" :loading="true" :columns="gridColumns" />
+        <p v-else class="section-empty">Nothing found.</p>
+      </section>
+
+      <section ref="latestAnimeSectionRef" class="discover-section">
+        <div class="section-header">
+          <h2 class="section-title"><span class="title-dot"></span>Newly Added Anime</h2>
+        </div>
+        <AnimeGrid v-if="latestAnime.length > 0" :items="latestAnime" :columns="gridColumns" />
+        <AnimeGrid v-else-if="!latestAnimeLoaded" :items="[]" :loading="true" :columns="gridColumns" />
+        <p v-else class="section-empty">Nothing found.</p>
+      </section>
+
+      <section ref="latestMangaSectionRef" class="discover-section">
+        <div class="section-header">
+          <h2 class="section-title"><span class="title-dot"></span>Newly Added Manga</h2>
+        </div>
+        <AnimeGrid v-if="latestManga.length > 0" :items="latestManga" :columns="gridColumns" />
+        <AnimeGrid v-else-if="!latestMangaLoaded" :items="[]" :loading="true" :columns="gridColumns" />
         <p v-else class="section-empty">Nothing found.</p>
       </section>
 

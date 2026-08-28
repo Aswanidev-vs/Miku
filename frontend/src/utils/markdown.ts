@@ -1,7 +1,7 @@
 import DOMPurify from 'dompurify'
 
 /**
- * Parses AniList flavored markdown & HTML (user bio, activity, comments)
+ * Parses AniList flavored markdown & HTML (user bio, character/staff description, activity)
  * into sanitized, safe HTML.
  */
 export function renderMarkdown(raw?: string | null): string {
@@ -43,34 +43,45 @@ export function renderMarkdown(raw?: string | null): string {
   // 7. Markdown images: ![alt](url)
   text = text.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g, '<img src="$2" alt="$1" />')
 
-  // 8. Markdown links: [text](url)
+  // 8. Markdown links: [text](url) -> formatted with description-link class for native routing/external browser
   text = text.replace(
     /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
+    '<a href="$2" data-url="$2" class="description-link" target="_blank" rel="noopener noreferrer">$1</a>'
   )
 
-  // 9. Bold, Italic, Strikethrough
-  text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-  text = text.replace(/__(.+?)__/g, '<strong>$1</strong>')
-  text = text.replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
-  text = text.replace(/_([^_\n]+)_/g, '<em>$1</em>')
+  // 9. Bold-italic: ***text*** or ___text___
+  text = text.replace(/\*\*\*([^*]+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+  text = text.replace(/___([^_]+?)___/g, '<strong><em>$1</em></strong>')
+
+  // 10. Bold: **text** or __text__ (including colons e.g. __Agency:__ or **Non-anime roles:**)
+  text = text.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>')
+  text = text.replace(/__([^_\n]+?)__/g, '<strong>$1</strong>')
+
+  // 11. Italic: *text* or _text_ (ensuring we do not match inside html tags or words)
+  text = text.replace(/(^|[^\w*])\*([^*\n]+?)\*([^\w*]|$)/g, '$1<em>$2</em>$3')
+  text = text.replace(/(^|[^\w_])_([^_\n]+?)_([^\w_]|$)/g, '$1<em>$2</em>$3')
+
+  // 12. Strikethrough: ~~text~~
   text = text.replace(/~~(.+?)~~/g, '<del>$1</del>')
 
-  // 10. Code blocks and inline code
+  // 13. Lists: `- Item` or `* Item`
+  text = text.replace(/^(\s*)[-*]\s+(.+)$/gm, '$1<span class="md-bullet">•</span> $2')
+
+  // 14. Code blocks and inline code
   text = text.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
   text = text.replace(/`([^`\n]+)`/g, '<code>$1</code>')
 
-  // 11. Preserve newlines as <br>
+  // 15. Preserve newlines as <br>
   text = text.replace(/\r\n/g, '\n')
   text = text.replace(/\n/g, '<br />')
 
-  // 12. Clean up excessive breaks around block tags
+  // 16. Clean up excessive breaks around block tags
   text = text.replace(/(<\/?(h[1-6]|pre|blockquote|center|hr|div|p|ul|ol|li)[^>]*>)<br\s*\/?>/gi, '$1')
   text = text.replace(/<br\s*\/?>(\s*<\/?(h[1-6]|pre|blockquote|center|hr|div|p|ul|ol|li))/gi, '$1')
 
-  // 13. DOMPurify sanitize
+  // 17. DOMPurify sanitize
   return DOMPurify.sanitize(text, {
     ADD_TAGS: ['center'],
-    ADD_ATTR: ['target', 'rel', 'style'],
+    ADD_ATTR: ['target', 'rel', 'style', 'data-url', 'class'],
   })
 }
