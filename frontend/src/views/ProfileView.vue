@@ -149,7 +149,37 @@ async function handleCheckForUpdates() {
 function handleSocialSelect(u: User) {
   if (user.value && u.id === user.value.id) return
   const url = `https://anilist.co/user/${encodeURIComponent(u.name)}`
-  Browser.OpenURL(url).catch(() => window.open(url, '_blank'))
+  openUrl(url)
+}
+
+async function openUrl(url: string) {
+  const androidBridge = (window as Window & {
+    wails?: { platform?: () => string; openInBrowser?: (url: string) => void }
+  }).wails
+
+  if (androidBridge?.platform?.() === 'android' && androidBridge.openInBrowser) {
+    androidBridge.openInBrowser(url)
+    return
+  }
+
+  try {
+    await Browser.OpenURL(url)
+  } catch {
+    window.open(url, '_blank')
+  }
+}
+
+function handleAboutClick(e: Event) {
+  const target = e.target as HTMLElement
+  if (target.classList.contains('description-link') || target.tagName.toLowerCase() === 'a') {
+    e.preventDefault()
+    const url = target.getAttribute('data-url') || target.getAttribute('href')
+    if (url) {
+      openUrl(url)
+    }
+  } else if (target.classList.contains('spoiler')) {
+    target.classList.toggle('revealed')
+  }
 }
 </script>
 
@@ -400,7 +430,7 @@ function handleSocialSelect(u: User) {
     <template v-if="isLoggedIn && user && showStats">
       <section v-if="settings.showAbout && user.about" class="settings-group">
         <h3 class="group-title">About Me</h3>
-        <div class="about-me" v-html="renderMarkdown(user.about)"></div>
+        <div class="about-me" v-html="renderMarkdown(user.about)" @click="handleAboutClick"></div>
       </section>
       <section class="settings-group">
         <h3 class="group-title">Social</h3>
@@ -644,6 +674,12 @@ function handleSocialSelect(u: User) {
   line-height: var(--line-height-relaxed, 1.7);
   overflow-wrap: anywhere;
   word-break: break-word;
+  overflow-x: auto;
+}
+
+.about-me :deep(*) {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .about-me :deep(center) {
@@ -655,14 +691,17 @@ function handleSocialSelect(u: User) {
   max-width: 100%;
   height: auto;
   border-radius: var(--radius-md);
-  margin: var(--space-xs) auto;
-  display: block;
+  margin: 3px 4px;
+  display: inline-block;
+  vertical-align: middle;
+  object-fit: contain;
 }
 
 .about-me :deep(a) {
   color: var(--color-primary);
   text-decoration: underline;
   text-underline-offset: 2px;
+  word-break: break-word;
 }
 
 .about-me :deep(blockquote) {
@@ -681,6 +720,8 @@ function handleSocialSelect(u: User) {
   overflow-x: auto;
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .about-me :deep(code) {
@@ -689,6 +730,7 @@ function handleSocialSelect(u: User) {
   padding: 2px 4px;
   border-radius: 4px;
   font-size: 0.9em;
+  word-break: break-word;
 }
 
 .about-me :deep(hr) {
@@ -696,6 +738,35 @@ function handleSocialSelect(u: User) {
   border-top: 1px solid var(--border-subtle);
   margin: var(--space-md) 0;
 }
+
+.about-me :deep(table) {
+  width: auto;
+  max-width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-sm) auto;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.about-me :deep(th),
+.about-me :deep(td) {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.about-me :deep(iframe),
+.about-me :deep(video) {
+  max-width: 100%;
+  border-radius: var(--radius-md);
+}
+
+.about-me :deep(h1) { font-size: var(--font-size-xl); margin: var(--space-md) 0 var(--space-xs); line-height: 1.2; }
+.about-me :deep(h2) { font-size: var(--font-size-lg); margin: var(--space-md) 0 var(--space-xs); line-height: 1.25; }
+.about-me :deep(h3) { font-size: var(--font-size-md); margin: var(--space-sm) 0 var(--space-xs); line-height: 1.3; }
+.about-me :deep(h4),
+.about-me :deep(h5),
+.about-me :deep(h6) { font-size: var(--font-size-sm); margin: var(--space-xs) 0; }
 
 .about-me :deep(.spoiler) {
   background: var(--bg-elevated);
@@ -705,6 +776,7 @@ function handleSocialSelect(u: User) {
   cursor: pointer;
   user-select: none;
   transition: color var(--transition-fast), background var(--transition-fast);
+  display: inline;
 }
 
 .about-me :deep(.spoiler:hover),

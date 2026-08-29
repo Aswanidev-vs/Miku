@@ -312,12 +312,19 @@ export interface CharacterConnection {
   pageInfo: PageInfo
 }
 
+export interface VoiceActorRole {
+  roleNotes?: string
+  dubGroup?: string
+  voiceActor?: Staff
+}
+
 export interface CharacterEdge {
   id: number
   node: Character
   role?: string
   name?: string
   voiceActors?: Staff[]
+  voiceActorRoles?: VoiceActorRole[]
 }
 
 export interface Character {
