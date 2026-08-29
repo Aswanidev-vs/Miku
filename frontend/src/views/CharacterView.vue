@@ -114,6 +114,22 @@ function goBack() { router.back() }
 function goToMedia(id: number) { router.push({ name: 'media-detail', params: { id } }) }
 function goToVA(id?: number) { if (id) router.push({ name: 'voice-actor', params: { id } }) }
 
+async function retry() {
+  const id = Number(route.params.id)
+  if (!id) return
+  loading.value = true
+  error.value = null
+  currentPage.value = 1
+  try {
+    await fetchCharacter(id, 1)
+  } catch (e: any) {
+    console.error('Character fetch error:', e)
+    error.value = e?.message || 'Failed to load character'
+  } finally {
+    loading.value = false
+  }
+}
+
 function handleDescriptionClick(e: Event) {
   const target = e.target as HTMLElement
   if (target.classList.contains('description-link') || target.tagName.toLowerCase() === 'a') {
@@ -153,8 +169,11 @@ async function openUrl(url: string) {
 
     <!-- Error -->
     <div v-else-if="error" class="empty-state">
-      <p>{{ error }}</p>
-      <button class="btn-back" @click="goBack">Go Back</button>
+      <p class="error-msg">{{ error }}</p>
+      <div class="error-actions">
+        <button class="btn-primary" @click="retry">Retry</button>
+        <button class="btn-back" @click="goBack">Go Back</button>
+      </div>
     </div>
 
     <!-- Content -->
@@ -295,7 +314,20 @@ async function openUrl(url: string) {
 .role-va:hover { color: var(--text-primary); }
 .role-va-img { width: 36px; height: 36px; border-radius: var(--radius-full); object-fit: cover; flex-shrink: 0; }
 
-.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: var(--space-lg); color: var(--text-muted); }
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 60vh; gap: var(--space-md); color: var(--text-muted);
+  text-align: center; padding: var(--space-xl);
+}
+.error-msg { font-size: var(--font-size-md); color: var(--text-secondary); max-width: 480px; line-height: var(--line-height-relaxed); }
+.error-actions { display: flex; gap: var(--space-md); align-items: center; }
+.btn-primary {
+  padding: var(--space-sm) var(--space-lg); border-radius: var(--radius-md);
+  font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); font-family: var(--font-body);
+  border: none; background: var(--color-primary); color: var(--text-on-primary); cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+.btn-primary:hover { opacity: 0.9; }
 .btn-back { padding: var(--space-sm) var(--space-lg); border-radius: var(--radius-md); font-size: var(--font-size-sm); border: 1px solid var(--bg-hover); background: var(--bg-surface); color: var(--text-secondary); cursor: pointer; }
 
 .load-more-btn {

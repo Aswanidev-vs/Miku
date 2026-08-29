@@ -20,7 +20,7 @@ interface GraphQLResponse {
 }
 
 // ---- Simple in-memory cache (avoids re-fetching on tab switch) ----
-const CACHE_TTL = 20_000 // 20 seconds — long enough for tab switches, short enough to stay fresh
+const CACHE_TTL = 30_000 // 30 seconds — long enough for tab switches, short enough to stay fresh
 const cache = new Map<string, { ts: number; data: GraphQLResponse }>()
 
 function cacheKey(query: string, variables?: Record<string, any>): string {
@@ -103,6 +103,25 @@ export async function gqlQuery(query: string, variables?: Record<string, any>): 
     },
     body: JSON.stringify({ query, variables }),
   })
+
+  if (response.status === 429) {
+    const retryAfter = response.headers.get('Retry-After')
+    const waitMsg = retryAfter ? `Please wait ${retryAfter}s and retry.` : 'Please wait a moment before trying again.'
+    throw new Error(`AniList rate limit exceeded (429). ${waitMsg}`)
+  }
+
+  if (!response.ok) {
+    let errMsg = `Request failed (${response.status})`
+    try {
+      const errJson = await response.json()
+      if (errJson?.errors?.[0]?.message) {
+        errMsg = errJson.errors[0].message
+      }
+    } catch {
+      // Non-JSON response (e.g. Cloudflare / 502 / 504)
+    }
+    throw new Error(errMsg)
+  }
 
   const json = await response.json()
 

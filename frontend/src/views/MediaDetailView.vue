@@ -177,6 +177,14 @@ function goBack() {
   router.back()
 }
 
+function retryFetch() {
+  const id = Number(route.params.id)
+  if (id) {
+    loaded.value = false
+    animeStore.fetchDetails(id).finally(() => { loaded.value = true })
+  }
+}
+
 function goToCharacter(edge: { node?: { id?: number } }) {
   const id = edge?.node?.id
   if (id) router.push({ name: 'character', params: { id } })
@@ -634,11 +642,14 @@ function handleEditorDeleted() {
       </div>
     </template>
 
-    <!-- Not found -->
+    <!-- Error / Not found -->
     <template v-else-if="!loading && loaded">
       <div class="empty-state">
-        <p>Media not found</p>
-        <button class="btn btn-secondary" @click="goBack">Go Back</button>
+        <p class="error-msg">{{ animeStore.error || 'Media not found' }}</p>
+        <div class="error-actions">
+          <button v-if="animeStore.error" class="btn btn-primary" @click="retryFetch">Retry</button>
+          <button class="btn btn-secondary" @click="goBack">Go Back</button>
+        </div>
       </div>
     </template>
 
@@ -1115,11 +1126,40 @@ function handleEditorDeleted() {
 .recommendation-poster img { width: 100%; height: 100%; object-fit: cover; }
 .recommendation-title { font-size: 10.5px; color: var(--text-secondary); text-align: center; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.25; }
 
-/* Empty */
+/* Empty / Error */
 .empty-state {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 60vh; gap: var(--space-lg); color: var(--text-muted);
+  min-height: 60vh; gap: var(--space-md); color: var(--text-muted);
+  text-align: center; padding: var(--space-xl);
 }
+
+.error-msg {
+  font-size: var(--font-size-md);
+  color: var(--text-secondary);
+  max-width: 480px;
+  line-height: var(--line-height-relaxed);
+}
+
+.error-actions {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+.btn-primary {
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  background: var(--color-primary);
+  color: var(--text-on-primary);
+  transition: opacity var(--transition-fast);
+}
+
+.btn-primary:hover { opacity: 0.9; }
 
 .btn-secondary {
   padding: var(--space-sm) var(--space-lg);
