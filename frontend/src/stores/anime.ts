@@ -270,6 +270,11 @@ query ($id: Int) {
         id role
         node { id name { full } image { medium large } }
         voiceActors(language: JAPANESE) { id name { full } image { medium } }
+        voiceActorRoles(language: JAPANESE, sort: [RELEVANCE, ID]) {
+          roleNotes
+          dubGroup
+          voiceActor { id name { full } image { medium } }
+        }
       }
     }
   }
@@ -287,6 +292,11 @@ query ($id: Int!, $page: Int, $perPage: Int) {
         id role
         node { id name { full } image { medium large } }
         voiceActors(language: JAPANESE) { id name { full } image { medium } }
+        voiceActorRoles(language: JAPANESE, sort: [RELEVANCE, ID]) {
+          roleNotes
+          dubGroup
+          voiceActor { id name { full } image { medium } }
+        }
       }
     }
   }

@@ -475,10 +475,46 @@ function handleEditorDeleted() {
           </h3>
           <div class="character-list">
             <template v-for="edge in visibleCharacters" :key="edge.id">
-              <!-- Character with multiple VAs: show each VA as separate row -->
-              <template v-if="(edge.voiceActors?.length ?? 0) > 1">
+              <!-- Multiple voice actor roles / voice actors -->
+              <template v-if="(edge.voiceActorRoles?.length ?? 0) > 1">
                 <div
-                  v-for="(va, vaIndex) in edge.voiceActors"
+                  v-for="(vaRole, vaIndex) in edge.voiceActorRoles"
+                  :key="`${edge.id}-${vaRole.voiceActor?.id || vaIndex}`"
+                  class="character-item"
+                  @click="goToCharacter(edge)"
+                >
+                  <img
+                    v-if="edge.node.image"
+                    :src="edge.node.image.large || edge.node.image.medium"
+                    :alt="edge.node.name.full"
+                    class="character-img"
+                  />
+                  <div class="character-info">
+                    <span class="character-name">{{ edge.node.name.full }}</span>
+                    <span class="character-role">{{ edge.role }}</span>
+                  </div>
+                  <div
+                    v-if="vaRole.voiceActor"
+                    class="character-va"
+                    @click.stop="vaRole.voiceActor?.id && router.push({ name: 'voice-actor', params: { id: vaRole.voiceActor.id } })"
+                  >
+                    <img
+                      v-if="vaRole.voiceActor.image"
+                      :src="vaRole.voiceActor.image.medium || vaRole.voiceActor.image.large"
+                      :alt="vaRole.voiceActor.name?.full"
+                      class="va-img"
+                    />
+                    <div class="va-info">
+                      <span class="va-name">{{ vaRole.voiceActor.name?.full }}</span>
+                      <span v-if="vaRole.roleNotes" class="va-role-notes">({{ vaRole.roleNotes }})</span>
+                      <span v-else class="va-label">VA</span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+              <template v-else-if="(edge.voiceActors?.length ?? 0) > 1">
+                <div
+                  v-for="va in edge.voiceActors"
                   :key="`${edge.id}-${va.id}`"
                   class="character-item"
                   @click="goToCharacter(edge)"
@@ -490,23 +526,27 @@ function handleEditorDeleted() {
                     class="character-img"
                   />
                   <div class="character-info">
-                    <span class="character-name">{{ edge.node.name.full }}{{ vaIndex > 0 ? ' (child)' : '' }}</span>
+                    <span class="character-name">{{ edge.node.name.full }}</span>
                     <span class="character-role">{{ edge.role }}</span>
                   </div>
-                  <div class="character-va" @click.stop="va.id && router.push({ name: 'voice-actor', params: { id: va.id } })">
+                  <div
+                    class="character-va"
+                    @click.stop="va.id && router.push({ name: 'voice-actor', params: { id: va.id } })"
+                  >
                     <img
-                      :src="va.image?.medium"
-                      :alt="va.name.full"
+                      v-if="va.image"
+                      :src="va.image.medium || va.image.large"
+                      :alt="va.name?.full"
                       class="va-img"
                     />
                     <div class="va-info">
-                      <span class="va-name">{{ va.name.full }}</span>
+                      <span class="va-name">{{ va.name?.full }}</span>
                       <span class="va-label">VA</span>
                     </div>
                   </div>
                 </div>
               </template>
-              <!-- Character with single VA: original layout -->
+              <!-- Single VA / No VA -->
               <div v-else class="character-item" @click="goToCharacter(edge)">
                 <img
                   v-if="edge.node.image"
@@ -518,15 +558,20 @@ function handleEditorDeleted() {
                   <span class="character-name">{{ edge.node.name.full }}</span>
                   <span class="character-role">{{ edge.role }}</span>
                 </div>
-                <div v-if="edge.voiceActors?.length" class="character-va" @click.stop="edge.voiceActors[0].id && router.push({ name: 'voice-actor', params: { id: edge.voiceActors[0].id } })">
+                <div
+                  v-if="edge.voiceActorRoles?.[0]?.voiceActor || edge.voiceActors?.[0]"
+                  class="character-va"
+                  @click.stop="(edge.voiceActorRoles?.[0]?.voiceActor?.id || edge.voiceActors?.[0]?.id) && router.push({ name: 'voice-actor', params: { id: (edge.voiceActorRoles?.[0]?.voiceActor?.id || edge.voiceActors?.[0]?.id) } })"
+                >
                   <img
-                    :src="edge.voiceActors[0].image?.medium"
-                    :alt="edge.voiceActors[0].name.full"
+                    :src="edge.voiceActorRoles?.[0]?.voiceActor?.image?.medium || edge.voiceActors?.[0]?.image?.medium"
+                    :alt="edge.voiceActorRoles?.[0]?.voiceActor?.name?.full || edge.voiceActors?.[0]?.name?.full"
                     class="va-img"
                   />
                   <div class="va-info">
-                    <span class="va-name">{{ edge.voiceActors[0].name.full }}</span>
-                    <span class="va-label">VA</span>
+                    <span class="va-name">{{ edge.voiceActorRoles?.[0]?.voiceActor?.name?.full || edge.voiceActors?.[0]?.name?.full }}</span>
+                    <span v-if="edge.voiceActorRoles?.[0]?.roleNotes" class="va-role-notes">({{ edge.voiceActorRoles[0].roleNotes }})</span>
+                    <span v-else class="va-label">VA</span>
                   </div>
                 </div>
               </div>
@@ -1012,8 +1057,9 @@ function handleEditorDeleted() {
 .character-va:hover { opacity: 0.8; }
 .va-img { width: 32px; height: 32px; border-radius: var(--radius-full); object-fit: cover; }
 .va-info { display: flex; flex-direction: column; }
-.va-name { font-size: var(--font-size-xs); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+.va-name { font-size: var(--font-size-xs); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
 .va-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
+.va-role-notes { font-size: 10px; color: var(--color-primary-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
 
 .characters-load-more {
   display: flex;
