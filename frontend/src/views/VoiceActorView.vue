@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { gqlQuery } from '../api/graphql'
+import { gqlQuery, isAniListTemporaryError } from '../api/graphql'
 import { Browser } from '@wailsio/runtime'
 import { useSettings } from '../composables/useSettings'
 import { preferredTitle } from '../utils/mediaDisplay'
 import { renderMarkdown } from '../utils/markdown'
+import RateLimitNotice from '../components/common/RateLimitNotice.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -237,11 +238,19 @@ async function openUrl(url: string) {
 
     <!-- Error -->
     <div v-else-if="error" class="empty-state">
-      <p class="error-msg">{{ error }}</p>
-      <div class="error-actions">
-        <button class="btn-primary" @click="retry">Retry</button>
-        <button class="btn-back" @click="goBack">Go Back</button>
-      </div>
+      <RateLimitNotice v-if="isAniListTemporaryError(error)" :message="error">
+        <template #actions>
+          <button class="btn-primary" @click="retry">Retry</button>
+          <button class="btn-back" @click="goBack">Go Back</button>
+        </template>
+      </RateLimitNotice>
+      <template v-else>
+        <p class="error-msg">{{ error }}</p>
+        <div class="error-actions">
+          <button class="btn-primary" @click="retry">Retry</button>
+          <button class="btn-back" @click="goBack">Go Back</button>
+        </div>
+      </template>
     </div>
 
     <!-- Content -->
