@@ -37,6 +37,8 @@ const currentVersionFromBackend = ref<string>('')
 const error = ref<string | null>(null)
 const downloadedApkPath = ref<string | null>(null)
 const installing = ref(false)
+const UPDATE_CHECK_KEY = 'miku-last-update-check'
+const UPDATE_CHECK_TTL = 6 * 60 * 60 * 1000
 
 export function useUpdate() {
   const hasUpdate = computed(() => updateInfo.value?.available ?? false)
@@ -60,6 +62,19 @@ export function useUpdate() {
     await ensureLoaded()
     if (!UpdateService) return null
 
+    // Update checks are background-only. Avoid repeatedly hitting GitHub's
+    // unauthenticated API limit when views mount or the user retries content.
+    try {
+      const lastCheck = Number(localStorage.getItem(UPDATE_CHECK_KEY) || 0)
+      if (lastCheck && Date.now() - lastCheck < UPDATE_CHECK_TTL) {
+        checked.value = true
+        return updateInfo.value
+      }
+      localStorage.setItem(UPDATE_CHECK_KEY, String(Date.now()))
+    } catch {
+      // Storage may be unavailable in a restricted webview; continue normally.
+    }
+
     checking.value = true
     checked.value = false
     error.value = null
@@ -72,7 +87,9 @@ export function useUpdate() {
       checked.value = true
       return info
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to check for update'
+      // A failed update check must never block the rest of the app.
+      console.warn('[Miku] Update check skipped:', e)
+      error.value = null
       checked.value = true
       return null
     } finally {

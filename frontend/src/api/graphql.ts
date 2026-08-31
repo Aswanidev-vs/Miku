@@ -19,8 +19,32 @@ interface GraphQLResponse {
   errors?: Array<{ message: string }>
 }
 
+/** Returns true when AniList has temporarily throttled the request. */
+export function isAniListRateLimitError(error: unknown): boolean {
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'string'
+      ? error
+      : (error as { message?: unknown } | null)?.message
+
+  return typeof message === 'string' && /\b429\b|rate[\s-]?limit|too many requests|throttl/i.test(message)
+}
+
+/** Returns true for throttling and short-lived transport failures from AniList. */
+export function isAniListTemporaryError(error: unknown): boolean {
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'string'
+      ? error
+      : (error as { message?: unknown } | null)?.message
+
+  return isAniListRateLimitError(error) || (
+    typeof message === 'string' && /failed to fetch|network error|networkerror|temporarily unavailable|service unavailable/i.test(message)
+  )
+}
+
 // ---- Simple in-memory cache (avoids re-fetching on tab switch) ----
-const CACHE_TTL = 30_000 // 30 seconds — long enough for tab switches, short enough to stay fresh
+const CACHE_TTL = 20_000 // 20 seconds — long enough for tab switches, short enough to stay fresh
 const cache = new Map<string, { ts: number; data: GraphQLResponse }>()
 
 function cacheKey(query: string, variables?: Record<string, any>): string {
@@ -94,15 +118,20 @@ export async function gqlQuery(query: string, variables?: Record<string, any>): 
 
   const authHeader = await getAuthHeader()
 
-  const response = await fetch(ANILIST_GRAPHQL_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      ...authHeader,
-    },
-    body: JSON.stringify({ query, variables }),
-  })
+  let response: Response
+  try {
+    response = await fetch(ANILIST_GRAPHQL_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        ...authHeader,
+      },
+      body: JSON.stringify({ query, variables }),
+    })
+  } catch {
+    throw new Error('AniList is temporarily unavailable. Please check your connection and try again.')
+  }
 
   if (response.status === 429) {
     const retryAfter = response.headers.get('Retry-After')

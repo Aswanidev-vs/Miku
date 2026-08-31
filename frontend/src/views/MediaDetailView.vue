@@ -6,9 +6,11 @@ import { useAnimeStore } from '../stores/anime'
 import { useAuthStore } from '../stores/auth'
 import { useSettings } from '../composables/useSettings'
 import { usePlatform } from '../composables/usePlatform'
+import { isAniListTemporaryError } from '../api/graphql'
 import { preferredTitle } from '../utils/mediaDisplay'
 import { renderMarkdown } from '../utils/markdown'
 import ListEditorModal from '../components/anime/ListEditorModal.vue'
+import RateLimitNotice from '../components/common/RateLimitNotice.vue'
 import type { ListStatus, MediaListEntry } from '../types'
 
 const route = useRoute()
@@ -645,11 +647,22 @@ function handleEditorDeleted() {
     <!-- Error / Not found -->
     <template v-else-if="!loading && loaded">
       <div class="empty-state">
-        <p class="error-msg">{{ animeStore.error || 'Media not found' }}</p>
-        <div class="error-actions">
-          <button v-if="animeStore.error" class="btn btn-primary" @click="retryFetch">Retry</button>
-          <button class="btn btn-secondary" @click="goBack">Go Back</button>
-        </div>
+        <RateLimitNotice
+          v-if="animeStore.error && isAniListTemporaryError(animeStore.error)"
+          :message="animeStore.error"
+        >
+          <template #actions>
+            <button class="btn btn-primary" @click="retryFetch">Retry</button>
+            <button class="btn btn-secondary" @click="goBack">Go Back</button>
+          </template>
+        </RateLimitNotice>
+        <template v-else>
+          <p class="error-msg">{{ animeStore.error || 'Media not found' }}</p>
+          <div class="error-actions">
+            <button v-if="animeStore.error" class="btn btn-primary" @click="retryFetch">Retry</button>
+            <button class="btn btn-secondary" @click="goBack">Go Back</button>
+          </div>
+        </template>
       </div>
     </template>
 
