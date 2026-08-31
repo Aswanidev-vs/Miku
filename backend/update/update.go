@@ -276,8 +276,14 @@ func openFile(path string) error {
 
 	switch runtime.GOOS {
 	case "windows":
-		cmd = "cmd"
-		args = []string{"/c", "start", "", path}
+		// Packaged Wails apps may not inherit System32 in PATH, so invoking
+		// `cmd /c start` can fail with "cmd executable not found". Explorer is
+		// the native file opener and can be resolved independently of PATH.
+		cmd = filepath.Join(os.Getenv("WINDIR"), "explorer.exe")
+		if os.Getenv("WINDIR") == "" {
+			cmd = `C:\Windows\explorer.exe`
+		}
+		args = []string{path}
 	case "darwin":
 		cmd = "open"
 		args = []string{path}

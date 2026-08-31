@@ -330,7 +330,7 @@ function formatSpeed(bytesPerSecond: number): string {
 
 .update-card {
   width: 320px;
-  max-width: calc(100vw - 32px);
+  max-width: calc(100vw - 24px);
   background: var(--bg-elevated);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
@@ -387,6 +387,7 @@ function formatSpeed(bytesPerSecond: number): string {
 
 .card-body {
   padding: var(--space-lg);
+  min-width: 0;
 }
 
 .episode-notices {
@@ -553,10 +554,13 @@ function formatSpeed(bytesPerSecond: number): string {
   color: var(--status-dropped);
   font-size: var(--font-size-sm);
   margin-bottom: var(--space-lg);
+  overflow-wrap: anywhere;
+  line-height: 1.45;
 }
 
 .card-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-sm);
 }
 
@@ -569,12 +573,14 @@ function formatSpeed(bytesPerSecond: number): string {
   border: none;
   transition: all var(--transition-fast);
   font-family: var(--font-body);
+  min-width: 0;
+  white-space: normal;
 }
 
 .btn-primary {
   background: var(--color-primary);
   color: var(--text-on-primary);
-  flex: 1;
+  flex: 1 1 120px;
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -590,6 +596,7 @@ function formatSpeed(bytesPerSecond: number): string {
   background: transparent;
   color: var(--text-muted);
   border: 1px solid var(--border-subtle);
+  flex: 1 1 92px;
 }
 
 .btn-ghost:hover {
@@ -631,6 +638,32 @@ function formatSpeed(bytesPerSecond: number): string {
   margin-bottom: 0;
   max-height: 80vh;
   overflow-y: auto;
+}
+
+@media (max-width: 420px) {
+  .update-panel {
+    padding: 8px;
+    align-items: flex-end;
+  }
+
+  .update-card:not(.mobile-sheet) {
+    width: 100%;
+    max-width: none;
+  }
+
+  .card-header,
+  .card-body {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .card-actions .btn {
+    flex: 1 1 calc(50% - 4px);
+  }
+
+  .card-actions .btn-primary {
+    flex-basis: 100%;
+  }
 }
 
 /* Up to date state */
