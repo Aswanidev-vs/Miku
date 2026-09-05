@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@wailsio/runtime": "latest",
-    "axios": "^1.19.0",
+    "axios": "^1.20.0",
     "dexie": "^4.4.5",
     "dompurify": "^3.4.14",
     "pinia": "^4.0.2",
