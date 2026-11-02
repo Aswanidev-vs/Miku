@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAnimeStore } from '../stores/anime'
 import { useMangaStore } from '../stores/manga'
 import { useAuthStore } from '../stores'
@@ -12,6 +12,7 @@ import AnimeGrid from '../components/anime/AnimeGrid.vue'
 import type { MediaType, SearchType, CharacterSearchResult, StaffSearchResult } from '../types'
 
 const router = useRouter()
+const route = useRoute()
 const animeStore = useAnimeStore()
 const mangaStore = useMangaStore()
 const authStore = useAuthStore()
@@ -225,6 +226,16 @@ function clearSearch() {
 onUnmounted(() => {
   if (debounceTimer) clearTimeout(debounceTimer)
 })
+
+function applyRouteSearch(value: unknown) {
+  const routeQuery = typeof value === 'string' ? value.trim() : ''
+  if (!routeQuery || routeQuery === query.value.trim()) return
+  query.value = routeQuery
+  performSearch()
+}
+
+onMounted(() => applyRouteSearch(route.query.search))
+watch(() => route.query.search, applyRouteSearch)
 </script>
 
 <template>
@@ -239,7 +250,7 @@ onUnmounted(() => {
           v-model="query"
           type="text"
           class="search-input"
-          :placeholder="activeType === 'CHARACTER' ? 'Search character name...' : activeType === 'STAFF' ? 'Search voice actor / staff...' : 'Search anime or manga...'"
+          :placeholder="activeType === 'CHARACTER' ? 'Character name' : activeType === 'STAFF' ? 'Voice actor / staff' : 'Anime or manga'"
           @input="debouncedSearch"
           @keydown.enter="performSearch"
         />
@@ -334,7 +345,7 @@ onUnmounted(() => {
                 <span class="person-name">{{ char.name.full }}</span>
                 <span v-if="char.name.native" class="person-native">{{ char.name.native }}</span>
                 <span v-if="char.gender || char.age" class="person-meta">
-                  {{ [char.gender, char.age].filter(Boolean).join(' · ') }}
+                  {{ [char.gender, char.age].filter(Boolean).join(', ') }}
                 </span>
               </div>
             </div>
@@ -673,5 +684,44 @@ onUnmounted(() => {
   padding: var(--space-lg);
   color: var(--text-muted);
   font-size: var(--font-size-sm);
+}
+
+@media (max-width: 640px) {
+  .search-header {
+    padding-top: var(--space-lg);
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .search-input-wrapper {
+    min-height: 46px;
+  }
+
+  .type-filter {
+    margin-right: calc(-1 * var(--mobile-gutter));
+    margin-left: calc(-1 * var(--mobile-gutter));
+    padding-right: var(--mobile-gutter);
+    padding-left: var(--mobile-gutter);
+  }
+
+  .search-results {
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .person-card {
+    min-height: 64px;
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .load-more-btn {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 360px) {
+  .loading-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 </style>

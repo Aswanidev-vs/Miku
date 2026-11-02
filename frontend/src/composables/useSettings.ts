@@ -13,9 +13,29 @@ export type ScoreFormatPref =
   | 'POINT_5'
   | 'POINT_3'
 
+export type CarouselTransition = 'crossfade' | 'slide' | 'fade-zoom' | 'none'
+export type CarouselAnimationSpeed = 'slow' | 'normal' | 'fast'
+export type CarouselPaginationStyle = 'dots' | 'progress' | 'minimal'
+export type CarouselSource =
+  | 'trending'
+  | 'seasonal'
+  | 'popular'
+  | 'popular-manga'
+  | 'recommended-anime'
+  | 'recommended-manga'
+  | 'currently-watching'
+  | 'recently-updated'
+export type CarouselMediaFilter = 'ANIME' | 'MANGA' | 'BOTH'
+export type CarouselDiscoveryFilter = 'unwatched' | 'all' | 'my-list'
+export type CarouselOrder = 'latest' | 'popular' | 'recently-updated'
+export type CarouselAlignment = 'left' | 'center'
+export type CarouselHeroHeight = 'compact' | 'standard' | 'large'
+export type MyListCardSize = 'small' | 'medium' | 'large'
+
 export interface Settings {
   autoSync: boolean
   compact: boolean
+  myListCardSize: MyListCardSize
   reduceMotion: boolean
   theme: ThemeMode
   accentColor: string | null
@@ -30,11 +50,69 @@ export interface Settings {
   showTopStaff: boolean
   showTopVoiceActors: boolean
   showAbout: boolean
+  carouselAutoplay: boolean
+  carouselDuration: number
+  carouselPauseOnHover: boolean
+  carouselResumeAfterInteraction: boolean
+  carouselTransition: CarouselTransition
+  carouselAnimationSpeed: CarouselAnimationSpeed
+  carouselBackgroundZoom: boolean
+  carouselTextEntrance: boolean
+  carouselRespectReducedMotion: boolean
+  carouselShowNavigation: boolean
+  carouselShowPagination: boolean
+  carouselPaginationStyle: CarouselPaginationStyle
+  carouselKeyboardNavigation: boolean
+  carouselTouchNavigation: boolean
+  carouselSources: CarouselSource[]
+  carouselMediaFilter: CarouselMediaFilter
+  carouselDiscoveryFilter: CarouselDiscoveryFilter
+  carouselOrder: CarouselOrder
+  carouselMaxSlides: number
+  carouselPreferList: boolean
+  carouselHideCompletedDropped: boolean
+  carouselShowCover: boolean
+  carouselShowSynopsis: boolean
+  carouselShowMetadata: boolean
+  carouselShowProgress: boolean
+  carouselAlignment: CarouselAlignment
+  carouselHeroHeight: CarouselHeroHeight
 }
 
-const defaults: Settings = {
+export const carouselDefaults = {
+  carouselAutoplay: true,
+  carouselDuration: 6,
+  carouselPauseOnHover: true,
+  carouselResumeAfterInteraction: true,
+  carouselTransition: 'crossfade' as CarouselTransition,
+  carouselAnimationSpeed: 'normal' as CarouselAnimationSpeed,
+  carouselBackgroundZoom: true,
+  carouselTextEntrance: true,
+  carouselRespectReducedMotion: true,
+  carouselShowNavigation: true,
+  carouselShowPagination: true,
+  carouselPaginationStyle: 'dots' as CarouselPaginationStyle,
+  carouselKeyboardNavigation: true,
+  carouselTouchNavigation: true,
+  carouselSources: ['recently-updated', 'seasonal'] as CarouselSource[],
+  carouselMediaFilter: 'ANIME' as CarouselMediaFilter,
+  carouselDiscoveryFilter: 'unwatched' as CarouselDiscoveryFilter,
+  carouselOrder: 'latest' as CarouselOrder,
+  carouselMaxSlides: 5,
+  carouselPreferList: true,
+  carouselHideCompletedDropped: false,
+  carouselShowCover: true,
+  carouselShowSynopsis: true,
+  carouselShowMetadata: true,
+  carouselShowProgress: true,
+  carouselAlignment: 'left' as CarouselAlignment,
+  carouselHeroHeight: 'standard' as CarouselHeroHeight,
+}
+
+export const defaultSettings: Settings = {
   autoSync: true,
   compact: false,
+  myListCardSize: 'medium',
   reduceMotion: false,
   theme: 'dark', // preserves the original Sakura Noir look for existing users
   accentColor: null, // null = default sakura coral
@@ -49,6 +127,7 @@ const defaults: Settings = {
   showTopStaff: true,
   showTopVoiceActors: true,
   showAbout: true,
+  ...carouselDefaults,
 }
 
 /* ---------- Pure theme helpers (unit-tested, no DOM access) ---------- */
@@ -79,11 +158,25 @@ export function accentStyleVars(hex: string | null): Record<string, string> | nu
 function load(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return { ...defaults, ...JSON.parse(raw) }
+    if (raw) {
+      const saved = JSON.parse(raw)
+      const isLegacyCarouselSettings = !saved.carouselDiscoveryFilter
+      return {
+        ...defaultSettings,
+        ...saved,
+        ...(isLegacyCarouselSettings
+          ? {
+              carouselSources: [...carouselDefaults.carouselSources],
+              carouselDiscoveryFilter: carouselDefaults.carouselDiscoveryFilter,
+              carouselOrder: carouselDefaults.carouselOrder,
+            }
+          : {}),
+      }
+    }
   } catch {
     /* ignore */
   }
-  return { ...defaults }
+  return { ...defaultSettings }
 }
 
 const state = ref<Settings>(load())

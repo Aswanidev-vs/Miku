@@ -176,18 +176,21 @@ function formatTooltip(date: string, count: number): string {
 
 <style scoped>
 .heatmap-container {
+  container-type: inline-size;
+  width: min(100%, 860px);
+  box-sizing: border-box;
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: var(--space-md);
   margin-top: var(--space-md);
-  width: 100%;
 }
 
 .heatmap-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--space-sm);
   margin-bottom: var(--space-md);
 }
@@ -250,7 +253,7 @@ function formatTooltip(date: string, count: number): string {
 .day-labels {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   padding-top: 16px;
 }
 
@@ -314,6 +317,7 @@ function formatTooltip(date: string, count: number): string {
 .heatmap-stats {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-sm);
   margin-top: var(--space-md);
   font-size: var(--font-size-sm);
@@ -327,5 +331,20 @@ function formatTooltip(date: string, count: number): string {
 
 .stat-sep {
   color: var(--text-muted);
+}
+
+@container (max-width: 560px) {
+  .heatmap-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .heatmap-legend {
+    align-self: flex-start;
+  }
+
+  .heatmap-stats {
+    row-gap: var(--space-xs);
+  }
 }
 </style>

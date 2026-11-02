@@ -40,16 +40,16 @@ function extractItems<T extends { count?: number | null }>(
   return items.filter((item) => item.count > 0)
 }
 
-// Color palette for multi-bar and stacked progress
+// Restrained palette: primary accent + neutral ramp (no rainbow)
 const paletteColors = [
-  '#00d2c4', // Miku teal
-  '#7b61ff', // Electric purple
-  '#ff5376', // Coral red
-  '#ffb86c', // Warm amber
-  '#50fa7b', // Mint green
-  '#38bdf8', // Sky blue
-  '#f472b6', // Pink
-  '#a78bfa', // Lavender
+  '#ff6f91', // primary (sakura)
+  '#f5c572', // accent (gold)
+  '#9d8df1', // iris
+  '#69cf8c', // watching
+  '#6aa9e2', // completed
+  '#b592ec', // planning
+  '#e6bd5e', // paused
+  '#e57e6e', // dropped
 ]
 
 function getColor(index: number): string {
@@ -456,14 +456,14 @@ function getStudioPercent(count: number): number {
   gap: 2px;
   padding: 2px;
   background: var(--bg-elevated);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   margin-bottom: var(--space-xl);
 }
 
 .breakdown-tab {
   padding: var(--space-xs) var(--space-lg);
   border: none;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   background: transparent;
   font-family: var(--font-body);
   font-size: var(--font-size-sm);
@@ -538,7 +538,7 @@ function getStudioPercent(count: number): number {
   font-weight: var(--font-weight-medium);
   background: var(--bg-elevated);
   padding: 2px 8px;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
 }
 
 .section-chevron {
@@ -619,14 +619,14 @@ function getStudioPercent(count: number): number {
   width: 100%;
   height: 5px;
   background: var(--bg-hover);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
 .genre-bar {
   height: 100%;
-  border-radius: var(--radius-full);
-  transition: width 0.3s ease-out;
+  border-radius: var(--radius-md);
+
 }
 
 /* 2. Top Tags - Inline Wrap-around Chips */
@@ -643,7 +643,7 @@ function getStudioPercent(count: number): number {
   padding: 4px 10px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   font-size: var(--font-size-xs);
   transition: border-color var(--transition-fast), background var(--transition-fast);
 }
@@ -663,7 +663,7 @@ function getStudioPercent(count: number): number {
   align-items: center;
   justify-content: center;
   padding: 1px 6px;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   background: var(--chip-color);
   color: #0b0f19;
   font-size: 10px;
@@ -677,7 +677,7 @@ function getStudioPercent(count: number): number {
   display: flex;
   width: 100%;
   height: 14px;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--bg-hover);
   gap: 1px;
@@ -685,7 +685,7 @@ function getStudioPercent(count: number): number {
 
 .stacked-bar-segment {
   height: 100%;
-  transition: width 0.4s ease-out;
+
 }
 
 .studio-legend-grid {
@@ -803,15 +803,15 @@ function getStudioPercent(count: number): number {
   width: 100%;
   height: 3px;
   background: var(--bg-hover);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   overflow: hidden;
   margin-top: 2px;
 }
 
 .people-bar {
   height: 100%;
-  border-radius: var(--radius-full);
-  transition: width 0.3s ease-out;
+  border-radius: var(--radius-md);
+
 }
 
 .breakdown-empty {

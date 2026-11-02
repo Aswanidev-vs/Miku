@@ -176,7 +176,6 @@ const allFavorites = computed(() => {
 
 .favorite-type {
   font-size: var(--font-size-xs);
-  text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: var(--font-weight-semibold);
 }

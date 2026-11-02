@@ -112,11 +112,11 @@ const indicatorTranslate = computed(() => {
 .is-desktop .ptr-desktop-btn {
   display: flex;
   position: fixed;
-  top: var(--space-lg);
-  right: var(--space-2xl);
-  z-index: var(--z-dropdown);
-  width: 40px;
-  height: 40px;
+  top: calc((var(--header-height) - 34px) / 2);
+  right: calc(var(--space-xl) + 42px);
+  z-index: calc(var(--z-sticky) + 2);
+  width: 34px;
+  height: 34px;
   border-radius: var(--radius-full);
   background: var(--bg-surface);
   border: 1px solid var(--border-default);
@@ -124,7 +124,7 @@ const indicatorTranslate = computed(() => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   transition: all var(--transition-fast);
 }
 

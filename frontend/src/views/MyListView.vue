@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
 import { useAnimeStore } from '../stores/anime'
 import { useAuthStore } from '../stores/auth'
 import { usePlatform } from '../composables/usePlatform'
+import { useSettings } from '../composables/useSettings'
 import { usePullToRefresh } from '../composables/usePullToRefresh'
 import { clearGqlCache } from '../api/graphql'
 import AnimeGrid from '../components/anime/AnimeGrid.vue'
@@ -11,24 +12,30 @@ import type { Media, ListStatus } from '../types'
 
 const animeStore = useAnimeStore()
 const authStore = useAuthStore()
-const { gridColumns } = usePlatform()
+const { gridColumns, screenSmall } = usePlatform()
+const { settings } = useSettings()
 
 type MyListTab = ListStatus | 'FAVOURITES'
 
 const activeTab = ref<MyListTab>('CURRENT')
 const favFilter = ref<'ALL' | 'ANIME' | 'MANGA'>('ALL')
+const searchFilter = ref('')
+const sortBy = ref<'updated' | 'title' | 'score' | 'progress'>('updated')
 
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const user = computed(() => authStore.currentUser)
 const loading = computed(() => animeStore.loading)
 
-const listMedia = computed(() => {
+const listRows = computed(() => {
   if (activeTab.value === 'FAVOURITES') {
     const favAnime = animeStore.favourites?.anime || []
     const favManga = animeStore.favourites?.manga || []
-    if (favFilter.value === 'ANIME') return favAnime
-    if (favFilter.value === 'MANGA') return favManga
-    return [...favAnime, ...favManga]
+    const media = favFilter.value === 'ANIME'
+      ? favAnime
+      : favFilter.value === 'MANGA'
+        ? favManga
+        : [...favAnime, ...favManga]
+    return media.map((item) => ({ media: item, entry: undefined }))
   }
   const collection = animeStore.myList
   if (!collection?.lists) return []
@@ -36,8 +43,43 @@ const listMedia = computed(() => {
   if (!list) return []
   return list.entries
     .filter(e => e.media)
-    .map(e => e.media as Media)
+    .map(e => ({ media: e.media as Media, entry: e }))
 })
+
+const listMedia = computed(() => {
+  const needle = searchFilter.value.trim().toLowerCase()
+  return [...listRows.value]
+    .filter(({ media }) => {
+      if (!needle) return true
+      return [media.title.userPreferred, media.title.english, media.title.romaji, media.title.native]
+        .filter(Boolean)
+        .some(title => String(title).toLowerCase().includes(needle))
+    })
+    .sort((a, b) => {
+      if (sortBy.value === 'title') return titleFor(a.media).localeCompare(titleFor(b.media))
+      if (sortBy.value === 'score') return (b.entry?.score || 0) - (a.entry?.score || 0)
+      if (sortBy.value === 'progress') return (b.entry?.progress || 0) - (a.entry?.progress || 0)
+      return (b.entry?.updatedAt || 0) - (a.entry?.updatedAt || 0)
+    })
+    .map(({ media }) => media)
+})
+
+// Avoid reserving a permanently empty grid track when a list contains fewer
+// titles than the desktop grid. Loading still uses the normal platform count.
+const listGridColumns = computed(() => {
+  const count = listMedia.value.length
+  const size = settings.value.myListCardSize
+  const preferredColumns = size === 'small' && !screenSmall.value
+    ? gridColumns.value + 1
+    : size === 'large'
+      ? Math.max(2, gridColumns.value - 1)
+      : gridColumns.value
+  return count > 0 ? Math.min(preferredColumns, count) : preferredColumns
+})
+
+function titleFor(media: Media) {
+  return media.title.userPreferred || media.title.english || media.title.romaji || media.title.native || ''
+}
 
 const tabs: { label: string; value: MyListTab }[] = [
   { label: 'Watching', value: 'CURRENT' },
@@ -79,6 +121,8 @@ watch(isLoggedIn, (val) => {
 })
 
 watch(activeTab, (tab) => {
+  searchFilter.value = ''
+  sortBy.value = 'updated'
   if (tab === 'FAVOURITES' && user.value) {
     animeStore.fetchFavourites(user.value.id)
   }
@@ -114,6 +158,24 @@ watch(activeTab, (tab) => {
         >
           {{ tab.label }}
         </button>
+      </div>
+
+      <div class="list-tools" role="search">
+        <label class="list-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" />
+          </svg>
+          <input v-model="searchFilter" type="search" placeholder="Filter this list" aria-label="Filter this list" />
+        </label>
+        <label class="sort-select">
+          <span>Sort</span>
+          <select v-model="sortBy" aria-label="Sort list">
+            <option value="updated">Recently updated</option>
+            <option value="title">Title</option>
+            <option value="score">Score</option>
+            <option value="progress">Progress</option>
+          </select>
+        </label>
       </div>
 
       <!-- Sub-filter for Favourites (All / Anime / Manga) -->
@@ -154,12 +216,12 @@ watch(activeTab, (tab) => {
       <!-- Content -->
       <div v-else class="mylist-content">
         <template v-if="listMedia.length > 0">
-          <AnimeGrid :items="listMedia" :columns="gridColumns" />
+          <AnimeGrid :items="listMedia" :columns="listGridColumns" />
         </template>
         <template v-else>
           <div class="empty-state">
-            <p class="empty-title">{{ activeTab === 'FAVOURITES' ? 'No favorites yet' : 'No anime here' }}</p>
-            <p class="empty-subtitle">{{ activeTab === 'FAVOURITES' ? 'Favorite anime or manga to see them here' : 'Add anime to your list from the detail page' }}</p>
+            <p class="empty-title">{{ searchFilter ? 'No matches' : activeTab === 'FAVOURITES' ? 'No favorites yet' : 'No anime here' }}</p>
+            <p class="empty-subtitle">{{ searchFilter ? 'Try another title or clear the filter' : activeTab === 'FAVOURITES' ? 'Favorite anime or manga to see them here' : 'Add anime to your list from the detail page' }}</p>
           </div>
         </template>
       </div>
@@ -227,6 +289,34 @@ watch(activeTab, (tab) => {
   margin-bottom: var(--space-md);
 }
 
+.list-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin: calc(var(--space-sm) * -1) 0 var(--space-lg);
+}
+
+.list-search {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: var(--space-sm);
+  min-width: 0;
+  padding: 0 var(--space-sm);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.list-search:focus-within { border-color: var(--color-primary); }
+.list-search svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--text-muted); }
+.list-search input { width: 100%; min-width: 0; height: 38px; color: var(--text-primary); background: transparent; border: 0; outline: 0; font: inherit; font-size: var(--font-size-sm); }
+.list-search input::placeholder { color: var(--text-muted); }
+
+.sort-select { display: flex; align-items: center; gap: var(--space-xs); flex-shrink: 0; color: var(--text-muted); font-size: var(--font-size-xs); }
+.sort-select select { height: 38px; padding: 0 26px 0 var(--space-sm); color: var(--text-secondary); background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font: inherit; }
+
 .fav-filter-btn {
   padding: 4px var(--space-sm);
   border: 1px solid var(--bg-hover);
@@ -290,5 +380,40 @@ watch(activeTab, (tab) => {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@media (max-width: 640px) {
+  .mylist-header {
+    padding-top: var(--space-lg);
+  }
+
+  .mylist-title {
+    display: none;
+  }
+
+  .mylist-subtitle {
+    margin-top: 0;
+  }
+
+  .tab-bar {
+    margin-right: calc(-1 * var(--mobile-gutter));
+    margin-left: calc(-1 * var(--mobile-gutter));
+    padding-right: var(--mobile-gutter);
+    padding-left: var(--mobile-gutter);
+  }
+
+  .list-tools {
+    align-items: stretch;
+    flex-direction: column;
+    margin-top: 0;
+  }
+
+  .list-search,
+  .sort-select select {
+    min-height: 44px;
+  }
+
+  .sort-select { justify-content: space-between; }
+  .sort-select select { flex: 1; }
 }
 </style>

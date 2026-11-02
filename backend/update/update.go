@@ -1,6 +1,8 @@
 package update
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -29,6 +31,12 @@ type UpdateService struct {
 	downloadTotal    int64
 	downloadActive   bool
 	mu               sync.Mutex
+
+	// Integrity tracking for the most recent update flow. expectedSHA256 is
+	// populated by CheckForUpdate when a checksum sidecar is published;
+	// downloadedSHA256 is computed during DownloadUpdate.
+	expectedSHA256   string
+	downloadedSHA256 string
 }
 
 type GitHubAsset struct {
@@ -52,6 +60,9 @@ type UpdateInfo struct {
 	AssetName   string `json:"assetName"`
 	AssetSize   int64  `json:"assetSize"`
 	ReleaseName string `json:"releaseName"`
+	// SHA256 is the expected hex-encoded SHA-256 of the download asset, when
+	// a checksum sidecar is published alongside it. Empty means "unverified".
+	SHA256 string `json:"sha256"`
 }
 
 func NewUpdateService(config Config) (*UpdateService, error) {
@@ -116,13 +127,29 @@ func (s *UpdateService) CheckForUpdate() (*UpdateInfo, error) {
 	if CompareVersions(release.TagName, s.config.CurrentVersion) > 0 {
 		info.Available = true
 
-		for _, asset := range release.Assets {
-			name := strings.ToLower(asset.Name)
+		var apkAsset *GitHubAsset
+		for i := range release.Assets {
+			a := &release.Assets[i]
+			name := strings.ToLower(a.Name)
 			if strings.HasSuffix(name, ".apk") && !strings.Contains(name, "unsigned") {
-				info.DownloadURL = asset.BrowserDownloadURL
-				info.AssetName = asset.Name
-				info.AssetSize = asset.Size
+				apkAsset = a
+				info.DownloadURL = a.BrowserDownloadURL
+				info.AssetName = a.Name
+				info.AssetSize = a.Size
 				break
+			}
+		}
+
+		// Best-effort: look for a published checksum sidecar and fetch the
+		// expected SHA-256 for the selected asset. Missing sidecar keeps the
+		// flow working (verification is skipped), so existing releases without
+		// checksums are not broken.
+		if apkAsset != nil {
+			if hash := s.fetchExpectedSHA256(release.Assets, apkAsset.Name); hash != "" {
+				info.SHA256 = hash
+				s.mu.Lock()
+				s.expectedSHA256 = hash
+				s.mu.Unlock()
 			}
 		}
 	}
@@ -130,7 +157,62 @@ func (s *UpdateService) CheckForUpdate() (*UpdateInfo, error) {
 	return info, nil
 }
 
-// CompareVersions returns > 0 if a > b, < 0 if a < b, 0 if equal.
+// fetchExpectedSHA256 looks for a checksum sidecar published alongside the
+// release assets and returns the hex-encoded SHA-256 for apkName. It supports
+// per-asset "<apk>.sha256" files as well as aggregate "SHA256SUMS"/
+// "checksums.txt" files. Returns "" when no usable checksum is found.
+func (s *UpdateService) fetchExpectedSHA256(assets []GitHubAsset, apkName string) string {
+	lowerApk := strings.ToLower(apkName)
+	for _, a := range assets {
+		name := strings.ToLower(a.Name)
+		// Per-asset sidecar: "<apk>.sha256"
+		if name == lowerApk+".sha256" || name == lowerApk+".sha256.txt" {
+			if h := s.downloadText(a.BrowserDownloadURL); h != "" {
+				return firstToken(h)
+			}
+		}
+		// Aggregate checksum files.
+		if name == "sha256sums" || name == "sha256sums.txt" ||
+			name == "checksums.txt" || name == "sha256.txt" {
+			content := s.downloadText(a.BrowserDownloadURL)
+			for _, line := range strings.Split(content, "\n") {
+				fields := strings.Fields(line)
+				if len(fields) >= 2 {
+					fname := strings.TrimPrefix(fields[1], "*")
+					if strings.EqualFold(fname, apkName) {
+						return fields[0]
+					}
+				}
+			}
+		}
+	}
+	return ""
+}
+
+func (s *UpdateService) downloadText(url string) string {
+	resp, err := s.httpClient.Get(url)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return ""
+	}
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+func firstToken(s string) string {
+	fields := strings.Fields(s)
+	if len(fields) == 0 {
+		return ""
+	}
+	return fields[0]
+}
+
 // Strips leading "v" and compares major.minor.patch numerically.
 func CompareVersions(a, b string) int {
 	a = strings.TrimPrefix(a, "v")
@@ -153,7 +235,17 @@ func CompareVersions(a, b string) int {
 	return 0
 }
 
-func (s *UpdateService) DownloadUpdate(downloadURL string) (string, error) {
+func (s *UpdateService) DownloadUpdate(downloadURL string, expectedSHA256 ...string) (string, error) {
+	expected := ""
+	if len(expectedSHA256) > 0 {
+		expected = strings.TrimSpace(expectedSHA256[0])
+	}
+	if expected == "" {
+		s.mu.Lock()
+		expected = s.expectedSHA256
+		s.mu.Unlock()
+	}
+
 	resp, err := s.httpClient.Get(downloadURL)
 	if err != nil {
 		return "", fmt.Errorf("download failed: %w", err)
@@ -192,6 +284,7 @@ func (s *UpdateService) DownloadUpdate(downloadURL string) (string, error) {
 
 	buf := make([]byte, 64*1024) // 64KB buffer for better throughput
 	var downloaded int64
+	hasher := sha256.New()
 
 	for {
 		n, readErr := resp.Body.Read(buf)
@@ -201,6 +294,7 @@ func (s *UpdateService) DownloadUpdate(downloadURL string) (string, error) {
 				os.Remove(tmpFile.Name())
 				return "", fmt.Errorf("write failed: %w", writeErr)
 			}
+			hasher.Write(buf[:n])
 			downloaded += int64(n)
 			s.mu.Lock()
 			s.downloadProgress = downloaded
@@ -217,6 +311,20 @@ func (s *UpdateService) DownloadUpdate(downloadURL string) (string, error) {
 	}
 
 	tmpFile.Close()
+	computed := hex.EncodeToString(hasher.Sum(nil))
+
+	s.mu.Lock()
+	s.downloadedSHA256 = computed
+	s.mu.Unlock()
+
+	// Verify integrity when an expected hash is available. On mismatch the
+	// downloaded file is removed and an error is returned, so a tampered
+	// payload never reaches the installer.
+	if expected != "" && !strings.EqualFold(expected, computed) {
+		os.Remove(tmpFile.Name())
+		return "", fmt.Errorf("checksum mismatch: expected %s, got %s", expected, computed)
+	}
+
 	return tmpFile.Name(), nil
 }
 
@@ -255,7 +363,33 @@ func (s *UpdateService) CleanupDownloads() {
 	}
 }
 
-func (s *UpdateService) InstallUpdate(apkPath string) error {
+func (s *UpdateService) InstallUpdate(apkPath string, expectedSHA256 ...string) error {
+	expected := ""
+	if len(expectedSHA256) > 0 {
+		expected = strings.TrimSpace(expectedSHA256[0])
+	}
+	if expected == "" {
+		s.mu.Lock()
+		expected = s.expectedSHA256
+		s.mu.Unlock()
+	}
+
+	// Verify integrity of the artifact before handing it to the OS installer.
+	// When an expected hash is known, enforce it; otherwise at least confirm
+	// the file is non-empty and readable.
+	if info, err := os.Stat(apkPath); err != nil || info.Size() == 0 {
+		return fmt.Errorf("update file missing or empty: %w", err)
+	}
+	if expected != "" {
+		computed, err := fileSHA256(apkPath)
+		if err != nil {
+			return fmt.Errorf("failed to hash update file: %w", err)
+		}
+		if !strings.EqualFold(expected, computed) {
+			return fmt.Errorf("checksum mismatch before install: expected %s, got %s", expected, computed)
+		}
+	}
+
 	switch runtime.GOOS {
 	case "windows":
 		return openFile(apkPath)
@@ -294,6 +428,20 @@ func openFile(path string) error {
 
 	execCmd := exec.Command(cmd, args...)
 	return execCmd.Start()
+}
+
+// fileSHA256 returns the hex-encoded SHA-256 of the file at path.
+func fileSHA256(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 func installAndroidAPK(apkPath string) error {

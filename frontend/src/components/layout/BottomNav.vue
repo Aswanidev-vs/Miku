@@ -75,24 +75,15 @@ function navigateTo(routeName: string) {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  padding: 0 var(--space-xs);
+  padding: 4px max(var(--space-xs), env(safe-area-inset-right, 0px)) 4px max(var(--space-xs), env(safe-area-inset-left, 0px));
   z-index: var(--z-sticky);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
 
-/* Desktop: floating centered pill */
+/* Desktop uses the persistent sidebar shell instead. */
 .is-desktop .bottom-nav {
-  left: 50%;
-  right: auto;
-  transform: translateX(-50%);
-  bottom: var(--space-lg);
-  width: min(640px, calc(100% - 32px));
-  height: 62px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-lg);
-  padding: 0 var(--space-md);
+  display: none;
 }
 
 .nav-item {
@@ -101,7 +92,8 @@ function navigateTo(routeName: string) {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 6px 0;
+  min-height: 44px;
+  padding: 5px 2px;
   border-radius: var(--radius-sm);
   transition: color var(--transition-fast), background var(--transition-fast);
   flex: 1;
@@ -117,17 +109,6 @@ function navigateTo(routeName: string) {
 
 .nav-item.active {
   color: var(--color-primary);
-}
-
-.is-desktop .nav-item {
-  flex-direction: row;
-  gap: var(--space-sm);
-  flex: 0 1 auto;
-  padding: 10px 20px;
-  border-radius: var(--radius-full);
-}
-
-.is-desktop .nav-item.active {
   background: var(--color-primary-subtle);
 }
 
@@ -153,7 +134,4 @@ function navigateTo(routeName: string) {
   letter-spacing: var(--letter-spacing-wide);
 }
 
-.is-desktop .nav-label {
-  font-size: var(--font-size-xs);
-}
 </style>

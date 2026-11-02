@@ -34,18 +34,14 @@ body {
   position: relative;
 }
 
-/* Atmospheric ambient backdrop — soft coral/iris bloom, fixed */
+/* Quiet base backdrop — no ambient color blooms (cover art carries color) */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background:
-    radial-gradient(900px 600px at 12% -8%, var(--ambient-coral), transparent 60%),
-    radial-gradient(800px 600px at 92% 4%, var(--ambient-iris), transparent 55%),
-    radial-gradient(700px 700px at 50% 110%, var(--ambient-gold), transparent 60%),
-    var(--bg-deepest);
+  background: var(--bg-deepest);
 }
 
 /* Subtle film grain for a crafted, non-AI feel */
@@ -71,6 +67,11 @@ button {
   border: none;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
 }
 
 input, textarea, select {
@@ -137,10 +138,8 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Card */
 .card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--glass-border);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
 }
@@ -276,6 +275,7 @@ h1, h2, h3, h4, h5, h6 {
 .discover-view,
 .mylist-view,
 .feed-view,
+.statistics-view,
 .settings-view,
 .profile-view,
 .va-view {
@@ -288,11 +288,16 @@ h1, h2, h3, h4, h5, h6 {
 .is-desktop .discover-view,
 .is-desktop .mylist-view,
 .is-desktop .feed-view,
+.is-desktop .statistics-view,
 .is-desktop .settings-view,
 .is-desktop .profile-view,
 .is-desktop .va-view {
-  max-width: var(--content-max);
-  margin: 0 auto;
+  /* Let each desktop view use the full area left by the sidebar. Individual
+     sections still control their own density, but the page no longer leaves a
+     centered 1200px strip stranded inside a wider window. */
+  width: 100%;
+  max-width: none;
+  margin: 0;
   padding-left: max(var(--space-2xl), env(safe-area-inset-left, 0px));
   padding-right: max(var(--space-2xl), env(safe-area-inset-right, 0px));
 }
@@ -332,13 +337,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .is-desktop .anime-card:hover {
-  transform: translateY(-4px);
   border-color: var(--border-strong);
-  box-shadow: var(--shadow-card);
-}
-
-.is-desktop .anime-card:hover .card-image img {
-  transform: scale(1.06);
 }
 
 .is-desktop .role-item:hover,
@@ -356,13 +355,17 @@ h1, h2, h3, h4, h5, h6 {
   padding-bottom: 96px !important;
 }
 
+.is-desktop .desktop-main-content {
+  padding-bottom: 0 !important;
+}
+
 /* ============================================================
    Mobile / Android Optimizations
    ============================================================ */
 
 /* Bottom nav — full-width, gesture-nav safe */
 .is-mobile .bottom-nav {
-  height: 56px;
+  height: calc(var(--nav-height) + var(--safe-area-bottom));
   padding-bottom: var(--safe-area-bottom);
 }
 
@@ -372,7 +375,21 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .is-mobile .main-content {
-  padding-bottom: calc(56px + var(--safe-area-bottom));
+  padding-bottom: calc(var(--nav-height) + var(--safe-area-bottom));
+}
+
+.is-mobile .safe-area-top {
+  padding-top: 0 !important;
+}
+
+.is-mobile .discover-view,
+.is-mobile .mylist-view,
+.is-mobile .feed-view,
+.is-mobile .statistics-view,
+.is-mobile .profile-view,
+.is-mobile .va-view {
+  padding-right: max(var(--mobile-gutter), env(safe-area-inset-right, 0px));
+  padding-left: max(var(--mobile-gutter), env(safe-area-inset-left, 0px));
 }
 
 /* Touch feedback — press scale on interactive cards */
@@ -394,6 +411,17 @@ h1, h2, h3, h4, h5, h6 {
 .is-mobile .tab-btn {
   min-height: 40px;
   padding: var(--space-sm) var(--space-lg);
+}
+
+.is-mobile .tab-bar,
+.is-mobile .type-filter {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.is-mobile .tab-bar::-webkit-scrollbar,
+.is-mobile .type-filter::-webkit-scrollbar {
+  display: none;
 }
 
 /* Detail view — tighter layout for mobile */
@@ -586,4 +614,15 @@ h1, h2, h3, h4, h5, h6 {
   animation-iteration-count: 1 !important;
   transition-duration: 1ms !important;
   scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
 }

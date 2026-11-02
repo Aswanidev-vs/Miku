@@ -200,6 +200,25 @@ function goToUser(activity: TextActivity | ListActivity) {
   to { transform: rotate(360deg); }
 }
 
+@media (max-width: 640px) {
+  .feed-header {
+    padding-top: var(--space-lg);
+  }
+
+  .feed-title {
+    display: none;
+  }
+
+  .feed-subtitle {
+    margin-top: 0;
+  }
+
+  .activity-list {
+    display: grid;
+    gap: var(--space-sm);
+  }
+}
+
 .empty-state {
   display: flex;
   flex-direction: column;

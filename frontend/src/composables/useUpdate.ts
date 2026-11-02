@@ -23,6 +23,7 @@ export interface UpdateInfo {
   assetName: string
   assetSize: number
   releaseName: string
+  sha256?: string
 }
 
 const checking = ref(false)

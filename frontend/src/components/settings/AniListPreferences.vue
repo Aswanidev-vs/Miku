@@ -137,7 +137,7 @@ async function saveToAniList() {
       </div>
     </div>
 
-    <div class="setting-row">
+    <div class="setting-row adult-row">
       <div class="setting-text">
         <span class="setting-label">Adult Content</span>
         <span class="setting-hint">
@@ -182,6 +182,7 @@ async function saveToAniList() {
 
 <style scoped>
 .settings-group {
+  container-type: inline-size;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
@@ -349,8 +350,8 @@ async function saveToAniList() {
   transform: translateX(18px);
 }
 
-/* Small screens: stack the picker below the label */
-@media (max-width: 540px) {
+/* Stack controls based on the card width, not only the viewport width. */
+@container (max-width: 560px) {
   .pref-row {
     flex-direction: column;
     align-items: stretch;
@@ -367,6 +368,21 @@ async function saveToAniList() {
 
   .pref-save-row .save-btn {
     padding: var(--space-sm) var(--space-md);
+  }
+
+  .adult-row {
+    flex-wrap: wrap;
+  }
+
+  .adult-row .setting-text {
+    flex: 1 1 calc(100% - 54px);
+  }
+}
+
+@container (max-width: 380px) {
+  .seg-btn {
+    flex: 1 1 calc(50% - 2px);
+    min-height: 32px;
   }
 }
 

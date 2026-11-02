@@ -585,10 +585,10 @@ function handleBackdropClick(e: MouseEvent) {
 .btn-close {
   position: absolute;
   top: 12px;
-  right: 14px;
+  right: 16px;
   width: 32px;
   height: 32px;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   border: 1px solid var(--border-subtle);
   background: rgba(8, 7, 12, 0.5);
   color: var(--text-secondary);
@@ -596,7 +596,7 @@ function handleBackdropClick(e: MouseEvent) {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
   z-index: 10;
 }
 
@@ -618,7 +618,7 @@ function handleBackdropClick(e: MouseEvent) {
   display: flex;
   align-items: flex-end;
   gap: var(--space-md);
-  margin-bottom: -18px;
+  margin-bottom: -20px;
 }
 
 .header-cover {
@@ -670,7 +670,7 @@ function handleBackdropClick(e: MouseEvent) {
   align-items: center;
   justify-content: center;
   transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
 }
 
 .btn-heart svg {
@@ -686,7 +686,7 @@ function handleBackdropClick(e: MouseEvent) {
   color: var(--color-primary);
   border-color: var(--color-primary);
   background: var(--color-primary-subtle);
-  box-shadow: 0 0 12px var(--color-primary-glow);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-heart.is-favourite svg {
@@ -709,8 +709,8 @@ function handleBackdropClick(e: MouseEvent) {
   border-radius: var(--radius-md);
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 12px var(--color-primary-glow);
-  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -774,7 +774,7 @@ function handleBackdropClick(e: MouseEvent) {
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .form-label {
@@ -804,7 +804,7 @@ function handleBackdropClick(e: MouseEvent) {
 .form-select:focus,
 .form-textarea:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-glow);
+  box-shadow: var(--shadow-sm);
 }
 
 .select-wrapper {
@@ -869,7 +869,7 @@ function handleBackdropClick(e: MouseEvent) {
   cursor: pointer;
   display: grid;
   place-content: center;
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
   margin: 0;
   flex-shrink: 0;
 }
@@ -897,7 +897,6 @@ function handleBackdropClick(e: MouseEvent) {
 .text-subtle-hint {
   font-size: var(--font-size-2xs);
   color: var(--text-muted);
-  font-style: italic;
 }
 
 /* Notes */
@@ -929,7 +928,7 @@ function handleBackdropClick(e: MouseEvent) {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
 }
 
 .btn-delete:hover {

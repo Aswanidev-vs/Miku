@@ -21,6 +21,8 @@ const authStore = useAuthStore()
 const animeStore = useAnimeStore()
 const { settings } = useSettings()
 
+const props = withDefaults(defineProps<{ inline?: boolean }>(), { inline: false })
+
 const showPanel = ref(false)
 const episodeNoticeRevision = ref(0)
 
@@ -144,14 +146,20 @@ function formatSpeed(bytesPerSecond: number): string {
 </script>
 
 <template>
-  <div class="update-trigger" @click="togglePanel">
+  <button
+    class="update-trigger"
+    :class="{ 'is-inline': props.inline }"
+    type="button"
+    aria-label="Open notifications"
+    @click="togglePanel"
+  >
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
          stroke-linecap="round" stroke-linejoin="round" class="bell-icon">
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
       <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
     </svg>
     <span v-if="showBadge" class="update-badge">{{ notificationCount }}</span>
-  </div>
+  </button>
 
   <Teleport to="body">
     <Transition name="panel-fade">
@@ -287,8 +295,31 @@ function formatSpeed(bytesPerSecond: number): string {
   color: var(--text-secondary);
 }
 
+.update-trigger.is-inline {
+  position: relative;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  align-self: center;
+  transform: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 .is-desktop .update-trigger {
   right: calc(var(--space-2xl) + 52px);
+}
+
+.is-desktop .update-trigger.is-inline {
+  right: auto;
 }
 
 .update-trigger:hover {
