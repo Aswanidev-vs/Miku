@@ -62,7 +62,7 @@ async function handleLogin() {
   max-width: none;
   min-height: 100%;
   margin: 0;
-  padding: var(--space-3xl) max(var(--space-2xl), env(safe-area-inset-left, 0px)) var(--space-5xl) max(var(--space-2xl), env(safe-area-inset-right, 0px));
+  padding: var(--space-3xl) max(var(--space-2xl), env(safe-area-inset-right, 0px)) var(--space-5xl) max(var(--space-2xl), env(safe-area-inset-left, 0px));
 }
 
 .statistics-header {
@@ -140,7 +140,8 @@ async function handleLogin() {
 
 @media (max-width: 820px) {
   .statistics-view {
-    padding-inline: max(var(--mobile-gutter), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--mobile-gutter), env(safe-area-inset-right, 0px));
+    padding-left: max(var(--mobile-gutter), env(safe-area-inset-left, 0px));
   }
 
   .statistics-view :deep(.stats-section) {

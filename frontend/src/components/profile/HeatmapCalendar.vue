@@ -137,6 +137,8 @@ function formatTooltip(date: string, count: number): string {
           class="heatmap-svg"
           :width="WEEKS * (CELL_SIZE + CELL_GAP)"
           :height="WEEK_DAYS * (CELL_SIZE + CELL_GAP) + HEADER_OFFSET"
+          :viewBox="`0 0 ${WEEKS * (CELL_SIZE + CELL_GAP)} ${WEEK_DAYS * (CELL_SIZE + CELL_GAP) + HEADER_OFFSET}`"
+          preserveAspectRatio="none"
         >
           <!-- Month labels on top -->
           <text
@@ -177,7 +179,8 @@ function formatTooltip(date: string, count: number): string {
 <style scoped>
 .heatmap-container {
   container-type: inline-size;
-  width: min(100%, 860px);
+  width: 100%;
+  max-width: none;
   box-sizing: border-box;
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
@@ -247,6 +250,7 @@ function formatTooltip(date: string, count: number): string {
 .heatmap-wrapper {
   display: flex;
   gap: var(--space-xs);
+  width: 100%;
   min-width: fit-content;
 }
 
@@ -275,6 +279,10 @@ function formatTooltip(date: string, count: number): string {
 
 .heatmap-svg {
   display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 780px;
+  height: 121px;
 }
 
 .heatmap-cell {

@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '../../stores'
 import UpdateNotification from './UpdateNotification.vue'
 import SearchDialog from './SearchDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 const searchOpen = ref(false)
+const currentUser = computed(() => authStore.currentUser)
+const profileAvatar = computed(() => currentUser.value?.avatar?.medium || currentUser.value?.avatar?.large || '')
 
 const pageTitles: Record<string, string> = {
   discover: 'Discover',
@@ -33,6 +37,10 @@ function submitSearch(query: string) {
   router.push({ name: 'search', query: { search: query } })
 }
 
+function openProfile() {
+  router.push({ name: 'profile' })
+}
+
 function onKeydown(event: KeyboardEvent) {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
     event.preventDefault()
@@ -56,13 +64,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     </div>
 
     <div class="mobile-header-actions">
-      <button class="mobile-search" type="button" aria-label="Open search" @click="openSearch">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-4-4" />
+      <UpdateNotification :inline="true" />
+      <button class="mobile-profile" type="button" aria-label="Open profile" @click="openProfile">
+        <img v-if="profileAvatar" :src="profileAvatar" :alt="currentUser?.name || 'Profile'" />
+        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="8" r="3.5" />
+          <path d="M5 20c.8-3.5 3.1-5.5 7-5.5s6.2 2 7 5.5" />
         </svg>
       </button>
-      <UpdateNotification :inline="true" />
     </div>
 
     <SearchDialog v-if="searchOpen" @close="closeSearch" @submit="submitSearch" />
@@ -80,7 +89,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   align-items: center;
   gap: var(--space-sm);
   height: calc(var(--mobile-header-height) + var(--safe-area-top));
-  padding: var(--safe-area-top) max(var(--mobile-gutter), env(safe-area-inset-left, 0px)) 0 max(var(--mobile-gutter), env(safe-area-inset-right, 0px));
+  padding: var(--safe-area-top) max(var(--mobile-gutter), env(safe-area-inset-right, 0px)) 0 max(var(--mobile-gutter), env(safe-area-inset-left, 0px));
   background: color-mix(in srgb, var(--bg-deep) 94%, transparent);
   border-bottom: 1px solid var(--border-subtle);
   backdrop-filter: blur(18px);
@@ -88,7 +97,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 }
 
 .mobile-brand,
-.mobile-search {
+.mobile-profile {
   display: grid;
   flex: 0 0 44px;
   width: 44px;
@@ -99,7 +108,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 }
 
 .mobile-brand:hover,
-.mobile-search:hover {
+.mobile-profile:hover {
   background: var(--bg-hover);
 }
 
@@ -146,13 +155,20 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   flex-shrink: 0;
 }
 
-.mobile-search {
+.mobile-profile {
   color: var(--text-secondary);
 }
 
-.mobile-search svg {
+.mobile-profile img,
+.mobile-profile svg {
   width: 20px;
   height: 20px;
+}
+
+.mobile-profile img {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  object-fit: cover;
 }
 
 @media (max-width: 360px) {
@@ -161,7 +177,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   }
 
   .mobile-brand,
-  .mobile-search {
+  .mobile-profile {
     flex-basis: 40px;
     width: 40px;
     height: 40px;
