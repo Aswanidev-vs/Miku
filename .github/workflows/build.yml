@@ -224,7 +224,10 @@ jobs:
         env:
           ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
           ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
-          ANDROID_KEYSTORE_FILE: ${{ github.event_name == 'pull_request' && '' || format('{0}/build/android/release.keystore', github.workspace) }}
+          # GitHub expressions treat an empty string as false, so using
+          # `pull_request && '' || <path>` incorrectly selects the path on PRs.
+          # Keep the keystore path empty when the signing setup step is skipped.
+          ANDROID_KEYSTORE_FILE: ${{ github.event_name != 'pull_request' && format('{0}/build/android/release.keystore', github.workspace) || '' }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
