@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 env:
-  GO_VERSION: '1.27.3'
+  GO_VERSION: '1.27.1'
   NODE_VERSION: '26.13.0'
   JAVA_VERSION: '17'
 
@@ -80,12 +80,32 @@ jobs:
         shell: pwsh
         run: |
           $env:GOFLAGS = "-tags=gtk3"
-          $wailsVersion = (go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3).Trim()
+          $env:GOPROXY = "https://proxy.golang.org|direct"
+          $wailsVersion = ((Get-Content go.mod | Select-String '^[\s]*github\.com/wailsapp/wails/v3[\s]+([^\s]+)' | Select-Object -First 1).Matches.Groups[1].Value).Trim()
           if ([string]::IsNullOrWhiteSpace($wailsVersion) -or $wailsVersion -match '-alpha') {
             throw "The Wails CLI version could not be resolved to a non-alpha module version: $wailsVersion"
           }
-          go install github.com/wailsapp/wails/v3/cmd/wails3@$wailsVersion
-          Add-Content -Path $env:GITHUB_PATH -Value "$(go env GOPATH)\bin"
+          $installTarget = "github.com/wailsapp/wails/v3/cmd/wails3@$wailsVersion"
+          $installed = $false
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            & go install $installTarget
+            if ($LASTEXITCODE -eq 0) {
+              $installed = $true
+              break
+            }
+            if ($attempt -lt 3) {
+              Write-Warning "Wails CLI installation failed (attempt $attempt/3); retrying..."
+              Start-Sleep -Seconds ([int][math]::Pow(2, $attempt - 1))
+            }
+          }
+          if (-not $installed) {
+            throw "Wails CLI installation failed after 3 attempts."
+          }
+          $goBin = Join-Path (go env GOPATH) 'bin'
+          if (-not (Test-Path (Join-Path $goBin 'wails3.exe'))) {
+            throw "Wails CLI installation completed without creating wails3.exe."
+          }
+          Add-Content -Path $env:GITHUB_PATH -Value $goBin
 
       - name: Install frontend dependencies
         shell: pwsh
@@ -188,13 +208,32 @@ jobs:
 
       - name: Install Wails CLI
         run: |
-          WAILS_VERSION=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
+          set -euo pipefail
+          export GOPROXY='https://proxy.golang.org|direct'
+          WAILS_VERSION=$(awk '$1 == "github.com/wailsapp/wails/v3" { print $2; exit }' go.mod)
           if [[ -z "$WAILS_VERSION" || "$WAILS_VERSION" == *"-alpha"* ]]; then
             echo "The Wails CLI version could not be resolved to a non-alpha module version: $WAILS_VERSION" >&2
             exit 1
           fi
-          GOFLAGS=-tags=gtk3 go install github.com/wailsapp/wails/v3/cmd/wails3@"$WAILS_VERSION"
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+          WAILS_TARGET="github.com/wailsapp/wails/v3/cmd/wails3@$WAILS_VERSION"
+          installed=false
+          for attempt in 1 2 3; do
+            if GOFLAGS=-tags=gtk3 go install "$WAILS_TARGET"; then
+              installed=true
+              break
+            fi
+            if [[ "$attempt" -lt 3 ]]; then
+              echo "Wails CLI installation failed (attempt $attempt/3); retrying..." >&2
+              sleep $((2 ** (attempt - 1)))
+            fi
+          done
+          if [[ "$installed" != true ]]; then
+            echo "Wails CLI installation failed after 3 attempts." >&2
+            exit 1
+          fi
+          WAILS_BIN="$(go env GOPATH)/bin/wails3"
+          test -x "$WAILS_BIN"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: Create build environment file
         run: |
@@ -379,12 +418,31 @@ jobs:
 
       - name: Install Wails CLI
         run: |
-          WAILS_VERSION=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
+          set -euo pipefail
+          export GOPROXY='https://proxy.golang.org|direct'
+          WAILS_VERSION=$(awk '$1 == "github.com/wailsapp/wails/v3" { print $2; exit }' go.mod)
           if [[ -z "$WAILS_VERSION" || "$WAILS_VERSION" == *"-alpha"* ]]; then
             echo "The Wails CLI version could not be resolved to a non-alpha module version: $WAILS_VERSION" >&2
             exit 1
           fi
-          GOFLAGS=-tags=gtk3 go install github.com/wailsapp/wails/v3/cmd/wails3@"$WAILS_VERSION"
+          WAILS_TARGET="github.com/wailsapp/wails/v3/cmd/wails3@$WAILS_VERSION"
+          installed=false
+          for attempt in 1 2 3; do
+            if GOFLAGS=-tags=gtk3 go install "$WAILS_TARGET"; then
+              installed=true
+              break
+            fi
+            if [[ "$attempt" -lt 3 ]]; then
+              echo "Wails CLI installation failed (attempt $attempt/3); retrying..." >&2
+              sleep $((2 ** (attempt - 1)))
+            fi
+          done
+          if [[ "$installed" != true ]]; then
+            echo "Wails CLI installation failed after 3 attempts." >&2
+            exit 1
+          fi
+          WAILS_BIN="$(go env GOPATH)/bin/wails3"
+          test -x "$WAILS_BIN"
 
       - name: Create validation environment file
         run: |
