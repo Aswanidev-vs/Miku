@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, computed, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAnimeStore } from '../stores/anime'
 import { usePlatform } from '../composables/usePlatform'
 import { usePullToRefresh } from '../composables/usePullToRefresh'
@@ -9,9 +10,13 @@ import AnimeGrid from '../components/anime/AnimeGrid.vue'
 import PullToRefresh from '../components/common/PullToRefresh.vue'
 import UpdateNotification from '../components/layout/UpdateNotification.vue'
 import type { Media } from '../types'
+import { preferredTitle } from '../utils/mediaDisplay'
+import { useSettings } from '../composables/useSettings'
 
 const animeStore = useAnimeStore()
+const router = useRouter()
 const { gridColumns } = usePlatform()
+const { settings } = useSettings()
 
 // Section data
 const popularAnime = ref<Media[]>([])
@@ -20,6 +25,7 @@ const latestAnime = ref<Media[]>([])
 const latestManga = ref<Media[]>([])
 const topManga = ref<Media[]>([])
 const trendingAnime = computed(() => animeStore.trending)
+const featuredAnime = computed(() => trendingAnime.value[0])
 
 // Pagination state for each section (used by "load more")
 const popularPage = ref(1)
@@ -46,6 +52,8 @@ const QUERIES = {
           id
           title { romaji english native userPreferred }
           coverImage { large medium color }
+          description(asHtml: false)
+          bannerImage
           format status episodes averageScore
           genres nextAiringEpisode { episode }
         }
@@ -133,6 +141,10 @@ function getCurrentSeason(): { season: string; year: number } {
   if (month < 6) return { season: 'SPRING', year }
   if (month < 9) return { season: 'SUMMER', year }
   return { season: 'FALL', year }
+}
+
+function openRoute(name: 'search' | 'mylist' | 'statistics') {
+  router.push({ name })
 }
 
 // Lazy initial loaders — fetch a section's first page only when it scrolls into view.
@@ -438,14 +450,76 @@ onUnmounted(() => {
         <p class="discover-sub">Hand-picked seasons, trends & hidden gems.</p>
       </header>
 
-      <section v-if="trendingAnime.length > 0" class="discover-section">
+      <section v-if="featuredAnime" class="featured-media" aria-labelledby="featured-title">
+        <div class="featured-cover">
+          <img
+            :src="featuredAnime.coverImage.large"
+            :alt="preferredTitle(featuredAnime.title, settings.titleLanguage)"
+          />
+          <span v-if="featuredAnime.nextAiringEpisode" class="featured-airing">
+            Episode {{ featuredAnime.nextAiringEpisode.episode }} next
+          </span>
+        </div>
+        <div class="featured-copy">
+          <p class="featured-kicker">Featured from trending</p>
+          <h2 id="featured-title">{{ preferredTitle(featuredAnime.title, settings.titleLanguage) }}</h2>
+          <p class="featured-meta">
+            <span v-if="featuredAnime.format">{{ featuredAnime.format.replace('_', ' ') }}</span>
+            <span v-if="featuredAnime.format && featuredAnime.status" aria-hidden="true">·</span>
+            <span v-if="featuredAnime.status">{{ featuredAnime.status.replaceAll('_', ' ').toLowerCase() }}</span>
+          </p>
+          <p class="featured-description">
+            {{ featuredAnime.description || 'Explore the cast, details, and related titles for this trending pick.' }}
+          </p>
+          <button class="btn btn-primary featured-action" type="button" @click="router.push({ name: 'media-detail', params: { id: featuredAnime.id } })">
+            View details
+          </button>
+        </div>
+      </section>
+
+      <section class="quick-actions" aria-labelledby="quick-actions-title">
+        <div class="section-header">
+          <h2 id="quick-actions-title" class="section-title">Quick actions</h2>
+        </div>
+        <div class="quick-action-grid">
+          <button class="quick-action" type="button" @click="openRoute('search')">
+            <span class="quick-action-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="6.5" />
+                <path d="m16 16 4.5 4.5" />
+              </svg>
+            </span>
+            <span><strong>Find a title</strong><small>Search anime, manga, and people</small></span>
+          </button>
+          <button class="quick-action" type="button" @click="openRoute('mylist')">
+            <span class="quick-action-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 6h12M8 12h12M8 18h12" />
+                <path d="M4 6h.01M4 12h.01M4 18h.01" stroke-width="2.6" />
+              </svg>
+            </span>
+            <span><strong>Open My List</strong><small>Pick up where you left off</small></span>
+          </button>
+          <button class="quick-action" type="button" @click="openRoute('statistics')">
+            <span class="quick-action-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19V5M4 19h16" />
+                <path d="m7 15 3-4 3 2 5-7" />
+              </svg>
+            </span>
+            <span><strong>View statistics</strong><small>See your watching history</small></span>
+          </button>
+        </div>
+      </section>
+
+      <section v-if="trendingAnime.length > 0" class="discover-section discover-section--rail">
         <div class="section-header">
           <h2 class="section-title"><span class="title-dot"></span>Trending Now</h2>
         </div>
         <AnimeGrid :items="trendingAnime.slice(0, 12)" :columns="gridColumns" />
       </section>
 
-      <section ref="popularSectionRef" class="discover-section">
+      <section ref="popularSectionRef" class="discover-section discover-section--rail">
         <div class="section-header">
           <h2 class="section-title"><span class="title-dot"></span>Most Popular</h2>
         </div>
@@ -454,7 +528,7 @@ onUnmounted(() => {
         <p v-else class="section-empty">Nothing found</p>
       </section>
 
-      <section ref="seasonalSectionRef" class="discover-section">
+      <section ref="seasonalSectionRef" class="discover-section discover-section--rail">
         <div class="section-header">
           <h2 class="section-title"><span class="title-dot"></span>This Season</h2>
         </div>
@@ -463,7 +537,7 @@ onUnmounted(() => {
         <p v-else class="section-empty">Nothing found</p>
       </section>
 
-      <section ref="latestAnimeSectionRef" class="discover-section">
+      <section ref="latestAnimeSectionRef" class="discover-section discover-section--rail">
         <div class="section-header">
           <h2 class="section-title"><span class="title-dot"></span>Newly Added Anime</h2>
         </div>
@@ -472,7 +546,7 @@ onUnmounted(() => {
         <p v-else class="section-empty">Nothing found</p>
       </section>
 
-      <section ref="latestMangaSectionRef" class="discover-section">
+      <section ref="latestMangaSectionRef" class="discover-section discover-section--rail">
         <div class="section-header">
           <h2 class="section-title"><span class="title-dot"></span>Newly Added Manga</h2>
         </div>
@@ -481,7 +555,7 @@ onUnmounted(() => {
         <p v-else class="section-empty">Nothing found</p>
       </section>
 
-      <section ref="mangaSectionRef" class="discover-section">
+      <section ref="mangaSectionRef" class="discover-section discover-section--rail">
         <div class="section-header">
           <h2 class="section-title"><span class="title-dot"></span>Top Manga</h2>
         </div>
@@ -536,6 +610,160 @@ onUnmounted(() => {
   color: var(--text-muted);
 }
 
+.featured-media {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
+  gap: var(--space-2xl);
+  max-width: 760px;
+  margin-bottom: var(--space-2xl);
+  padding: var(--space-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.featured-cover {
+  position: relative;
+  min-height: 260px;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+
+.featured-cover img {
+  width: 100%;
+  height: 100%;
+  min-height: 260px;
+  object-fit: cover;
+}
+
+.featured-airing {
+  position: absolute;
+  right: var(--space-sm);
+  bottom: var(--space-sm);
+  left: var(--space-sm);
+  padding: 5px 7px;
+  color: var(--text-on-primary);
+  background: var(--color-primary);
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+}
+
+.featured-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+  padding: var(--space-md) var(--space-md) var(--space-md) 0;
+}
+
+.featured-kicker {
+  margin-bottom: var(--space-sm);
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.featured-copy h2 {
+  max-width: 18ch;
+  font-size: var(--font-size-2xl);
+}
+
+.featured-meta {
+  display: flex;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  text-transform: capitalize;
+}
+
+.featured-description {
+  display: -webkit-box;
+  max-width: 52ch;
+  margin: var(--space-md) 0 var(--space-xl);
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.featured-action {
+  min-height: 40px;
+}
+
+.quick-actions {
+  margin-bottom: var(--space-3xl);
+}
+
+.quick-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-sm);
+}
+
+.quick-action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 64px;
+  padding: var(--space-md);
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  text-align: left;
+  transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.quick-action:hover {
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border-color: var(--border-default);
+}
+
+.quick-action-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  place-items: center;
+  color: var(--color-primary);
+  background: var(--color-primary-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.quick-action-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.quick-action span:last-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.quick-action strong {
+  color: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.quick-action small {
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--font-size-2xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .discover-section {
   padding: 0;
   margin-bottom: var(--space-3xl);
@@ -568,6 +796,47 @@ onUnmounted(() => {
   color: var(--text-muted);
   font-size: var(--font-size-sm);
   padding: var(--space-lg) 0;
+}
+
+.is-desktop .discover-section--rail :deep(.anime-grid) {
+  display: flex;
+  gap: var(--space-md) !important;
+  overflow-x: auto;
+  padding-bottom: var(--space-xs);
+  scrollbar-width: thin;
+}
+
+.is-desktop .discover-section--rail :deep(.grid-item) {
+  flex: 0 0 148px;
+}
+
+@media (max-width: 720px) {
+  .featured-media {
+    grid-template-columns: 104px minmax(0, 1fr);
+    gap: var(--space-md);
+  }
+
+  .featured-cover,
+  .featured-cover img {
+    min-height: 148px;
+  }
+
+  .featured-copy {
+    padding: var(--space-xs) 0;
+  }
+
+  .featured-copy h2 {
+    font-size: var(--font-size-lg);
+  }
+
+  .featured-description {
+    margin-bottom: var(--space-md);
+    -webkit-line-clamp: 2;
+  }
+
+  .quick-action-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .load-more-sentinel {

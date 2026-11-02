@@ -127,6 +127,8 @@
   /* Layout */
   --nav-height: 56px;
   --header-height: 52px;
+  --sidebar-width: 224px;
+  --sidebar-rail-width: 72px;
   --content-max: 1200px;
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);

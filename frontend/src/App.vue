@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterView, useRouter } from 'vue-router'
 import { useAuthStore } from './stores'
 import { useSettings } from './composables/useSettings'
 import { usePlatform } from './composables/usePlatform'
 import BottomNav from './components/layout/BottomNav.vue'
+import DesktopHeader from './components/layout/DesktopHeader.vue'
+import DesktopSidebar from './components/layout/DesktopSidebar.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const { settings } = useSettings()
 const { os, isDesktop, isMobile, screenSmall, screenMedium, screenLarge } = usePlatform()
+const sidebarCollapsed = ref(false)
 
 // Lazy-load Wails runtime imports to avoid crash if runtime isn't ready
 let Events: any = null
@@ -152,8 +155,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="app-container">
-    <main class="main-content">
+  <div
+    class="app-container"
+    :class="{
+      'desktop-shell': isDesktop,
+      'desktop-shell--rail': sidebarCollapsed,
+    }"
+  >
+    <DesktopHeader v-if="isDesktop" />
+    <DesktopSidebar v-if="isDesktop" @update:collapsed="sidebarCollapsed = $event" />
+    <main class="main-content" :class="{ 'desktop-main-content': isDesktop }">
       <RouterView v-slot="{ Component }">
         <Transition name="view-fade" mode="out-in">
           <component :is="Component" />
@@ -182,5 +193,18 @@ onUnmounted(() => {
   overscroll-behavior-y: contain;
   touch-action: pan-y;
   padding-bottom: var(--nav-height);
+}
+
+.desktop-main-content {
+  top: var(--header-height);
+  right: 0;
+  bottom: 0;
+  left: var(--sidebar-width);
+  padding-bottom: 0;
+  transition: left var(--transition-normal);
+}
+
+.desktop-shell--rail .desktop-main-content {
+  left: var(--sidebar-rail-width);
 }
 </style>

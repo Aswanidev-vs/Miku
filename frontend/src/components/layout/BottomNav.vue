@@ -81,18 +81,9 @@ function navigateTo(routeName: string) {
   -webkit-backdrop-filter: blur(20px);
 }
 
-/* Desktop: floating centered pill */
+/* Desktop uses the persistent sidebar shell instead. */
 .is-desktop .bottom-nav {
-  left: 50%;
-  right: auto;
-  transform: translateX(-50%);
-  bottom: var(--space-lg);
-  width: min(640px, calc(100% - 32px));
-  height: 62px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-lg);
-  padding: 0 var(--space-md);
+  display: none;
 }
 
 .nav-item {
@@ -119,18 +110,6 @@ function navigateTo(routeName: string) {
   color: var(--color-primary);
 }
 
-.is-desktop .nav-item {
-  flex-direction: row;
-  gap: var(--space-sm);
-  flex: 0 1 auto;
-  padding: 10px 20px;
-  border-radius: var(--radius-full);
-}
-
-.is-desktop .nav-item.active {
-  background: var(--color-primary-subtle);
-}
-
 .nav-icon {
   width: 22px;
   height: 22px;
@@ -153,7 +132,4 @@ function navigateTo(routeName: string) {
   letter-spacing: var(--letter-spacing-wide);
 }
 
-.is-desktop .nav-label {
-  font-size: var(--font-size-xs);
-}
 </style>
