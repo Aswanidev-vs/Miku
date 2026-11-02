@@ -90,10 +90,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   gap: var(--space-sm);
   height: calc(var(--mobile-header-height) + var(--safe-area-top));
   padding: var(--safe-area-top) max(var(--mobile-gutter), env(safe-area-inset-right, 0px)) 0 max(var(--mobile-gutter), env(safe-area-inset-left, 0px));
-  background: color-mix(in srgb, var(--bg-deep) 94%, transparent);
-  border-bottom: 1px solid var(--border-subtle);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background: transparent;
 }
 
 .mobile-brand,
@@ -151,7 +148,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .mobile-header-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-xs);
   flex-shrink: 0;
 }
 
@@ -161,8 +158,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 .mobile-profile img,
 .mobile-profile svg {
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
 }
 
 .mobile-profile img {
@@ -178,9 +175,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
   .mobile-brand,
   .mobile-profile {
-    flex-basis: 40px;
-    width: 40px;
-    height: 40px;
+    flex-basis: 44px;
+    width: 44px;
+    height: 44px;
   }
 
   .mobile-brand img {

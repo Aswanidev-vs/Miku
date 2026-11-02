@@ -250,7 +250,20 @@ function onCustomAccent(e: Event) {
   }
 
   .theme-picker {
-    justify-content: flex-start;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: 100%;
+    justify-content: initial;
+  }
+
+  .theme-btn {
+    min-width: 0;
+    min-height: 44px;
+    padding-right: var(--space-xs);
+    padding-left: var(--space-xs);
+    text-align: center;
+    letter-spacing: 0;
+    white-space: normal;
   }
 }
 
