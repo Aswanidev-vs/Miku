@@ -14,6 +14,12 @@ export class UpdateInfo {
     "assetSize": number;
     "releaseName": string;
 
+    /**
+     * SHA256 is the expected hex-encoded SHA-256 of the download asset, when
+     * a checksum sidecar is published alongside it. Empty means "unverified".
+     */
+    "sha256": string;
+
     /** Creates a new UpdateInfo instance. */
     constructor($$source: Partial<UpdateInfo> = {}) {
         if (!("available" in $$source)) {
@@ -36,6 +42,9 @@ export class UpdateInfo {
         }
         if (!("releaseName" in $$source)) {
             this["releaseName"] = "";
+        }
+        if (!("sha256" in $$source)) {
+            this["sha256"] = "";
         }
 
         Object.assign(this, $$source);

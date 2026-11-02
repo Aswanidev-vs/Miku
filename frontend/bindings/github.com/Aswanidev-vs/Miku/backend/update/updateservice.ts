@@ -19,8 +19,8 @@ export function CleanupDownloads(): $CancellablePromise<void> {
     return $Call.ByID(1337919975);
 }
 
-export function DownloadUpdate(downloadURL: string): $CancellablePromise<string> {
-    return $Call.ByID(1447067367, downloadURL);
+export function DownloadUpdate(downloadURL: string, ...expectedSHA256: string[]): $CancellablePromise<string> {
+    return $Call.ByID(1447067367, downloadURL, expectedSHA256);
 }
 
 export function GetCurrentVersion(): $CancellablePromise<string> {
@@ -31,8 +31,8 @@ export function GetDownloadProgress(): $CancellablePromise<[number, number, bool
     return $Call.ByID(165365789);
 }
 
-export function InstallUpdate(apkPath: string): $CancellablePromise<void> {
-    return $Call.ByID(1230765532, apkPath);
+export function InstallUpdate(apkPath: string, ...expectedSHA256: string[]): $CancellablePromise<void> {
+    return $Call.ByID(1230765532, apkPath, expectedSHA256);
 }
 
 // Private type creation functions
