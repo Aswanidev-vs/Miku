@@ -864,7 +864,7 @@ function handleAboutClick(e: Event) {
 }
 
 .switch.on {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  background: var(--color-primary);
   border-color: transparent;
 }
 
