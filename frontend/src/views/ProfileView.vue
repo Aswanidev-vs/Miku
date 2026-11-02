@@ -420,11 +420,14 @@ function handleAboutClick(e: Event) {
       </div>
     </section>
 
-    <!-- Appearance (theme + accent) -->
-    <AppearanceSettings />
+<!-- Appearance + AniList prefs: side-by-side on desktop, stacked on mobile -->
+<div class="settings-columns">
+  <!-- Appearance (theme + accent) -->
+  <AppearanceSettings />
 
-    <!-- AniList preferences (title language, score format, default tab, adult content) -->
-    <AniListPreferences />
+  <!-- AniList preferences (title language, score format, default tab, adult content) -->
+  <AniListPreferences />
+</div>
 
     <!-- Profile (when signed in) — deferred: mounts 300ms after settings for faster initial paint -->
     <template v-if="isLoggedIn && user && showStats">
@@ -930,6 +933,23 @@ function handleAboutClick(e: Event) {
     max-width: 100%;
   }
 }
+/* Settings columns: stacked on mobile, side-by-side on desktop */
+.settings-columns {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+@media (min-width: 1024px) {
+  .settings-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xl);
+    align-items: start;
+  }
+}
+
+/* Spinner */
 .spinner {
   width: 18px;
   height: 18px;
