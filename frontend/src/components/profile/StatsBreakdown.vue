@@ -626,7 +626,7 @@ function getStudioPercent(count: number): number {
 .genre-bar {
   height: 100%;
   border-radius: var(--radius-full);
-  transition: width 0.3s ease-out;
+
 }
 
 /* 2. Top Tags - Inline Wrap-around Chips */
@@ -685,7 +685,7 @@ function getStudioPercent(count: number): number {
 
 .stacked-bar-segment {
   height: 100%;
-  transition: width 0.4s ease-out;
+
 }
 
 .studio-legend-grid {
@@ -811,7 +811,7 @@ function getStudioPercent(count: number): number {
 .people-bar {
   height: 100%;
   border-radius: var(--radius-full);
-  transition: width 0.3s ease-out;
+
 }
 
 .breakdown-empty {
