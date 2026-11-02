@@ -239,7 +239,7 @@ onUnmounted(() => {
           v-model="query"
           type="text"
           class="search-input"
-          :placeholder="activeType === 'CHARACTER' ? 'Search character name...' : activeType === 'STAFF' ? 'Search voice actor / staff...' : 'Search anime or manga...'"
+          :placeholder="activeType === 'CHARACTER' ? 'Character name' : activeType === 'STAFF' ? 'Voice actor / staff' : 'Anime or manga'"
           @input="debouncedSearch"
           @keydown.enter="performSearch"
         />
@@ -334,7 +334,7 @@ onUnmounted(() => {
                 <span class="person-name">{{ char.name.full }}</span>
                 <span v-if="char.name.native" class="person-native">{{ char.name.native }}</span>
                 <span v-if="char.gender || char.age" class="person-meta">
-                  {{ [char.gender, char.age].filter(Boolean).join(' · ') }}
+                  {{ [char.gender, char.age].filter(Boolean).join(', ') }}
                 </span>
               </div>
             </div>
