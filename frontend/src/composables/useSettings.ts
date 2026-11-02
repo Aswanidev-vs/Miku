@@ -30,10 +30,12 @@ export type CarouselDiscoveryFilter = 'unwatched' | 'all' | 'my-list'
 export type CarouselOrder = 'latest' | 'popular' | 'recently-updated'
 export type CarouselAlignment = 'left' | 'center'
 export type CarouselHeroHeight = 'compact' | 'standard' | 'large'
+export type MyListCardSize = 'small' | 'medium' | 'large'
 
 export interface Settings {
   autoSync: boolean
   compact: boolean
+  myListCardSize: MyListCardSize
   reduceMotion: boolean
   theme: ThemeMode
   accentColor: string | null
@@ -110,6 +112,7 @@ export const carouselDefaults = {
 export const defaultSettings: Settings = {
   autoSync: true,
   compact: false,
+  myListCardSize: 'medium',
   reduceMotion: false,
   theme: 'dark', // preserves the original Sakura Noir look for existing users
   accentColor: null, // null = default sakura coral

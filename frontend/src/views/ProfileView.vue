@@ -5,7 +5,7 @@ import { Browser } from '@wailsio/runtime'
 import { useAuthStore } from '../stores'
 import { useUserStore } from '../stores'
 import { useAnimeStore } from '../stores/anime'
-import { useSettings } from '../composables/useSettings'
+import { useSettings, type MyListCardSize } from '../composables/useSettings'
 import { useUpdate } from '../composables/useUpdate'
 import { clearGqlCache } from '../api/graphql'
 import UserFavorites from '../components/profile/UserFavorites.vue'
@@ -22,7 +22,7 @@ const userStore = useUserStore()
 const animeStore = useAnimeStore()
 const route = useRoute()
 const router = useRouter()
-const { settings, toggle } = useSettings()
+const { settings, set, toggle } = useSettings()
 const {
   currentVersion, hasUpdate, latestVersion, checked, checking, updateInfo, error: updateError,
   checkForUpdate,
@@ -32,6 +32,12 @@ const user = computed(() => authStore.currentUser)
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const isSettingsRoute = computed(() => route.name === 'settings')
 const loading = computed(() => authStore.loading || authStore.authFlowInProgress || userStore.loading)
+
+const MY_LIST_CARD_SIZE_OPTIONS: { value: MyListCardSize; label: string; hint: string }[] = [
+  { value: 'small', label: 'Small', hint: 'More titles' },
+  { value: 'medium', label: 'Standard', hint: 'Balanced' },
+  { value: 'large', label: 'Large', hint: 'More artwork' },
+]
 
 // Auto-sync toggle -> start/stop the 60s polling loop
 watch(
@@ -310,6 +316,28 @@ function handleAboutClick(e: Event) {
         </button>
       </div>
 
+      <div class="setting-row setting-row--choice">
+        <div class="setting-text">
+          <span class="setting-label">My List card size</span>
+          <span class="setting-hint">Choose how much artwork each title gets</span>
+        </div>
+        <div class="setting-choice-group" role="radiogroup" aria-label="My List card size">
+          <button
+            v-for="option in MY_LIST_CARD_SIZE_OPTIONS"
+            :key="option.value"
+            class="setting-choice"
+            :class="{ active: settings.myListCardSize === option.value }"
+            role="radio"
+            :aria-checked="settings.myListCardSize === option.value"
+            :title="option.hint"
+            type="button"
+            @click="set('myListCardSize', option.value)"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+      </div>
+
       <div class="setting-row">
         <div class="setting-text">
           <span class="setting-label">Reduce motion</span>
@@ -529,8 +557,8 @@ function handleAboutClick(e: Event) {
   min-height: 100%;
   background: var(--bg-deepest);
   padding-bottom: var(--space-xl);
-  max-width: 860px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
   width: 100%;
 }
 
@@ -924,6 +952,43 @@ function handleAboutClick(e: Event) {
   margin-top: 1px;
 }
 
+.setting-row--choice {
+  align-items: flex-start;
+}
+
+.setting-choice-group {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 3px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+}
+
+.setting-choice {
+  min-width: 68px;
+  padding: 6px 9px;
+  color: var(--text-muted);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  transition: color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.setting-choice:hover:not(.active) {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.setting-choice.active {
+  color: var(--text-on-primary);
+  background: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-glow);
+}
+
 /* Switch */
 .switch {
   position: relative;
@@ -994,13 +1059,12 @@ function handleAboutClick(e: Event) {
   font-weight: var(--font-weight-medium);
 }
 
-/* Desktop: constrain and center the settings canvas so it never stretches
-   edge-to-edge on wide monitors; keep mobile full-width. */
+/* Desktop: use the shared full-width page canvas. The settings groups keep
+   their own borders and internal padding so the wider layout stays composed. */
 @media (min-width: 1024px) {
   .profile-view {
-    max-width: 980px;
-    margin: 0 auto;
-    padding-inline: var(--space-2xl);
+    max-width: none;
+    margin: 0;
   }
 
   .settings-group {
@@ -1039,6 +1103,22 @@ function handleAboutClick(e: Event) {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@media (max-width: 540px) {
+  .setting-row--choice {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-sm);
+  }
+
+  .setting-choice-group {
+    justify-content: stretch;
+  }
+
+  .setting-choice {
+    flex: 1;
+  }
 }
 
 /* Small Android screens: stack the action below the account details so the

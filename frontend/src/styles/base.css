@@ -275,6 +275,7 @@ h1, h2, h3, h4, h5, h6 {
 .discover-view,
 .mylist-view,
 .feed-view,
+.statistics-view,
 .settings-view,
 .profile-view,
 .va-view {
@@ -287,11 +288,16 @@ h1, h2, h3, h4, h5, h6 {
 .is-desktop .discover-view,
 .is-desktop .mylist-view,
 .is-desktop .feed-view,
+.is-desktop .statistics-view,
 .is-desktop .settings-view,
 .is-desktop .profile-view,
 .is-desktop .va-view {
-  max-width: var(--content-max);
-  margin: 0 auto;
+  /* Let each desktop view use the full area left by the sidebar. Individual
+     sections still control their own density, but the page no longer leaves a
+     centered 1200px strip stranded inside a wider window. */
+  width: 100%;
+  max-width: none;
+  margin: 0;
   padding-left: max(var(--space-2xl), env(safe-area-inset-left, 0px));
   padding-right: max(var(--space-2xl), env(safe-area-inset-right, 0px));
 }

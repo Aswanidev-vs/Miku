@@ -58,10 +58,11 @@ async function handleLogin() {
 
 <style scoped>
 .statistics-view {
-  width: min(100%, var(--content-max));
+  width: 100%;
+  max-width: none;
   min-height: 100%;
-  margin: 0 auto;
-  padding: var(--space-3xl) max(var(--space-2xl), env(safe-area-inset-left, 0px)) var(--space-5xl);
+  margin: 0;
+  padding: var(--space-3xl) max(var(--space-2xl), env(safe-area-inset-left, 0px)) var(--space-5xl) max(var(--space-2xl), env(safe-area-inset-right, 0px));
 }
 
 .statistics-header {

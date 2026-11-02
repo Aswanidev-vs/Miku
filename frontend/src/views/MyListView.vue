@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
 import { useAnimeStore } from '../stores/anime'
 import { useAuthStore } from '../stores/auth'
 import { usePlatform } from '../composables/usePlatform'
+import { useSettings } from '../composables/useSettings'
 import { usePullToRefresh } from '../composables/usePullToRefresh'
 import { clearGqlCache } from '../api/graphql'
 import AnimeGrid from '../components/anime/AnimeGrid.vue'
@@ -11,7 +12,8 @@ import type { Media, ListStatus } from '../types'
 
 const animeStore = useAnimeStore()
 const authStore = useAuthStore()
-const { gridColumns } = usePlatform()
+const { gridColumns, screenSmall } = usePlatform()
+const { settings } = useSettings()
 
 type MyListTab = ListStatus | 'FAVOURITES'
 
@@ -60,6 +62,19 @@ const listMedia = computed(() => {
       return (b.entry?.updatedAt || 0) - (a.entry?.updatedAt || 0)
     })
     .map(({ media }) => media)
+})
+
+// Avoid reserving a permanently empty grid track when a list contains fewer
+// titles than the desktop grid. Loading still uses the normal platform count.
+const listGridColumns = computed(() => {
+  const count = listMedia.value.length
+  const size = settings.value.myListCardSize
+  const preferredColumns = size === 'small' && !screenSmall.value
+    ? gridColumns.value + 1
+    : size === 'large'
+      ? Math.max(2, gridColumns.value - 1)
+      : gridColumns.value
+  return count > 0 ? Math.min(preferredColumns, count) : preferredColumns
 })
 
 function titleFor(media: Media) {
@@ -201,7 +216,7 @@ watch(activeTab, (tab) => {
       <!-- Content -->
       <div v-else class="mylist-content">
         <template v-if="listMedia.length > 0">
-          <AnimeGrid :items="listMedia" :columns="gridColumns" />
+          <AnimeGrid :items="listMedia" :columns="listGridColumns" />
         </template>
         <template v-else>
           <div class="empty-state">
