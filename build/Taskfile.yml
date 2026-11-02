@@ -85,6 +85,7 @@ tasks:
     generates:
       - dist/**/*
     deps:
+      - task: sync:branding
       - task: install:frontend:deps
       - task: generate:bindings
         vars:
@@ -135,6 +136,26 @@ tasks:
       - bun run {{.SCRIPT}}
     vars:
       SCRIPT: "{{.SCRIPT}}"
+
+  sync:branding:
+    summary: Syncs the root Miku logo into frontend development and packaging assets
+    run: once
+    dir: build
+    sources:
+      - "../logo.png"
+    generates:
+      - "appicon.png"
+      - "appicon.icon/Assets/logo.png"
+      - "../frontend/public/logo.png"
+    cmds:
+      - cmd: powershell -NoProfile -Command "Copy-Item -LiteralPath '..\logo.png' -Destination 'appicon.png' -Force; Copy-Item -LiteralPath '..\logo.png' -Destination '..\frontend\public\logo.png' -Force; Copy-Item -LiteralPath '..\logo.png' -Destination 'android\app\src\main\res\mipmap-hdpi\ic_launcher.png' -Force; Copy-Item -LiteralPath '..\logo.png' -Destination 'android\app\src\main\res\mipmap-hdpi\ic_launcher_round.png' -Force; Copy-Item -LiteralPath '..\logo.png' -Destination 'android\app\src\main\res\mipmap-mdpi\ic_launcher.png' -Force; Copy-Item -LiteralPath '..\logo.png' -Destination 'android\app\src\main\res\mipmap-mdpi\ic_launcher_round.png' -Force; Copy-Item -LiteralPath '..\logo.png' -Destination 'android\app\src\main\res\mipmap-xhdpi\ic_launcher.png' -Force; Copy-Item -LiteralPath '..\logo.png' -Destination 'android\app\src\main\res\mipmap-xhdpi\ic_launcher_round.png' -Force; Copy-Item -LiteralPath '..\logo.png' -Destination 'android\app\src\main\res\mipmap-xxhdpi\ic_launcher.png' -Force; Copy-Item -LiteralPath '..\logo.png' -Destination 'android\app\src\main\res\mipmap-xxhdpi\ic_launcher_round.png' -Force; Copy-Item -LiteralPath '..\logo.png' -Destination 'android\app\src\main\res\mipmap-xxxhdpi\ic_launcher.png' -Force; Copy-Item -LiteralPath '..\logo.png' -Destination 'android\app\src\main\res\mipmap-xxxhdpi\ic_launcher_round.png' -Force"
+        platforms: [windows]
+      - cmd: powershell -NoProfile -Command "Copy-Item -LiteralPath '../logo.png' -Destination 'appicon.icon/Assets/logo.png' -Force"
+        platforms: [windows]
+      - cmd: cp ../logo.png appicon.png && cp ../logo.png ../frontend/public/logo.png && find android/app/src/main/res -type f -name 'ic_launcher*.png' -exec cp ../logo.png {} \;
+        platforms: [linux, darwin]
+      - cmd: cp ../logo.png appicon.icon/Assets/logo.png
+        platforms: [linux, darwin]
 
   frontend:vendor:puppertino:
     summary: Fetches Puppertino CSS into frontend/public for consistent mobile styling
@@ -196,7 +217,10 @@ tasks:
     summary: Generates Windows `.ico` and Mac `.icns` from an image; on macOS, `-iconcomposerinput appicon.icon -macassetdir darwin` also produces `Assets.car` from a `.icon` file (skipped on other platforms).
     run: once
     dir: build
+    deps:
+      - task: sync:branding
     sources:
+      - "../logo.png"
       - "appicon.png"
       - "appicon.icon"
     generates:
@@ -208,6 +232,7 @@ tasks:
   dev:frontend:
     summary: Runs the frontend in development mode
     deps:
+      - task: sync:branding
       - task: install:frontend:deps
     cmds:
       - task: frontend:dev:{{.PACKAGE_MANAGER}}
