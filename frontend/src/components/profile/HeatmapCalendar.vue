@@ -177,6 +177,8 @@ function formatTooltip(date: string, count: number): string {
 <style scoped>
 .heatmap-container {
   container-type: inline-size;
+  width: min(100%, 860px);
+  box-sizing: border-box;
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);

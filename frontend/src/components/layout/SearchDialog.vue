@@ -3,7 +3,7 @@ import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { gqlQuery } from '../../api/graphql'
 
-type SearchKind = 'ANIME' | 'MANGA' | 'PEOPLE'
+type SearchKind = 'ANIME' | 'MANGA' | 'CHARACTER' | 'STAFF'
 type ResultKind = 'ANIME' | 'MANGA' | 'CHARACTER' | 'STAFF'
 type SearchResult = {
   id: number
@@ -41,14 +41,21 @@ query ($search: String, $type: MediaType) {
 }
 `
 
-const PEOPLE_SEARCH_QUERY = `
-query ($search: String) {
-  Page(perPage: 4) {
+const CHARACTER_SEARCH_QUERY = `
+query ($search: String, $page: Int, $perPage: Int) {
+  Page(page: $page, perPage: $perPage) {
     characters(search: $search, sort: SEARCH_MATCH) {
       id
       name { full native }
       image { medium large }
     }
+  }
+}
+`
+
+const STAFF_SEARCH_QUERY = `
+query ($search: String, $page: Int, $perPage: Int) {
+  Page(page: $page, perPage: $perPage) {
     staff(search: $search, sort: SEARCH_MATCH) {
       id
       name { full native }
@@ -87,24 +94,22 @@ async function fetchResults() {
   loading.value = true
   hasSearched.value = true
   try {
-    if (activeKind.value === 'PEOPLE') {
-      const response = await gqlQuery(PEOPLE_SEARCH_QUERY, { search: value })
+    if (activeKind.value === 'CHARACTER' || activeKind.value === 'STAFF') {
+      const response = await gqlQuery(
+        activeKind.value === 'CHARACTER' ? CHARACTER_SEARCH_QUERY : STAFF_SEARCH_QUERY,
+        { search: value, page: 1, perPage: 6 },
+      )
       const page = response?.data?.Page
-      const characters: SearchResult[] = (page?.characters || []).map((person: any) => ({
+      const people = activeKind.value === 'CHARACTER' ? page?.characters || [] : page?.staff || []
+      results.value = people.map((person: any) => ({
         id: person.id,
-        kind: 'CHARACTER',
-        title: person.name?.full || 'Unknown character',
-        subtitle: person.name?.native || 'Character',
-        image: person.image?.large || person.image?.medium,
-      }))
-      const staff: SearchResult[] = (page?.staff || []).map((person: any) => ({
-        id: person.id,
-        kind: 'STAFF',
+        kind: activeKind.value as 'CHARACTER' | 'STAFF',
         title: person.name?.full || 'Unknown staff member',
-        subtitle: person.primaryOccupations?.join(', ') || 'Staff',
+        subtitle: activeKind.value === 'CHARACTER'
+          ? person.name?.native || 'Character'
+          : person.primaryOccupations?.join(', ') || 'Staff',
         image: person.image?.large || person.image?.medium,
       }))
-      results.value = [...characters, ...staff]
     } else {
       const response = await gqlQuery(MEDIA_SEARCH_QUERY, { search: value, type: activeKind.value })
       results.value = (response?.data?.Page?.media || []).map((media: any) => ({
@@ -170,13 +175,14 @@ onUnmounted(() => {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" />
             </svg>
-            <input ref="input" v-model="query" type="search" placeholder="Search anime, manga, people" autocomplete="off" />
+            <input ref="input" v-model="query" type="search" placeholder="Search anime, manga, characters, staff" autocomplete="off" />
             <kbd>Enter</kbd>
           </form>
           <div class="search-dialog-filters" role="tablist" aria-label="Search category">
             <button type="button" :class="{ active: activeKind === 'ANIME' }" @click="setKind('ANIME')">Anime</button>
             <button type="button" :class="{ active: activeKind === 'MANGA' }" @click="setKind('MANGA')">Manga</button>
-            <button type="button" :class="{ active: activeKind === 'PEOPLE' }" @click="setKind('PEOPLE')">People</button>
+            <button type="button" :class="{ active: activeKind === 'CHARACTER' }" @click="setKind('CHARACTER')">Characters</button>
+            <button type="button" :class="{ active: activeKind === 'STAFF' }" @click="setKind('STAFF')">Staff</button>
           </div>
           <div v-if="loading" class="search-dialog-state">Searching AniList…</div>
           <div v-else-if="results.length" class="search-dialog-results" aria-live="polite">
@@ -210,9 +216,9 @@ onUnmounted(() => {
 .search-dialog-form input::placeholder { color: var(--text-muted); }
 kbd { padding: 3px 6px; color: var(--text-muted); background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 4px; font-size: 10px; white-space: nowrap; }
 .search-dialog-filters { display: flex; gap: 6px; padding: var(--space-md) var(--space-lg) var(--space-sm); }
-.search-dialog-filters button { padding: 6px 10px; color: var(--text-muted); background: transparent; border: 1px solid transparent; border-radius: var(--radius-full); font-size: var(--font-size-xs); }
-.search-dialog-filters button:hover { color: var(--text-primary); background: var(--bg-hover); }
-.search-dialog-filters button.active { color: var(--text-on-primary); background: var(--color-primary); }
+.search-dialog-filters button { padding: 6px 10px; color: var(--text-secondary); background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: var(--radius-full); font-size: var(--font-size-xs); box-shadow: inset 0 0 0 1px rgba(255,255,255,.025); transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast); }
+.search-dialog-filters button:hover { color: var(--text-primary); background: var(--bg-hover); border-color: var(--text-muted); }
+.search-dialog-filters button.active { color: var(--text-on-primary); background: var(--color-primary); border-color: var(--color-primary-light); box-shadow: 0 0 0 2px var(--color-primary-glow); }
 .search-dialog-results { display: grid; gap: 4px; max-height: 288px; padding: 0 var(--space-lg) var(--space-sm); overflow-y: auto; }
 .search-dialog-result { display: flex; align-items: center; gap: var(--space-sm); width: 100%; padding: 7px; color: var(--text-secondary); background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); text-align: left; }
 .search-dialog-result:hover { color: var(--text-primary); background: var(--bg-hover); border-color: var(--border-subtle); }
