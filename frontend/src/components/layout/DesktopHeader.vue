@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import UpdateNotification from './UpdateNotification.vue'
+import SearchDialog from './SearchDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
+const searchOpen = ref(false)
 
 const pageTitles: Record<string, string> = {
   discover: 'Discover',
@@ -19,7 +21,16 @@ const pageTitles: Record<string, string> = {
 const pageTitle = computed(() => pageTitles[String(route.name)] ?? 'Miku')
 
 function openSearch() {
-  router.push({ name: 'search' })
+  searchOpen.value = true
+}
+
+function closeSearch() {
+  searchOpen.value = false
+}
+
+function submitSearch(query: string) {
+  searchOpen.value = false
+  router.push({ name: 'search', query: { search: query } })
 }
 
 function onKeydown(event: KeyboardEvent) {
@@ -54,6 +65,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
       <UpdateNotification :inline="true" />
     </div>
+
+    <SearchDialog v-if="searchOpen" @close="closeSearch" @submit="submitSearch" />
   </header>
 </template>
 
@@ -111,6 +124,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  min-height: 34px;
 }
 
 .header-search {

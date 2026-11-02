@@ -13,6 +13,7 @@ import SocialList from '../components/profile/SocialList.vue'
 import ActivityItem from '../components/feed/ActivityItem.vue'
 import AppearanceSettings from '../components/settings/AppearanceSettings.vue'
 import AniListPreferences from '../components/settings/AniListPreferences.vue'
+import DiscoverCarouselSettings from '../components/settings/DiscoverCarouselSettings.vue'
 import { renderMarkdown } from '../utils/markdown'
 import type { User, TextActivity, ListActivity } from '../types'
 
@@ -450,6 +451,8 @@ function handleAboutClick(e: Event) {
         <AppearanceSettings />
         <AniListPreferences />
       </div>
+
+      <DiscoverCarouselSettings />
 
       <section class="settings-group">
         <h3 class="group-title">About Miku</h3>

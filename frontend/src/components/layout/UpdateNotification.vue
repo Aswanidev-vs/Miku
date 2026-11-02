@@ -299,12 +299,17 @@ function formatSpeed(bytesPerSecond: number): string {
   position: relative;
   top: auto;
   right: auto;
+  bottom: auto;
   width: 34px;
   height: 34px;
   padding: 0;
+  margin: 0;
   background: transparent;
   border: 0;
   border-radius: var(--radius-sm);
+  box-shadow: none;
+  align-self: center;
+  transform: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }

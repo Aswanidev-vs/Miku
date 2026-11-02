@@ -11,6 +11,7 @@ query ($page: Int, $perPage: Int, $adult: Boolean) {
   Page(page: $page, perPage: $perPage) {
     media(sort: TRENDING_DESC, type: ANIME, isAdult: $adult) {
       id
+      type
       title {
         romaji
         english
@@ -31,6 +32,9 @@ query ($page: Int, $perPage: Int, $adult: Boolean) {
       trending
       genres
       description(asHtml: false)
+      season
+      seasonYear
+      mediaListEntry { id status score progress updatedAt }
       nextAiringEpisode {
         episode
         airingAt

@@ -1,18 +1,20 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed, nextTick } from 'vue'
+import { onMounted, onUnmounted, ref, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAnimeStore } from '../stores/anime'
+import { useAuthStore } from '../stores'
 import { usePlatform } from '../composables/usePlatform'
 import { usePullToRefresh } from '../composables/usePullToRefresh'
 import { clearGqlCache } from '../api/graphql'
 import { gqlQuery } from '../api/graphql'
 import AnimeGrid from '../components/anime/AnimeGrid.vue'
 import PullToRefresh from '../components/common/PullToRefresh.vue'
-import type { Media } from '../types'
+import type { Media, MediaListEntry } from '../types'
 import { preferredTitle } from '../utils/mediaDisplay'
 import { useSettings } from '../composables/useSettings'
 
 const animeStore = useAnimeStore()
+const authStore = useAuthStore()
 const router = useRouter()
 const { gridColumns } = usePlatform()
 const { settings } = useSettings()
@@ -24,7 +26,160 @@ const latestAnime = ref<Media[]>([])
 const latestManga = ref<Media[]>([])
 const topManga = ref<Media[]>([])
 const trendingAnime = computed(() => animeStore.trending)
-const featuredAnime = computed(() => trendingAnime.value[0])
+
+const carouselIndex = ref(0)
+const carouselActionMessage = ref('')
+const isCarouselHovered = ref(false)
+const isManualPaused = ref(false)
+const touchStartX = ref<number | null>(null)
+const isDiscoverMounted = ref(false)
+let carouselTimer: ReturnType<typeof setInterval> | null = null
+let listLoadPromise: Promise<void> | null = null
+
+const listEntriesByMediaId = computed(() => {
+  const entries = new Map<number, MediaListEntry>()
+  for (const list of animeStore.myList?.lists || []) {
+    for (const entry of list.entries || []) entries.set(entry.mediaId, entry)
+  }
+  return entries
+})
+
+const carouselMedia = computed(() => {
+  const sources = settings.value.carouselSources
+  const bySource: Record<string, Media[]> = {
+    trending: trendingAnime.value,
+    seasonal: seasonalAnime.value,
+    popular: popularAnime.value,
+    'popular-manga': topManga.value,
+    'recommended-anime': animeStore.genreRecommendations,
+    'recommended-manga': [],
+    'currently-watching': (animeStore.myList?.lists || [])
+      .find((list) => list.status === 'CURRENT')?.entries
+      ?.map((entry) => entry.media)
+      .filter(Boolean) as Media[] || [],
+    'recently-updated': latestAnime.value,
+  }
+  const seen = new Set<number>()
+  const candidates: Media[] = []
+  for (const source of sources) {
+    for (const media of bySource[source] || []) {
+      if (!media || seen.has(media.id)) continue
+      const listEntry = media.mediaListEntry || listEntriesByMediaId.value.get(media.id)
+      if (settings.value.carouselMediaFilter !== 'BOTH' && media.type && media.type !== settings.value.carouselMediaFilter) continue
+      if (settings.value.carouselHideCompletedDropped && ['COMPLETED', 'DROPPED'].includes(listEntry?.status || '')) continue
+      seen.add(media.id)
+      candidates.push(listEntry && !media.mediaListEntry ? { ...media, mediaListEntry: listEntry } : media)
+    }
+  }
+  if (settings.value.carouselPreferList) {
+    candidates.sort((a, b) => Number(Boolean(b.mediaListEntry)) - Number(Boolean(a.mediaListEntry)))
+  }
+  return candidates.slice(0, settings.value.carouselMaxSlides)
+})
+
+const activeCarouselMedia = computed(() => carouselMedia.value[carouselIndex.value])
+const carouselMotionReduced = computed(() => {
+  if (settings.value.reduceMotion) return true
+  return settings.value.carouselRespectReducedMotion
+    && typeof window !== 'undefined'
+    && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+})
+
+const carouselDuration = computed(() => `${settings.value.carouselDuration}s`)
+const carouselAnimationDuration = computed(() => ({ slow: '1.1s', normal: '.7s', fast: '.4s' }[settings.value.carouselAnimationSpeed]))
+
+function stopCarouselAutoplay() {
+  if (carouselTimer) {
+    clearInterval(carouselTimer)
+    carouselTimer = null
+  }
+}
+
+function startCarouselAutoplay() {
+  stopCarouselAutoplay()
+  if (!isDiscoverMounted.value) return
+  if (!settings.value.carouselAutoplay || carouselMedia.value.length < 2) return
+  if (isManualPaused.value) return
+  if (isCarouselHovered.value && settings.value.carouselPauseOnHover) return
+  carouselTimer = setInterval(() => moveCarousel(1, false), settings.value.carouselDuration * 1000)
+}
+
+function resetCarouselAutoplay() {
+  stopCarouselAutoplay()
+  startCarouselAutoplay()
+}
+
+function moveCarousel(direction: number, manual = true) {
+  const length = carouselMedia.value.length
+  if (length < 2) return
+  carouselIndex.value = (carouselIndex.value + direction + length) % length
+  if (manual && settings.value.carouselResumeAfterInteraction) {
+    isManualPaused.value = false
+    resetCarouselAutoplay()
+  } else if (manual) {
+    isManualPaused.value = true
+    stopCarouselAutoplay()
+  }
+}
+
+function goToCarousel(index: number) {
+  if (index < 0 || index >= carouselMedia.value.length) return
+  carouselIndex.value = index
+  if (settings.value.carouselResumeAfterInteraction) {
+    isManualPaused.value = false
+    resetCarouselAutoplay()
+  } else {
+    isManualPaused.value = true
+    stopCarouselAutoplay()
+  }
+}
+
+function handleCarouselKeydown(event: KeyboardEvent) {
+  if (!settings.value.carouselKeyboardNavigation) return
+  if (event.key === 'ArrowLeft') { event.preventDefault(); moveCarousel(-1) }
+  if (event.key === 'ArrowRight') { event.preventDefault(); moveCarousel(1) }
+}
+
+function handleTouchStart(event: TouchEvent) {
+  if (!settings.value.carouselTouchNavigation) return
+  touchStartX.value = event.touches[0]?.clientX ?? null
+}
+
+function handleTouchEnd(event: TouchEvent) {
+  if (!settings.value.carouselTouchNavigation || touchStartX.value === null) return
+  const distance = (event.changedTouches[0]?.clientX ?? touchStartX.value) - touchStartX.value
+  touchStartX.value = null
+  if (Math.abs(distance) > 44) moveCarousel(distance > 0 ? -1 : 1)
+}
+
+function handleCarouselEnter() {
+  isCarouselHovered.value = true
+  if (settings.value.carouselPauseOnHover) stopCarouselAutoplay()
+}
+
+function handleCarouselLeave() {
+  isCarouselHovered.value = false
+  if (settings.value.carouselPauseOnHover && !isManualPaused.value) startCarouselAutoplay()
+}
+
+async function handleCarouselAction() {
+  const media = activeCarouselMedia.value
+  if (!media) return
+  const entry = media.mediaListEntry
+  if (!authStore.isLoggedIn) {
+    router.push({ name: 'profile' })
+    return
+  }
+  try {
+    const nextProgress = entry ? entry.progress + 1 : 0
+    const savedEntry = await animeStore.updateEntry(media.id, entry?.status || 'PLANNING', entry?.score || 0, nextProgress)
+    if (savedEntry) media.mediaListEntry = savedEntry
+    carouselActionMessage.value = entry ? 'Progress updated' : 'Added to Planning'
+    window.setTimeout(() => { carouselActionMessage.value = '' }, 2200)
+  } catch {
+    carouselActionMessage.value = 'Could not update your list'
+  }
+}
 
 // Pagination state for each section (used by "load more")
 const popularPage = ref(1)
@@ -49,11 +204,14 @@ const QUERIES = {
       Page(page: $page, perPage: $perPage) {
         media(sort: TRENDING_DESC, type: ANIME) {
           id
+          type
           title { romaji english native userPreferred }
           coverImage { large medium color }
           description(asHtml: false)
           bannerImage
           format status episodes averageScore
+          season seasonYear
+          mediaListEntry { id status score progress updatedAt }
           genres nextAiringEpisode { episode }
         }
         pageInfo { hasNextPage }
@@ -65,6 +223,7 @@ const QUERIES = {
       Page(page: $page, perPage: $perPage) {
         media(sort: POPULARITY_DESC, type: ANIME) {
           id
+          type
           title { romaji english native userPreferred }
           coverImage { large medium color }
           format status episodes averageScore
@@ -79,6 +238,7 @@ const QUERIES = {
       Page(page: $page, perPage: $perPage) {
         media(season: $season, seasonYear: $year, sort: POPULARITY_DESC, type: ANIME) {
           id
+          type
           title { romaji english native userPreferred }
           coverImage { large medium color }
           format status episodes averageScore
@@ -93,6 +253,7 @@ const QUERIES = {
       Page(page: $page, perPage: $perPage) {
         media(sort: ID_DESC, type: ANIME) {
           id
+          type
           title { romaji english native userPreferred }
           coverImage { large medium color }
           format status episodes averageScore
@@ -107,6 +268,7 @@ const QUERIES = {
       Page(page: $page, perPage: $perPage) {
         media(sort: ID_DESC, type: MANGA) {
           id
+          type
           title { romaji english native userPreferred }
           coverImage { large medium color }
           format status chapters volumes averageScore
@@ -121,6 +283,7 @@ const QUERIES = {
       Page(page: $page, perPage: $perPage) {
         media(sort: SCORE_DESC, type: MANGA) {
           id
+          type
           title { romaji english native userPreferred }
           coverImage { large medium color }
           format status chapters volumes averageScore
@@ -232,6 +395,23 @@ async function loadManga() {
     console.warn('[Discover] Manga section failed to load:', err)
     mangaLoaded.value = false
   }
+}
+
+async function loadCarouselData() {
+  const sources = settings.value.carouselSources
+  const loaders: Promise<void>[] = []
+  if (sources.includes('popular')) loaders.push(loadPopular())
+  if (sources.includes('seasonal')) loaders.push(loadSeasonal())
+  if (sources.includes('popular-manga')) loaders.push(loadManga())
+  if (sources.includes('recently-updated')) loaders.push(loadLatestAnime())
+  if (authStore.currentUser && !animeStore.myList) {
+    if (!listLoadPromise) {
+      listLoadPromise = animeStore.fetchMyList(authStore.currentUser.id).finally(() => { listLoadPromise = null })
+    }
+    loaders.push(listLoadPromise)
+  }
+  await Promise.all(loaders)
+  startCarouselAutoplay()
 }
 
 // Load more pages for a specific section (triggered by the bottom sentinel)
@@ -420,11 +600,42 @@ function setupInfiniteScroll() {
   observer.observe(sentinelRef.value)
 }
 
+watch(carouselMedia, (items) => {
+  if (items.length === 0) {
+    carouselIndex.value = 0
+  } else if (carouselIndex.value >= items.length) {
+    carouselIndex.value = 0
+  }
+  startCarouselAutoplay()
+}, { deep: true })
+
+watch(
+  () => [
+    settings.value.carouselAutoplay,
+    settings.value.carouselDuration,
+    settings.value.carouselPauseOnHover,
+    settings.value.carouselResumeAfterInteraction,
+    settings.value.carouselSources,
+    settings.value.carouselMaxSlides,
+    settings.value.carouselRespectReducedMotion,
+  ],
+  () => {
+    if (settings.value.carouselResumeAfterInteraction) isManualPaused.value = false
+    loadCarouselData()
+    resetCarouselAutoplay()
+  },
+  { deep: true },
+)
+
+watch(() => authStore.currentUser?.id, () => loadCarouselData())
+
 onMounted(() => {
+  isDiscoverMounted.value = true
   // Trending is the hero — load it eagerly so the top of the page fills immediately.
   if (animeStore.trending.length === 0) {
     animeStore.fetchTrending(1, 12)
   }
+  loadCarouselData()
   if (viewRef.value) setupListeners(viewRef.value)
   nextTick(() => {
     setupLazySections()
@@ -433,9 +644,11 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  isDiscoverMounted.value = false
   if (viewRef.value) removeListeners(viewRef.value)
   observer?.disconnect()
   lazyObserver?.disconnect()
+  stopCarouselAutoplay()
 })
 </script>
 
@@ -448,30 +661,63 @@ onUnmounted(() => {
         <p class="discover-sub">Hand-picked seasons, trends & hidden gems.</p>
       </header>
 
-      <section v-if="featuredAnime" class="featured-media" aria-labelledby="featured-title">
-        <div class="featured-cover">
-          <img
-            :src="featuredAnime.coverImage.large"
-            :alt="preferredTitle(featuredAnime.title, settings.titleLanguage)"
-          />
-          <span v-if="featuredAnime.nextAiringEpisode" class="featured-airing">
-            Episode {{ featuredAnime.nextAiringEpisode.episode }} next
-          </span>
+      <section
+        v-if="activeCarouselMedia"
+        class="featured-carousel"
+        :class="[
+          `hero-${settings.carouselHeroHeight}`,
+          `align-${settings.carouselAlignment}`,
+          `transition-${settings.carouselTransition}`,
+          { 'has-zoom': settings.carouselBackgroundZoom && !carouselMotionReduced, 'has-entrance': settings.carouselTextEntrance && !carouselMotionReduced, 'motion-reduced': carouselMotionReduced },
+        ]"
+        :style="{ '--carousel-duration': carouselDuration, '--carousel-animation-duration': carouselAnimationDuration }"
+        tabindex="0"
+        aria-roledescription="carousel"
+        :aria-label="`Featured title ${carouselIndex + 1} of ${carouselMedia.length}`"
+        @keydown="handleCarouselKeydown"
+        @mouseenter="handleCarouselEnter"
+        @mouseleave="handleCarouselLeave"
+        @touchstart.passive="handleTouchStart"
+        @touchend.passive="handleTouchEnd"
+      >
+        <Transition name="carousel-bg" mode="out-in">
+          <div :key="activeCarouselMedia.id" class="carousel-background" :style="{ backgroundImage: `url('${activeCarouselMedia.bannerImage || activeCarouselMedia.coverImage.large}')` }" aria-hidden="true" />
+        </Transition>
+        <div class="carousel-shade" aria-hidden="true" />
+        <div :key="activeCarouselMedia.id" class="carousel-content">
+          <div v-if="settings.carouselShowCover" class="carousel-cover">
+            <img :src="activeCarouselMedia.coverImage.large" :alt="preferredTitle(activeCarouselMedia.title, settings.titleLanguage)" />
+            <span v-if="activeCarouselMedia.nextAiringEpisode" class="featured-airing">Episode {{ activeCarouselMedia.nextAiringEpisode.episode }} next</span>
+          </div>
+          <div class="carousel-copy">
+            <p class="featured-kicker">Featured from AniList</p>
+            <h2 id="featured-title">{{ preferredTitle(activeCarouselMedia.title, settings.titleLanguage) }}</h2>
+            <p v-if="settings.carouselShowMetadata" class="featured-meta">
+              <span v-if="activeCarouselMedia.format">{{ activeCarouselMedia.format.replace('_', ' ') }}</span>
+              <span v-if="activeCarouselMedia.seasonYear">· {{ activeCarouselMedia.season ? `${activeCarouselMedia.season.toLowerCase()} ` : '' }}{{ activeCarouselMedia.seasonYear }}</span>
+              <span v-if="activeCarouselMedia.status">· {{ activeCarouselMedia.status.replaceAll('_', ' ').toLowerCase() }}</span>
+              <span v-if="activeCarouselMedia.averageScore">· {{ activeCarouselMedia.averageScore }}%</span>
+            </p>
+            <p v-if="settings.carouselShowSynopsis" class="featured-description">{{ activeCarouselMedia.description || 'Explore the cast, details, and related titles for this AniList pick.' }}</p>
+            <p v-if="settings.carouselShowProgress && activeCarouselMedia.mediaListEntry" class="featured-progress">
+              On your list · {{ activeCarouselMedia.mediaListEntry.status.replaceAll('_', ' ').toLowerCase() }}<span v-if="activeCarouselMedia.episodes"> · {{ activeCarouselMedia.mediaListEntry.progress }}/{{ activeCarouselMedia.episodes }} episodes</span>
+            </p>
+            <div class="featured-actions">
+              <button class="btn btn-primary featured-action" type="button" @click="router.push({ name: 'media-detail', params: { id: activeCarouselMedia.id } })">View details</button>
+              <button class="btn btn-secondary featured-action" type="button" @click="handleCarouselAction">{{ !authStore.isLoggedIn ? 'Sign in to track' : activeCarouselMedia.mediaListEntry ? 'Update progress' : 'Add to My List' }}</button>
+            </div>
+            <span v-if="carouselActionMessage" class="carousel-feedback" role="status">{{ carouselActionMessage }}</span>
+          </div>
         </div>
-        <div class="featured-copy">
-          <p class="featured-kicker">Featured from trending</p>
-          <h2 id="featured-title">{{ preferredTitle(featuredAnime.title, settings.titleLanguage) }}</h2>
-          <p class="featured-meta">
-            <span v-if="featuredAnime.format">{{ featuredAnime.format.replace('_', ' ') }}</span>
-            <span v-if="featuredAnime.format && featuredAnime.status" aria-hidden="true">·</span>
-            <span v-if="featuredAnime.status">{{ featuredAnime.status.replaceAll('_', ' ').toLowerCase() }}</span>
-          </p>
-          <p class="featured-description">
-            {{ featuredAnime.description || 'Explore the cast, details, and related titles for this trending pick.' }}
-          </p>
-          <button class="btn btn-primary featured-action" type="button" @click="router.push({ name: 'media-detail', params: { id: featuredAnime.id } })">
-            View details
-          </button>
+        <button v-if="settings.carouselShowNavigation && carouselMedia.length > 1" class="carousel-nav carousel-nav-prev" type="button" aria-label="Previous featured title" @click="moveCarousel(-1)">‹</button>
+        <button v-if="settings.carouselShowNavigation && carouselMedia.length > 1" class="carousel-nav carousel-nav-next" type="button" aria-label="Next featured title" @click="moveCarousel(1)">›</button>
+        <div v-if="settings.carouselShowPagination && carouselMedia.length > 1" class="carousel-pagination" :class="`pagination-${settings.carouselPaginationStyle}`" aria-label="Featured title pagination">
+          <template v-if="settings.carouselPaginationStyle === 'progress'">
+            <span class="pagination-progress"><span :style="{ width: `${((carouselIndex + 1) / carouselMedia.length) * 100}%` }" /></span>
+          </template>
+          <template v-else>
+            <button v-for="(_, index) in carouselMedia" :key="index" type="button" :class="{ active: carouselIndex === index }" :aria-label="`Go to featured title ${index + 1}`" :aria-current="carouselIndex === index ? 'true' : undefined" @click="goToCarousel(index)" />
+          </template>
         </div>
       </section>
 
@@ -608,32 +854,72 @@ onUnmounted(() => {
   color: var(--text-muted);
 }
 
-.featured-media {
-  display: grid;
-  grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
-  gap: var(--space-2xl);
-  max-width: 760px;
-  margin-bottom: var(--space-2xl);
-  padding: var(--space-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-}
-
-.featured-cover {
+.featured-carousel {
   position: relative;
-  min-height: 260px;
+  min-height: 410px;
+  margin-bottom: var(--space-2xl);
   overflow: hidden;
-  border-radius: var(--radius-md);
-  background: var(--bg-elevated);
+  isolation: isolate;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  outline: none;
 }
 
-.featured-cover img {
-  width: 100%;
-  height: 100%;
-  min-height: 260px;
-  object-fit: cover;
-}
+.featured-carousel:focus-visible { box-shadow: 0 0 0 3px var(--color-primary-glow); }
+.featured-carousel.hero-compact { min-height: 320px; }
+.featured-carousel.hero-large { min-height: 500px; }
+.carousel-background, .carousel-shade { position: absolute; inset: 0; }
+.carousel-background { z-index: -2; background-position: center; background-size: cover; transform: scale(1.02); }
+.carousel-shade { z-index: -1; background: linear-gradient(90deg, rgba(9, 8, 13, .97) 0%, rgba(9, 8, 13, .83) 42%, rgba(9, 8, 13, .35) 100%), linear-gradient(0deg, rgba(9, 8, 13, .72), transparent 56%); }
+.has-zoom .carousel-background { animation: carousel-zoom var(--carousel-duration) ease-out infinite alternate; }
+.carousel-bg-enter-active, .carousel-bg-leave-active { transition: opacity var(--carousel-animation-duration) ease; }
+.carousel-bg-enter-from, .carousel-bg-leave-to { opacity: 0; }
+.transition-slide .carousel-bg-enter-active, .transition-slide .carousel-bg-leave-active { transition: opacity var(--carousel-animation-duration) ease, transform var(--carousel-animation-duration) ease; }
+.transition-slide .carousel-bg-enter-from { transform: translateX(4%) scale(1.03); }
+.transition-slide .carousel-bg-leave-to { transform: translateX(-4%) scale(1.03); }
+.transition-fade-zoom .carousel-bg-enter-active, .transition-fade-zoom .carousel-bg-leave-active { transition: opacity var(--carousel-animation-duration) ease, transform var(--carousel-animation-duration) ease; }
+.transition-fade-zoom .carousel-bg-enter-from { transform: scale(1.08); }
+.transition-fade-zoom .carousel-bg-leave-to { transform: scale(.98); }
+.transition-none .carousel-bg-enter-active, .transition-none .carousel-bg-leave-active { transition: none; }
+.motion-reduced .carousel-bg-enter-active, .motion-reduced .carousel-bg-leave-active { transition: none; }
+.carousel-content { display: grid; grid-template-columns: minmax(140px, 210px) minmax(0, 580px); align-items: center; gap: var(--space-xl); min-height: inherit; padding: var(--space-2xl); }
+.has-entrance .carousel-content { animation: carousel-copy-in var(--carousel-animation-duration) ease both; }
+.transition-slide.has-entrance .carousel-content { animation-name: carousel-copy-slide; }
+.transition-fade-zoom.has-entrance .carousel-content { animation-name: carousel-copy-zoom; }
+.transition-none.has-entrance .carousel-content { animation: none; }
+.motion-reduced .carousel-content, .motion-reduced .carousel-background { animation: none; }
+.carousel-cover { position: relative; align-self: center; overflow: hidden; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); }
+.carousel-cover img { display: block; width: 100%; aspect-ratio: 2 / 3; object-fit: cover; }
+.carousel-copy { max-width: 58ch; min-width: 0; }
+.align-center .carousel-content { grid-template-columns: minmax(0, 720px); justify-content: center; text-align: center; }
+.align-center .carousel-copy { margin: 0 auto; }
+.align-center .carousel-cover { display: none; }
+.align-center .featured-meta, .align-center .featured-actions { justify-content: center; }
+.featured-carousel .featured-kicker { margin-bottom: var(--space-sm); color: var(--color-primary-light); font-size: var(--font-size-xs); font-weight: var(--font-weight-bold); letter-spacing: var(--letter-spacing-wide); text-transform: uppercase; }
+.featured-carousel h2 { max-width: 18ch; color: #fff; font-family: var(--font-heading); font-size: clamp(2rem, 4vw, 4rem); line-height: .98; letter-spacing: var(--letter-spacing-tight); }
+.align-center h2 { margin-inline: auto; }
+.featured-carousel .featured-meta { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin-top: var(--space-md); color: rgba(255,255,255,.72); font-size: var(--font-size-xs); text-transform: capitalize; }
+.featured-carousel .featured-description { display: -webkit-box; max-width: 56ch; margin: var(--space-md) 0 var(--space-lg); overflow: hidden; color: rgba(255,255,255,.78); font-size: var(--font-size-sm); line-height: var(--line-height-relaxed); -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.featured-progress { margin-bottom: var(--space-md); color: var(--color-primary-light); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); }
+.featured-actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
+.featured-action { min-height: 40px; }
+.carousel-feedback { display: block; margin-top: var(--space-sm); color: var(--color-primary-light); font-size: var(--font-size-xs); }
+.carousel-nav { position: absolute; top: 50%; z-index: 2; display: grid; width: 38px; height: 38px; place-items: center; color: #fff; background: rgba(10, 9, 14, .62); border: 1px solid rgba(255,255,255,.18); border-radius: 50%; font-size: 28px; line-height: 1; transform: translateY(-50%); transition: background var(--transition-fast), border-color var(--transition-fast); }
+.carousel-nav:hover { background: var(--color-primary); border-color: var(--color-primary); }
+.carousel-nav-prev { left: var(--space-md); }
+.carousel-nav-next { right: var(--space-md); }
+.carousel-pagination { position: absolute; right: 0; bottom: var(--space-lg); left: 0; z-index: 2; display: flex; justify-content: center; gap: 6px; }
+.pagination-dots button, .pagination-minimal button { width: 7px; height: 7px; padding: 0; background: rgba(255,255,255,.42); border: 0; border-radius: 50%; transition: width var(--transition-fast), background var(--transition-fast); }
+.pagination-dots button.active { width: 24px; background: var(--color-primary); border-radius: var(--radius-full); }
+.pagination-minimal button { width: 18px; height: 2px; border-radius: 0; }
+.pagination-minimal button.active { background: #fff; }
+.pagination-progress { width: min(180px, 40vw); height: 3px; overflow: hidden; background: rgba(255,255,255,.25); border-radius: var(--radius-full); }
+.pagination-progress span { display: block; height: 100%; background: var(--color-primary); transition: width var(--transition-normal); }
+@keyframes carousel-zoom { from { transform: scale(1.02); } to { transform: scale(1.09); } }
+@keyframes carousel-copy-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes carousel-copy-slide { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes carousel-copy-zoom { from { opacity: 0; transform: scale(.98); } to { opacity: 1; transform: scale(1); } }
 
 .featured-airing {
   position: absolute;
@@ -647,52 +933,6 @@ onUnmounted(() => {
   font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-semibold);
   text-align: center;
-}
-
-.featured-copy {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  min-width: 0;
-  padding: var(--space-md) var(--space-md) var(--space-md) 0;
-}
-
-.featured-kicker {
-  margin-bottom: var(--space-sm);
-  color: var(--color-primary);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-}
-
-.featured-copy h2 {
-  max-width: 18ch;
-  font-size: var(--font-size-2xl);
-}
-
-.featured-meta {
-  display: flex;
-  gap: var(--space-xs);
-  margin-top: var(--space-sm);
-  color: var(--text-secondary);
-  font-size: var(--font-size-xs);
-  text-transform: capitalize;
-}
-
-.featured-description {
-  display: -webkit-box;
-  max-width: 52ch;
-  margin: var(--space-md) 0 var(--space-xl);
-  overflow: hidden;
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-relaxed);
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-}
-
-.featured-action {
-  min-height: 40px;
 }
 
 .quick-actions {
@@ -809,32 +1049,33 @@ onUnmounted(() => {
 }
 
 @media (max-width: 720px) {
-  .featured-media {
-    grid-template-columns: 104px minmax(0, 1fr);
-    gap: var(--space-md);
-  }
+  .featured-carousel,
+  .featured-carousel.hero-large,
+  .featured-carousel.hero-compact { min-height: 430px; }
 
-  .featured-cover,
-  .featured-cover img {
-    min-height: 148px;
-  }
-
-  .featured-copy {
-    padding: var(--space-xs) 0;
-  }
-
-  .featured-copy h2 {
-    font-size: var(--font-size-lg);
-  }
-
-  .featured-description {
-    margin-bottom: var(--space-md);
-    -webkit-line-clamp: 2;
-  }
+  .carousel-content { grid-template-columns: 88px minmax(0, 1fr); gap: var(--space-md); padding: var(--space-lg); }
+  .carousel-cover { align-self: start; }
+  .featured-carousel h2 { font-size: clamp(1.55rem, 8vw, 2.4rem); }
+  .featured-carousel .featured-description { margin-bottom: var(--space-md); -webkit-line-clamp: 4; }
+  .carousel-nav { width: 32px; height: 32px; font-size: 22px; }
+  .carousel-nav-prev { left: var(--space-xs); }
+  .carousel-nav-next { right: var(--space-xs); }
+  .carousel-pagination { bottom: var(--space-sm); }
 
   .quick-action-grid {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 480px) {
+  .featured-carousel,
+  .featured-carousel.hero-large,
+  .featured-carousel.hero-compact { min-height: 510px; }
+  .carousel-content { grid-template-columns: 1fr; align-content: center; padding: var(--space-lg) var(--space-md); }
+  .carousel-cover { width: 88px; }
+  .carousel-copy { align-self: start; }
+  .featured-carousel .featured-description { -webkit-line-clamp: 3; }
+  .featured-actions { flex-direction: column; align-items: stretch; }
 }
 
 .load-more-sentinel {

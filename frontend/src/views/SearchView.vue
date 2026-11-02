@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAnimeStore } from '../stores/anime'
 import { useMangaStore } from '../stores/manga'
 import { useAuthStore } from '../stores'
@@ -12,6 +12,7 @@ import AnimeGrid from '../components/anime/AnimeGrid.vue'
 import type { MediaType, SearchType, CharacterSearchResult, StaffSearchResult } from '../types'
 
 const router = useRouter()
+const route = useRoute()
 const animeStore = useAnimeStore()
 const mangaStore = useMangaStore()
 const authStore = useAuthStore()
@@ -225,6 +226,16 @@ function clearSearch() {
 onUnmounted(() => {
   if (debounceTimer) clearTimeout(debounceTimer)
 })
+
+function applyRouteSearch(value: unknown) {
+  const routeQuery = typeof value === 'string' ? value.trim() : ''
+  if (!routeQuery || routeQuery === query.value.trim()) return
+  query.value = routeQuery
+  performSearch()
+}
+
+onMounted(() => applyRouteSearch(route.query.search))
+watch(() => route.query.search, applyRouteSearch)
 </script>
 
 <template>
