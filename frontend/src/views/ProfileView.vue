@@ -913,7 +913,23 @@ function handleAboutClick(e: Event) {
   font-weight: var(--font-weight-medium);
 }
 
-/* Spinner */
+/* Desktop: constrain and center the settings canvas so it never stretches
+   edge-to-edge on wide monitors; keep mobile full-width. */
+@media (min-width: 1024px) {
+  .profile-view {
+    max-width: 980px;
+    margin: 0 auto;
+    padding-inline: var(--space-2xl);
+  }
+
+  .settings-group {
+    margin-inline: 0;
+  }
+
+  .account-card {
+    max-width: 100%;
+  }
+}
 .spinner {
   width: 18px;
   height: 18px;
