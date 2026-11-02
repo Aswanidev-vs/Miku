@@ -972,7 +972,7 @@ function handleEditorDeleted() {
 
 .score-item { display: flex; flex-direction: column; align-items: center; }
 .score-value { font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); color: var(--color-primary-light); }
-.score-label { font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; }
+.score-label { font-size: var(--font-size-xs); color: var(--text-muted); }
 
 /* Genres */
 .detail-genres { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin-bottom: var(--space-lg); }
@@ -995,7 +995,7 @@ function handleEditorDeleted() {
   margin-bottom: var(--space-lg);
 }
 
-.airing-label { font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; }
+.airing-label { font-size: var(--font-size-xs); color: var(--text-muted); }
 .airing-value { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-primary-light); }
 .airing-time {
   font-size: var(--font-size-xs);
@@ -1054,7 +1054,7 @@ function handleEditorDeleted() {
 /* Dates */
 .date-row { display: flex; gap: var(--space-xl); }
 .date-item { display: flex; flex-direction: column; }
-.date-label { font-size: var(--font-size-xs); color: var(--text-muted); text-transform: uppercase; }
+.date-label { font-size: var(--font-size-xs); color: var(--text-muted); }
 .date-value { font-size: var(--font-size-sm); color: var(--text-primary); }
 
 /* Characters */
@@ -1082,7 +1082,7 @@ function handleEditorDeleted() {
 .va-img { width: 32px; height: 32px; border-radius: var(--radius-full); object-fit: cover; }
 .va-info { display: flex; flex-direction: column; }
 .va-name { font-size: var(--font-size-xs); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
-.va-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
+.va-label { font-size: 10px; color: var(--text-muted); }
 .va-role-notes { font-size: 10px; color: var(--color-primary-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
 
 .characters-load-more {

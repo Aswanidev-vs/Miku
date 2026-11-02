@@ -82,7 +82,6 @@ defineProps<{
   font-size: 10px;
   font-weight: var(--font-weight-semibold, 600);
   letter-spacing: 0.14em;
-  text-transform: uppercase;
 }
 
 .rate-limit-copy h2 {
