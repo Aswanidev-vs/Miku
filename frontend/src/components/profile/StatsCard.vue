@@ -186,7 +186,7 @@ const mangaStats = [
 /* Responsive: smaller screens */
 @media (max-width: 360px) {
   .stats-grid {
-    gap: 6px;
+    gap: 4px;
   }
 
   .stat-card {

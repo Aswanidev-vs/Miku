@@ -250,7 +250,7 @@ function formatTooltip(date: string, count: number): string {
 .day-labels {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   padding-top: 16px;
 }
 
