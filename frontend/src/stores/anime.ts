@@ -34,6 +34,7 @@ query ($page: Int, $perPage: Int, $adult: Boolean) {
       description(asHtml: false)
       season
       seasonYear
+      startDate { year month day }
       mediaListEntry { id status score progress updatedAt }
       nextAiringEpisode {
         episode
@@ -139,6 +140,7 @@ query ($userId: Int, $status: MediaListStatus) {
         private
         hiddenFromStatusLists
         customLists
+        updatedAt
         media {
           id
           title {

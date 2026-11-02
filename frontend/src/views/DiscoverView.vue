@@ -44,6 +44,17 @@ const listEntriesByMediaId = computed(() => {
   return entries
 })
 
+function releaseTimestamp(media: Media): number {
+  if (media.startDate?.year) {
+    return Date.UTC(media.startDate.year, (media.startDate.month || 1) - 1, media.startDate.day || 1)
+  }
+  if (media.seasonYear) {
+    const seasonMonth = { WINTER: 0, SPRING: 3, SUMMER: 6, FALL: 9 }[media.season || ''] ?? 0
+    return Date.UTC(media.seasonYear, seasonMonth, 1)
+  }
+  return media.id
+}
+
 const carouselMedia = computed(() => {
   const sources = settings.value.carouselSources
   const bySource: Record<string, Media[]> = {
@@ -66,14 +77,26 @@ const carouselMedia = computed(() => {
       if (!media || seen.has(media.id)) continue
       const listEntry = media.mediaListEntry || listEntriesByMediaId.value.get(media.id)
       if (settings.value.carouselMediaFilter !== 'BOTH' && media.type && media.type !== settings.value.carouselMediaFilter) continue
+      if (settings.value.carouselDiscoveryFilter === 'my-list' && !listEntry) continue
+      if (settings.value.carouselDiscoveryFilter === 'unwatched' && listEntry && listEntry.status !== 'PLANNING') continue
       if (settings.value.carouselHideCompletedDropped && ['COMPLETED', 'DROPPED'].includes(listEntry?.status || '')) continue
       seen.add(media.id)
       candidates.push(listEntry && !media.mediaListEntry ? { ...media, mediaListEntry: listEntry } : media)
     }
   }
-  if (settings.value.carouselPreferList) {
-    candidates.sort((a, b) => Number(Boolean(b.mediaListEntry)) - Number(Boolean(a.mediaListEntry)))
-  }
+  candidates.sort((a, b) => {
+    let difference = 0
+    if (settings.value.carouselOrder === 'popular') {
+      difference = (b.popularity || b.trending || 0) - (a.popularity || a.trending || 0)
+    } else if (settings.value.carouselOrder === 'recently-updated') {
+      difference = (b.mediaListEntry?.updatedAt || releaseTimestamp(b)) - (a.mediaListEntry?.updatedAt || releaseTimestamp(a))
+    } else {
+      difference = releaseTimestamp(b) - releaseTimestamp(a)
+    }
+    if (difference !== 0) return difference
+    if (settings.value.carouselPreferList) return Number(Boolean(b.mediaListEntry)) - Number(Boolean(a.mediaListEntry))
+    return b.id - a.id
+  })
   return candidates.slice(0, settings.value.carouselMaxSlides)
 })
 
@@ -227,6 +250,7 @@ const QUERIES = {
           title { romaji english native userPreferred }
           coverImage { large medium color }
           format status episodes averageScore
+          startDate { year month day }
           genres nextAiringEpisode { episode }
         }
         pageInfo { hasNextPage }
@@ -242,6 +266,7 @@ const QUERIES = {
           title { romaji english native userPreferred }
           coverImage { large medium color }
           format status episodes averageScore
+          startDate { year month day }
           genres nextAiringEpisode { episode }
         }
         pageInfo { hasNextPage }
@@ -257,6 +282,7 @@ const QUERIES = {
           title { romaji english native userPreferred }
           coverImage { large medium color }
           format status episodes averageScore
+          startDate { year month day }
           genres nextAiringEpisode { episode }
         }
         pageInfo { hasNextPage }

@@ -26,6 +26,8 @@ export type CarouselSource =
   | 'currently-watching'
   | 'recently-updated'
 export type CarouselMediaFilter = 'ANIME' | 'MANGA' | 'BOTH'
+export type CarouselDiscoveryFilter = 'unwatched' | 'all' | 'my-list'
+export type CarouselOrder = 'latest' | 'popular' | 'recently-updated'
 export type CarouselAlignment = 'left' | 'center'
 export type CarouselHeroHeight = 'compact' | 'standard' | 'large'
 
@@ -62,6 +64,8 @@ export interface Settings {
   carouselTouchNavigation: boolean
   carouselSources: CarouselSource[]
   carouselMediaFilter: CarouselMediaFilter
+  carouselDiscoveryFilter: CarouselDiscoveryFilter
+  carouselOrder: CarouselOrder
   carouselMaxSlides: number
   carouselPreferList: boolean
   carouselHideCompletedDropped: boolean
@@ -88,8 +92,10 @@ export const carouselDefaults = {
   carouselPaginationStyle: 'dots' as CarouselPaginationStyle,
   carouselKeyboardNavigation: true,
   carouselTouchNavigation: true,
-  carouselSources: ['trending', 'seasonal', 'popular'] as CarouselSource[],
+  carouselSources: ['recently-updated', 'seasonal'] as CarouselSource[],
   carouselMediaFilter: 'ANIME' as CarouselMediaFilter,
+  carouselDiscoveryFilter: 'unwatched' as CarouselDiscoveryFilter,
+  carouselOrder: 'latest' as CarouselOrder,
   carouselMaxSlides: 5,
   carouselPreferList: true,
   carouselHideCompletedDropped: false,
@@ -149,7 +155,21 @@ export function accentStyleVars(hex: string | null): Record<string, string> | nu
 function load(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return { ...defaultSettings, ...JSON.parse(raw) }
+    if (raw) {
+      const saved = JSON.parse(raw)
+      const isLegacyCarouselSettings = !saved.carouselDiscoveryFilter
+      return {
+        ...defaultSettings,
+        ...saved,
+        ...(isLegacyCarouselSettings
+          ? {
+              carouselSources: [...carouselDefaults.carouselSources],
+              carouselDiscoveryFilter: carouselDefaults.carouselDiscoveryFilter,
+              carouselOrder: carouselDefaults.carouselOrder,
+            }
+          : {}),
+      }
+    }
   } catch {
     /* ignore */
   }
