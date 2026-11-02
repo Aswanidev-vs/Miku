@@ -451,7 +451,7 @@ onUnmounted(() => {
         </div>
         <AnimeGrid v-if="popularAnime.length > 0" :items="popularAnime" :columns="gridColumns" />
         <AnimeGrid v-else-if="!popularLoaded" :items="[]" :loading="true" :columns="gridColumns" />
-        <p v-else class="section-empty">Nothing found.</p>
+        <p v-else class="section-empty">Nothing found</p>
       </section>
 
       <section ref="seasonalSectionRef" class="discover-section">
@@ -460,7 +460,7 @@ onUnmounted(() => {
         </div>
         <AnimeGrid v-if="seasonalAnime.length > 0" :items="seasonalAnime" :columns="gridColumns" />
         <AnimeGrid v-else-if="!seasonalLoaded" :items="[]" :loading="true" :columns="gridColumns" />
-        <p v-else class="section-empty">Nothing found.</p>
+        <p v-else class="section-empty">Nothing found</p>
       </section>
 
       <section ref="latestAnimeSectionRef" class="discover-section">
@@ -469,7 +469,7 @@ onUnmounted(() => {
         </div>
         <AnimeGrid v-if="latestAnime.length > 0" :items="latestAnime" :columns="gridColumns" />
         <AnimeGrid v-else-if="!latestAnimeLoaded" :items="[]" :loading="true" :columns="gridColumns" />
-        <p v-else class="section-empty">Nothing found.</p>
+        <p v-else class="section-empty">Nothing found</p>
       </section>
 
       <section ref="latestMangaSectionRef" class="discover-section">
@@ -478,7 +478,7 @@ onUnmounted(() => {
         </div>
         <AnimeGrid v-if="latestManga.length > 0" :items="latestManga" :columns="gridColumns" />
         <AnimeGrid v-else-if="!latestMangaLoaded" :items="[]" :loading="true" :columns="gridColumns" />
-        <p v-else class="section-empty">Nothing found.</p>
+        <p v-else class="section-empty">Nothing found</p>
       </section>
 
       <section ref="mangaSectionRef" class="discover-section">
@@ -487,7 +487,7 @@ onUnmounted(() => {
         </div>
         <AnimeGrid v-if="topManga.length > 0" :items="topManga" :columns="gridColumns" />
         <AnimeGrid v-else-if="!mangaLoaded" :items="[]" :loading="true" :columns="gridColumns" />
-        <p v-else class="section-empty">Nothing found.</p>
+        <p v-else class="section-empty">Nothing found</p>
       </section>
 
       <!-- Infinite scroll sentinel + loading indicator -->
