@@ -17,23 +17,17 @@ const navItems = [
   { label: 'Search', route: 'search', icon: 'search' },
   { label: 'My List', route: 'mylist', icon: 'list' },
   { label: 'Activity', route: 'feed', icon: 'activity' },
-  { label: 'Profile', route: 'profile', icon: 'user' },
-  { label: 'Statistics', route: 'profile', icon: 'chart' },
+  { label: 'Statistics', route: 'statistics', icon: 'chart' },
   { label: 'Settings', route: 'settings', icon: 'settings' },
 ]
 
 const currentUser = computed(() => authStore.currentUser)
 
-function isActive(routeName: string, label: string) {
-  if (label === 'Statistics') return route.name === 'statistics'
+function isActive(routeName: string) {
   return route.name === routeName
 }
 
-function navigateTo(routeName: string, label: string) {
-  if (label === 'Statistics') {
-    router.push({ name: 'statistics' })
-    return
-  }
+function navigateTo(routeName: string) {
   router.push({ name: routeName })
 }
 
@@ -49,14 +43,7 @@ function openAccount() {
 
 <template>
   <aside class="desktop-sidebar" :class="{ collapsed }" aria-label="Primary navigation">
-    <div class="sidebar-brand-row">
-      <button class="sidebar-brand" type="button" aria-label="Open Discover" @click="router.push({ name: 'discover' })">
-        <img src="/logo.png" alt="" class="sidebar-logo" />
-        <span v-if="!collapsed" class="sidebar-brand-copy">
-          <strong>Miku</strong>
-          <span>AniList client</span>
-        </span>
-      </button>
+    <div class="sidebar-top">
       <button
         class="sidebar-collapse"
         type="button"
@@ -76,12 +63,12 @@ function openAccount() {
         v-for="item in navItems"
         :key="item.label"
         class="sidebar-nav-item"
-        :class="{ active: isActive(item.route, item.label) }"
+        :class="{ active: isActive(item.route) }"
         type="button"
         :aria-label="item.label"
-        :aria-current="isActive(item.route, item.label) ? 'page' : undefined"
+        :aria-current="isActive(item.route) ? 'page' : undefined"
         :title="collapsed ? item.label : undefined"
-        @click="navigateTo(item.route, item.label)"
+        @click="navigateTo(item.route)"
       >
         <span class="sidebar-nav-icon" aria-hidden="true">
           <svg v-if="item.icon === 'compass'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -100,10 +87,6 @@ function openAccount() {
             <path d="M4 11a8 8 0 0 1 8 8" />
             <path d="M4 5a14 14 0 0 1 14 14" />
             <circle cx="5" cy="19" r="1" />
-          </svg>
-          <svg v-else-if="item.icon === 'user'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="8" r="3.5" />
-            <path d="M5 20a7 7 0 0 1 14 0" />
           </svg>
           <svg v-else-if="item.icon === 'chart'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 19V5M4 19h16" />
@@ -156,62 +139,18 @@ function openAccount() {
   padding-inline: var(--space-xs);
 }
 
-.sidebar-brand-row {
+.sidebar-top {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  justify-content: flex-end;
   min-height: 44px;
   margin-bottom: var(--space-xl);
 }
 
-.sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-width: 0;
-  flex: 1;
-  text-align: left;
-}
-
-.collapsed .sidebar-brand-row {
-  gap: var(--space-xs);
-}
-
-.collapsed .sidebar-brand {
-  flex: 0 0 28px;
-  width: 28px;
-}
-
-.sidebar-logo {
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
-  object-fit: cover;
-  border-radius: var(--radius-sm);
-}
-
-.collapsed .sidebar-logo {
-  width: 28px;
-  height: 28px;
-}
-
-.sidebar-brand-copy,
 .sidebar-account-copy {
   display: flex;
   flex-direction: column;
   min-width: 0;
-}
-
-.sidebar-brand-copy strong {
-  font-family: var(--font-heading);
-  font-size: var(--font-size-lg);
-  line-height: 1;
-}
-
-.sidebar-brand-copy span {
-  margin-top: 3px;
-  color: var(--text-muted);
-  font-size: var(--font-size-2xs);
 }
 
 .sidebar-collapse,
@@ -231,9 +170,8 @@ function openAccount() {
   color: var(--text-muted);
 }
 
-.collapsed .sidebar-collapse {
-  width: 28px;
-  height: 28px;
+.collapsed .sidebar-top {
+  justify-content: center;
 }
 
 .sidebar-collapse:hover {

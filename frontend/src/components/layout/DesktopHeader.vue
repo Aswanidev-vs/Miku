@@ -36,6 +36,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 <template>
   <header class="desktop-header">
     <div class="desktop-header-title">
+      <button class="header-brand" type="button" aria-label="Open Discover" @click="router.push({ name: 'discover' })">
+        <img src="/logo.png" alt="Miku" />
+      </button>
       <h1>{{ pageTitle }}</h1>
     </div>
 
@@ -72,8 +75,29 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 .desktop-header-title {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-sm);
+}
+
+.header-brand {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.header-brand:hover {
+  background: var(--bg-hover);
+}
+
+.header-brand img {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  object-fit: cover;
 }
 
 .desktop-header h1 {
