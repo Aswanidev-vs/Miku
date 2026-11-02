@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '../../stores/auth'
+import UpdateNotification from './UpdateNotification.vue'
 
 const route = useRoute()
 const router = useRouter()
-const authStore = useAuthStore()
 
 const pageTitles: Record<string, string> = {
   discover: 'Discover',
@@ -18,18 +17,9 @@ const pageTitles: Record<string, string> = {
 }
 
 const pageTitle = computed(() => pageTitles[String(route.name)] ?? 'Miku')
-const user = computed(() => authStore.currentUser)
 
 function openSearch() {
   router.push({ name: 'search' })
-}
-
-function openNotifications() {
-  router.push({ name: 'feed' })
-}
-
-function openProfile() {
-  router.push({ name: 'profile' })
 }
 
 function onKeydown(event: KeyboardEvent) {
@@ -46,7 +36,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 <template>
   <header class="desktop-header">
     <div class="desktop-header-title">
-      <span class="desktop-header-kicker">Miku / Workspace</span>
       <h1>{{ pageTitle }}</h1>
     </div>
 
@@ -60,21 +49,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         <kbd>Ctrl K</kbd>
       </button>
 
-      <button class="header-icon-button notification-button" type="button" aria-label="Open activity" @click="openNotifications">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
-          <path d="M10 21h4" />
-        </svg>
-      </button>
-
-      <button class="header-profile" type="button" aria-label="Open profile" @click="openProfile">
-        <img v-if="user" :src="user.avatar.medium" :alt="user.name" />
-        <img v-else src="/logo.png" alt="" />
-        <span v-if="user">{{ user.name }}</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="m6 9 6 6 6-6" />
-        </svg>
-      </button>
+      <UpdateNotification :inline="true" />
     </div>
   </header>
 </template>
@@ -99,12 +74,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   display: flex;
   align-items: baseline;
   gap: var(--space-sm);
-}
-
-.desktop-header-kicker {
-  color: var(--text-muted);
-  font-size: var(--font-size-2xs);
-  letter-spacing: var(--letter-spacing-wide);
 }
 
 .desktop-header h1 {
@@ -166,69 +135,11 @@ kbd {
   white-space: nowrap;
 }
 
-.header-icon-button,
-.header-profile {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 34px;
-  border-radius: var(--radius-sm);
-  transition: color var(--transition-fast), background-color var(--transition-fast);
-}
-
-.header-icon-button:hover,
-.header-profile:hover {
-  color: var(--text-primary);
-  background: var(--bg-hover);
-}
-
-.header-icon-button {
-  position: relative;
-  width: 34px;
-  color: var(--text-secondary);
-}
-
-.header-icon-button svg {
-  width: 18px;
-  height: 18px;
-}
-
-.header-profile {
-  gap: var(--space-sm);
-  padding: 0 var(--space-sm);
-  color: var(--text-secondary);
-}
-
-.header-profile img {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.header-profile span {
-  max-width: 120px;
-  overflow: hidden;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.header-profile svg {
-  width: 14px;
-  height: 14px;
-  color: var(--text-muted);
-}
-
 @media (max-width: 900px) {
   .desktop-header {
     padding-inline: var(--space-md);
   }
 
-  .desktop-header-kicker,
-  .header-profile span,
-  .header-profile svg,
   kbd {
     display: none;
   }

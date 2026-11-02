@@ -153,7 +153,7 @@ function openAccount() {
 
 .desktop-sidebar.collapsed {
   width: var(--sidebar-rail-width);
-  padding-inline: var(--space-sm);
+  padding-inline: var(--space-xs);
 }
 
 .sidebar-brand-row {
@@ -173,12 +173,26 @@ function openAccount() {
   text-align: left;
 }
 
+.collapsed .sidebar-brand-row {
+  gap: var(--space-xs);
+}
+
+.collapsed .sidebar-brand {
+  flex: 0 0 28px;
+  width: 28px;
+}
+
 .sidebar-logo {
   width: 34px;
   height: 34px;
   flex-shrink: 0;
   object-fit: cover;
   border-radius: var(--radius-sm);
+}
+
+.collapsed .sidebar-logo {
+  width: 28px;
+  height: 28px;
 }
 
 .sidebar-brand-copy,
@@ -215,6 +229,11 @@ function openAccount() {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   color: var(--text-muted);
+}
+
+.collapsed .sidebar-collapse {
+  width: 28px;
+  height: 28px;
 }
 
 .sidebar-collapse:hover {

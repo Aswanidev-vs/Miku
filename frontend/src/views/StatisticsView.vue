@@ -1,14 +1,11 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useUserStore } from '../stores/user'
 import StatsCard from '../components/profile/StatsCard.vue'
 import StatsBreakdown from '../components/profile/StatsBreakdown.vue'
 import HeatmapCalendar from '../components/profile/HeatmapCalendar.vue'
-import UserFavorites from '../components/profile/UserFavorites.vue'
 
-const router = useRouter()
 const authStore = useAuthStore()
 const userStore = useUserStore()
 const user = computed(() => authStore.currentUser)
@@ -17,9 +14,10 @@ watch(user, (value) => {
   if (value) userStore.fetchAllActivitiesForHeatmap(value.id)
 }, { immediate: true })
 
-function openProfile() {
-  router.push({ name: 'profile' })
+async function handleLogin() {
+  await authStore.login()
 }
+
 </script>
 
 <template>
@@ -30,13 +28,12 @@ function openProfile() {
         <h1>Statistics</h1>
         <p class="statistics-subtitle">A clear view of what you watch, read, and return to</p>
       </div>
-      <button v-if="user" class="btn btn-secondary" type="button" @click="openProfile">Open profile</button>
     </header>
 
     <div v-if="!user" class="statistics-empty">
       <h2>Sign in to see your statistics</h2>
       <p>Connect AniList to bring your anime and manga history into Miku.</p>
-      <button class="btn btn-primary" type="button" @click="openProfile">Connect AniList</button>
+      <button class="btn btn-primary" type="button" @click="handleLogin">Sign in with AniList</button>
     </div>
 
     <template v-else-if="user.statistics">
@@ -54,13 +51,6 @@ function openProfile() {
           <p>Your activity over the last year</p>
         </div>
         <HeatmapCalendar :activities="userStore.heatmapActivities" />
-      </section>
-      <section v-if="user.favourites" class="statistics-section">
-        <div class="section-heading">
-          <h2>Favorites</h2>
-          <p>The titles and people you keep close</p>
-        </div>
-        <UserFavorites :favorites="user.favourites" />
       </section>
     </template>
   </div>

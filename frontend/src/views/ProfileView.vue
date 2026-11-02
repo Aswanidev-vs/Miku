@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Browser } from '@wailsio/runtime'
 import { useAuthStore } from '../stores'
 import { useUserStore } from '../stores'
@@ -8,11 +8,8 @@ import { useAnimeStore } from '../stores/anime'
 import { useSettings } from '../composables/useSettings'
 import { useUpdate } from '../composables/useUpdate'
 import { clearGqlCache } from '../api/graphql'
-import StatsCard from '../components/profile/StatsCard.vue'
-import StatsBreakdown from '../components/profile/StatsBreakdown.vue'
 import UserFavorites from '../components/profile/UserFavorites.vue'
 import SocialList from '../components/profile/SocialList.vue'
-import HeatmapCalendar from '../components/profile/HeatmapCalendar.vue'
 import ActivityItem from '../components/feed/ActivityItem.vue'
 import AppearanceSettings from '../components/settings/AppearanceSettings.vue'
 import AniListPreferences from '../components/settings/AniListPreferences.vue'
@@ -22,6 +19,7 @@ import type { User, TextActivity, ListActivity } from '../types'
 const authStore = useAuthStore()
 const userStore = useUserStore()
 const animeStore = useAnimeStore()
+const route = useRoute()
 const router = useRouter()
 const { settings, toggle } = useSettings()
 const {
@@ -29,14 +27,9 @@ const {
   checkForUpdate,
 } = useUpdate()
 
-onMounted(() => {
-  if (isLoggedIn.value && user.value) {
-    userStore.fetchAllActivitiesForHeatmap(user.value.id)
-  }
-})
-
 const user = computed(() => authStore.currentUser)
 const isLoggedIn = computed(() => authStore.isLoggedIn)
+const isSettingsRoute = computed(() => route.name === 'settings')
 const loading = computed(() => authStore.loading || authStore.authFlowInProgress || userStore.loading)
 
 // Auto-sync toggle -> start/stop the 60s polling loop
@@ -51,9 +44,26 @@ watch(
   }
 )
 
-// Deferred loading: stats/heatmap/genres mount after settings section renders
+// Defer profile-only sections so account and preference controls render first.
 const showStats = ref(false)
 let statsTimer: ReturnType<typeof setTimeout> | null = null
+
+const profileLoadedUserId = ref<number | null>(null)
+
+async function loadProfileData() {
+  if (isSettingsRoute.value || !isLoggedIn.value || !user.value) {
+    profileLoadedUserId.value = null
+    return
+  }
+  if (profileLoadedUserId.value === user.value.id) return
+
+  profileLoadedUserId.value = user.value.id
+  if (settings.value.showRecentActivity) {
+    await loadHistoryPage(1, false)
+  }
+  userStore.fetchFollowing(user.value.id)
+  userStore.fetchFollowers(user.value.id)
+}
 
 // Activity history lives in local state — the shared userStore.activities
 // belongs to the feed and must not be overwritten by the profile view.
@@ -107,22 +117,18 @@ function openUser(activity: TextActivity | ListActivity) {
 watch(
   () => settings.value.showRecentActivity,
   (enabled) => {
-    if (enabled && isLoggedIn.value && user.value && profileActivities.value.length === 0) {
+    if (!isSettingsRoute.value && enabled && isLoggedIn.value && user.value && profileActivities.value.length === 0) {
       loadHistoryPage(1, false)
     }
   }
 )
 
-onMounted(async () => {
-  if (isLoggedIn.value && user.value) {
-    if (settings.value.showRecentActivity) {
-      loadHistoryPage(1, false)
-    }
-    userStore.fetchFollowing(user.value.id)
-    userStore.fetchFollowers(user.value.id)
-    if (settings.value.autoSync) animeStore.startSync(user.value.id)
-  }
-  // Defer heavy stats section by 300ms so account + settings appear instantly
+watch([isLoggedIn, user], () => {
+  loadProfileData()
+}, { immediate: true })
+
+onMounted(() => {
+  // Defer profile sections by 300ms so the page heading appears immediately.
   statsTimer = setTimeout(() => { showStats.value = true }, 300)
 })
 
@@ -185,13 +191,32 @@ function handleAboutClick(e: Event) {
 
 <template>
   <div class="profile-view">
-    <header class="settings-header safe-area-top">
+    <header v-if="isSettingsRoute" class="settings-header safe-area-top">
       <h1 class="settings-title">Settings</h1>
       <p class="settings-sub">Account &amp; preferences for Miku</p>
     </header>
 
-    <!-- Account (top section) -->
-    <section class="account-card">
+    <header v-else class="profile-header safe-area-top">
+      <template v-if="user">
+        <img :src="user.avatar.large" :alt="user.name" class="profile-avatar" />
+        <div class="profile-header-copy">
+          <p class="profile-kicker">AniList profile</p>
+          <h1>{{ user.name }}</h1>
+          <p class="profile-sub">Your identity, social graph, and recent activity</p>
+        </div>
+      </template>
+      <template v-else>
+        <div class="profile-header-copy">
+          <p class="profile-kicker">Miku account</p>
+          <h1>Your profile</h1>
+          <p class="profile-sub">Connect AniList to see your profile and activity</p>
+        </div>
+      </template>
+    </header>
+
+    <template v-if="isSettingsRoute">
+      <!-- Account and connection controls belong to Settings. -->
+      <section class="account-card">
       <template v-if="isLoggedIn && user">
         <img :src="user.avatar.large" :alt="user.name" class="account-avatar" />
         <div class="account-info">
@@ -218,12 +243,12 @@ function handleAboutClick(e: Event) {
           <span v-else>Sign in with AniList</span>
         </button>
       </template>
-    </section>
+      </section>
 
-    <p v-if="authStore.error" class="inline-error">{{ authStore.error }}</p>
+      <p v-if="authStore.error" class="inline-error">{{ authStore.error }}</p>
 
-    <!-- Manual update status and trigger -->
-    <button class="update-card" type="button" @click="handleCheckForUpdates" :disabled="checking">
+      <!-- Manual update status and trigger -->
+      <button class="update-card" type="button" @click="handleCheckForUpdates" :disabled="checking">
       <span class="update-card-icon" :class="{ checking }">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M20 11a8.1 8.1 0 0 0-14.9-4L3 9" />
@@ -244,11 +269,11 @@ function handleAboutClick(e: Event) {
         <span class="update-card-status" v-else>Tap to check your installed version</span>
       </span>
       <span class="update-card-chevron">›</span>
-    </button>
-    <p v-if="updateError" class="inline-error update-error">{{ updateError }}</p>
+      </button>
+      <p v-if="updateError" class="inline-error update-error">{{ updateError }}</p>
 
-    <!-- Preferences -->
-    <section class="settings-group">
+      <!-- Preferences -->
+      <section class="settings-group">
       <h3 class="group-title">Preferences</h3>
 
       <div class="setting-row" :class="{ disabled: !isLoggedIn }">
@@ -418,19 +443,37 @@ function handleAboutClick(e: Event) {
           <span class="switch-knob" />
         </button>
       </div>
-    </section>
+      </section>
 
-<!-- Appearance + AniList prefs: side-by-side on desktop, stacked on mobile -->
-<div class="settings-columns">
-  <!-- Appearance (theme + accent) -->
-  <AppearanceSettings />
+      <!-- Appearance + AniList prefs: side-by-side on desktop, stacked on mobile -->
+      <div class="settings-columns">
+        <AppearanceSettings />
+        <AniListPreferences />
+      </div>
 
-  <!-- AniList preferences (title language, score format, default tab, adult content) -->
-  <AniListPreferences />
-</div>
+      <section class="settings-group">
+        <h3 class="group-title">About Miku</h3>
+        <div class="about-row">
+          <span class="about-label">App</span>
+          <span class="about-value">Miku · AniList Client</span>
+        </div>
+        <div class="about-row">
+          <span class="about-label">Version</span>
+          <span class="about-value">
+            v{{ currentVersion }}
+            <span v-if="hasUpdate" class="update-indicator">
+              → v{{ latestVersion }} available
+            </span>
+          </span>
+        </div>
+        <div class="about-row">
+          <span class="about-label">Data</span>
+          <span class="about-value">Provided by AniList</span>
+        </div>
+      </section>
+    </template>
 
-    <!-- Profile (when signed in) — deferred: mounts 300ms after settings for faster initial paint -->
-    <template v-if="isLoggedIn && user && showStats">
+    <template v-else-if="isLoggedIn && user && showStats">
       <section v-if="settings.showAbout && user.about" class="settings-group">
         <h3 class="group-title">About Me</h3>
         <div class="about-me" v-html="renderMarkdown(user.about)" @click="handleAboutClick"></div>
@@ -440,11 +483,8 @@ function handleAboutClick(e: Event) {
         <SocialList title="Following" :users="userStore.followingUsers" @select="handleSocialSelect" />
         <SocialList title="Followers" :users="userStore.followerUsers" @select="handleSocialSelect" />
       </section>
-      <section v-if="user.statistics" class="settings-group">
-        <h3 class="group-title">Your Stats</h3>
-        <StatsCard :statistics="user.statistics" />
-        <StatsBreakdown :statistics="user.statistics" />
-        <HeatmapCalendar :activities="userStore.heatmapActivities" />
+      <section v-if="user.favourites" class="settings-group">
+        <h3 class="group-title">Favorites</h3>
         <UserFavorites v-if="user.favourites" :favorites="user.favourites" />
       </section>
       <!-- Recent Activity (when enabled in preferences) -->
@@ -472,27 +512,10 @@ function handleAboutClick(e: Event) {
       </section>
     </template>
 
-    <!-- About -->
-    <section class="settings-group">
-      <h3 class="group-title">About</h3>
-      <div class="about-row">
-        <span class="about-label">App</span>
-        <span class="about-value">Miku · AniList Client</span>
-      </div>
-      <div class="about-row">
-        <span class="about-label">Version</span>
-        <span class="about-value">
-          v{{ currentVersion }}
-          <span v-if="hasUpdate" class="update-indicator">
-            → v{{ latestVersion }} available
-          </span>
-        </span>
-      </div>
-      <div class="about-row">
-        <span class="about-label">Data</span>
-        <span class="about-value">Provided by AniList</span>
-      </div>
-    </section>
+    <div v-else class="profile-empty">
+      <p>Sign in with AniList to see your profile.</p>
+      <button class="btn btn-primary" type="button" @click="handleLogin">Sign in with AniList</button>
+    </div>
   </div>
 </template>
 
@@ -525,6 +548,58 @@ function handleAboutClick(e: Event) {
   margin-top: var(--space-xs);
   font-size: var(--font-size-sm);
   color: var(--text-muted);
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  padding: var(--space-3xl) var(--space-lg) var(--space-lg);
+}
+
+.profile-avatar {
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+  border: 2px solid var(--color-primary);
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profile-header-copy {
+  min-width: 0;
+}
+
+.profile-kicker {
+  margin-bottom: var(--space-xs);
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.profile-header h1 {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.05;
+}
+
+.profile-sub {
+  margin-top: var(--space-xs);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.profile-empty {
+  display: grid;
+  min-height: 50vh;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-md);
+  padding: var(--space-xl);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
 }
 
 /* Account */
@@ -969,6 +1044,17 @@ function handleAboutClick(e: Event) {
   .settings-header {
     padding-right: var(--space-md);
     padding-left: var(--space-md);
+  }
+
+  .profile-header {
+    align-items: flex-start;
+    padding-right: var(--space-md);
+    padding-left: var(--space-md);
+  }
+
+  .profile-avatar {
+    width: 56px;
+    height: 56px;
   }
 
   .account-card {
