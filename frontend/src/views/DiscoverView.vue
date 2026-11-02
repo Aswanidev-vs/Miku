@@ -917,7 +917,7 @@ onUnmounted(() => {
 .motion-reduced .carousel-content, .motion-reduced .carousel-background { animation: none; }
 .carousel-cover { position: relative; align-self: center; overflow: hidden; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); }
 .carousel-cover img { display: block; width: 100%; aspect-ratio: 2 / 3; object-fit: cover; }
-.carousel-copy { max-width: 58ch; min-width: 0; }
+.carousel-copy { max-width: 58ch; min-width: 0; overflow-wrap: anywhere; }
 .align-center .carousel-content { grid-template-columns: minmax(0, 720px); justify-content: center; text-align: center; }
 .align-center .carousel-copy { margin: 0 auto; }
 .align-center .carousel-cover { display: none; }
@@ -926,7 +926,7 @@ onUnmounted(() => {
 .featured-carousel h2 { max-width: 18ch; color: #fff; font-family: var(--font-heading); font-size: clamp(2rem, 4vw, 4rem); line-height: .98; letter-spacing: var(--letter-spacing-tight); }
 .align-center h2 { margin-inline: auto; }
 .featured-carousel .featured-meta { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin-top: var(--space-md); color: rgba(255,255,255,.72); font-size: var(--font-size-xs); text-transform: capitalize; }
-.featured-carousel .featured-description { display: -webkit-box; max-width: 56ch; margin: var(--space-md) 0 var(--space-lg); overflow: hidden; color: rgba(255,255,255,.78); font-size: var(--font-size-sm); line-height: var(--line-height-relaxed); -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.featured-carousel .featured-description { display: -webkit-box; max-width: 56ch; margin: var(--space-md) 0 var(--space-lg); overflow: hidden; overflow-wrap: anywhere; color: rgba(255,255,255,.78); font-size: var(--font-size-sm); line-height: var(--line-height-relaxed); -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 .featured-progress { margin-bottom: var(--space-md); color: var(--color-primary-light); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); }
 .featured-actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
 .featured-action { min-height: 40px; }
@@ -1108,7 +1108,7 @@ onUnmounted(() => {
   .featured-carousel.hero-large,
   .featured-carousel.hero-compact { min-height: clamp(390px, 64svh, 480px); }
 
-  .carousel-content { grid-template-columns: clamp(72px, 23vw, 96px) minmax(0, 1fr); gap: var(--space-md); padding: var(--space-lg); align-content: start; }
+  .carousel-content { grid-template-columns: clamp(72px, 23vw, 96px) minmax(0, 1fr); gap: var(--space-md); padding: var(--space-lg); align-content: start; min-width: 0; }
   .carousel-cover { align-self: start; }
   .featured-carousel h2 { font-size: clamp(1.55rem, 8vw, 2.4rem); }
   .featured-carousel .featured-description { margin-bottom: var(--space-md); -webkit-line-clamp: 4; }
@@ -1130,16 +1130,21 @@ onUnmounted(() => {
 @media (max-width: 480px) {
   .featured-carousel,
   .featured-carousel.hero-large,
-  .featured-carousel.hero-compact { min-height: clamp(420px, 70svh, 500px); }
-  .carousel-content { grid-template-columns: clamp(68px, 22vw, 84px) minmax(0, 1fr); align-content: start; padding: var(--space-lg) var(--space-md); }
-  .carousel-cover { width: auto; }
-  .carousel-copy { align-self: start; }
-  .featured-carousel h2 { font-size: clamp(1.4rem, 7.5vw, 2.1rem); }
-  .featured-carousel .featured-description { -webkit-line-clamp: 3; }
-  .featured-actions { flex-direction: column; align-items: stretch; }
+  .featured-carousel.hero-compact { min-height: clamp(460px, calc(100svh - var(--mobile-header-height) - var(--nav-height) - 24px), 560px); }
+  .carousel-content { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-sm); min-width: 0; padding: var(--space-md) var(--space-md) var(--space-4xl); }
+  .carousel-cover { width: clamp(72px, 22vw, 92px); }
+  .carousel-copy { align-self: stretch; width: 100%; max-width: none; }
+  .featured-carousel h2 { max-width: 100%; font-size: clamp(1.35rem, 7vw, 2rem); }
+  .featured-carousel .featured-description { margin: var(--space-sm) 0 var(--space-md); -webkit-line-clamp: 2; }
+  .featured-actions { flex-direction: row; align-items: stretch; width: 100%; }
+  .featured-action { flex: 1 1 0; min-width: 0; padding-inline: var(--space-sm); font-size: var(--font-size-xs); }
+  .carousel-nav { top: auto; bottom: var(--space-xl); transform: none; }
+  .carousel-pagination { bottom: var(--space-sm); }
 }
 
 @media (max-width: 380px) {
+  .featured-actions { flex-direction: column; }
+
   .quick-action-grid {
     grid-template-columns: 1fr;
   }

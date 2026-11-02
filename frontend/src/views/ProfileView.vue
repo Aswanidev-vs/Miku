@@ -554,6 +554,7 @@ function handleAboutClick(e: Event) {
 .profile-view {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   min-height: 100%;
   background: var(--bg-deepest);
   padding-bottom: var(--space-xl);
@@ -613,6 +614,8 @@ function handleAboutClick(e: Event) {
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-semibold);
   line-height: 1.05;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .profile-sub {
@@ -1122,6 +1125,21 @@ function handleAboutClick(e: Event) {
   .inline-error {
     margin-right: 0;
     margin-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-header {
+    align-items: flex-start;
+    gap: var(--space-md);
+  }
+
+  .profile-header h1 {
+    font-size: clamp(24px, 7vw, var(--font-size-2xl));
+  }
+
+  .profile-sub {
+    max-width: 30ch;
   }
 }
 

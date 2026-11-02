@@ -48,6 +48,24 @@ func TestGetCurrentVersion(t *testing.T) {
 	assert.Equal(t, "0.8.14", svc.GetCurrentVersion())
 }
 
+func TestSelectUpdateAssetForPlatform(t *testing.T) {
+	assets := []GitHubAsset{
+		{Name: "Miku-v0.9.0.apk", BrowserDownloadURL: "https://example.com/Miku-v0.9.0.apk"},
+		{Name: "Miku-v0.9.0-windows-setup.exe", BrowserDownloadURL: "https://example.com/Miku-v0.9.0-windows-setup.exe"},
+		{Name: "Miku-v0.9.0-windows-unsigned.exe", BrowserDownloadURL: "https://example.com/Miku-v0.9.0-windows-unsigned.exe"},
+	}
+
+	androidAsset := selectUpdateAsset(assets, "android")
+	require.NotNil(t, androidAsset)
+	assert.Equal(t, "Miku-v0.9.0.apk", androidAsset.Name)
+
+	windowsAsset := selectUpdateAsset(assets, "windows")
+	require.NotNil(t, windowsAsset)
+	assert.Equal(t, "Miku-v0.9.0-windows-setup.exe", windowsAsset.Name)
+
+	assert.Nil(t, selectUpdateAsset(assets, "linux"))
+}
+
 func TestCheckForUpdate_NewerAvailable(t *testing.T) {
 	mockRelease := `{
 		"tag_name": "v0.9.0",

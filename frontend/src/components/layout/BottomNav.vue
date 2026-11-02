@@ -9,8 +9,9 @@ const tabs = [
   { name: 'Discover', route: 'discover', icon: 'compass' },
   { name: 'Search', route: 'search', icon: 'search' },
   { name: 'My List', route: 'mylist', icon: 'list' },
-  { name: 'Feed', route: 'feed', icon: 'rss' },
-  { name: 'Settings', route: 'profile', icon: 'settings' },
+  { name: 'Activity', route: 'feed', icon: 'rss' },
+  { name: 'Statistics', route: 'statistics', icon: 'chart' },
+  { name: 'Settings', route: 'settings', icon: 'settings' },
 ]
 
 const currentRoute = computed(() => route.name)
@@ -52,6 +53,11 @@ function navigateTo(routeName: string) {
           <path d="M4 11a9 9 0 0 1 9 9"/>
           <path d="M4 4a16 16 0 0 1 16 16"/>
           <circle cx="5" cy="19" r="1"/>
+        </svg>
+        <svg v-else-if="tab.icon === 'chart'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19V5" />
+          <path d="M4 19h16" />
+          <path d="m7 15 3-4 3 2 5-6" />
         </svg>
         <svg v-else-if="tab.icon === 'settings'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"/>
@@ -96,7 +102,7 @@ function navigateTo(routeName: string) {
   padding: 5px 2px;
   border-radius: var(--radius-sm);
   transition: color var(--transition-fast), background var(--transition-fast);
-  flex: 1;
+  flex: 1 1 0;
   color: var(--text-muted);
   position: relative;
   min-width: 0;
@@ -128,10 +134,11 @@ function navigateTo(routeName: string) {
 
 .nav-label {
   font-family: var(--font-body);
-  font-size: 9px;
+  font-size: clamp(8px, 2.3vw, 9px);
   font-weight: var(--font-weight-semibold);
   line-height: 1;
-  letter-spacing: var(--letter-spacing-wide);
+  letter-spacing: 0;
+  white-space: nowrap;
 }
 
 </style>
