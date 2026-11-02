@@ -685,4 +685,43 @@ watch(() => route.query.search, applyRouteSearch)
   color: var(--text-muted);
   font-size: var(--font-size-sm);
 }
+
+@media (max-width: 640px) {
+  .search-header {
+    padding-top: var(--space-lg);
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .search-input-wrapper {
+    min-height: 46px;
+  }
+
+  .type-filter {
+    margin-right: calc(-1 * var(--mobile-gutter));
+    margin-left: calc(-1 * var(--mobile-gutter));
+    padding-right: var(--mobile-gutter);
+    padding-left: var(--mobile-gutter);
+  }
+
+  .search-results {
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .person-card {
+    min-height: 64px;
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .load-more-btn {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 360px) {
+  .loading-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 </style>

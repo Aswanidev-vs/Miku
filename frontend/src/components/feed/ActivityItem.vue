@@ -164,4 +164,23 @@ function openMedia(id?: number) {
   flex-shrink: 0;
   cursor: pointer;
 }
+
+@media (max-width: 640px) {
+  .activity-item {
+    padding: var(--space-md);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+  }
+
+  .activity-avatar img {
+    width: 36px;
+    height: 36px;
+  }
+
+  .activity-cover {
+    width: 44px;
+    height: 58px;
+  }
+}
 </style>

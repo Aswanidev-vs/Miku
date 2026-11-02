@@ -1091,6 +1091,40 @@ function handleAboutClick(e: Event) {
   }
 }
 
+@media (max-width: 820px) {
+  .settings-header,
+  .profile-header {
+    padding-top: var(--space-lg);
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .settings-title {
+    display: none;
+  }
+
+  .settings-sub {
+    margin-top: 0;
+  }
+
+  .account-card,
+  .settings-group {
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  .update-card {
+    width: 100%;
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  .inline-error {
+    margin-right: 0;
+    margin-left: 0;
+  }
+}
+
 /* Spinner */
 .spinner {
   width: 18px;
@@ -1125,14 +1159,14 @@ function handleAboutClick(e: Event) {
    account name/status never gets squeezed into an unreadable column. */
 @media (max-width: 420px) {
   .settings-header {
-    padding-right: var(--space-md);
-    padding-left: var(--space-md);
+    padding-right: 0;
+    padding-left: 0;
   }
 
   .profile-header {
     align-items: flex-start;
-    padding-right: var(--space-md);
-    padding-left: var(--space-md);
+    padding-right: 0;
+    padding-left: 0;
   }
 
   .profile-avatar {
@@ -1144,8 +1178,8 @@ function handleAboutClick(e: Event) {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     gap: var(--space-sm) var(--space-md);
-    margin-right: var(--space-md);
-    margin-left: var(--space-md);
+    margin-right: 0;
+    margin-left: 0;
     padding: var(--space-sm);
   }
 
@@ -1171,19 +1205,19 @@ function handleAboutClick(e: Event) {
   }
 
   .inline-error {
-    margin-right: var(--space-md);
-    margin-left: var(--space-md);
+    margin-right: 0;
+    margin-left: 0;
   }
 
   .update-card {
-    width: calc(100% - (var(--space-md) * 2));
-    margin-right: var(--space-md);
-    margin-left: var(--space-md);
+    width: 100%;
+    margin-right: 0;
+    margin-left: 0;
   }
 
   .settings-group {
-    margin-right: var(--space-md);
-    margin-left: var(--space-md);
+    margin-right: 0;
+    margin-left: 0;
     padding-right: var(--space-sm);
     padding-left: var(--space-sm);
   }

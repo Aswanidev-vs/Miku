@@ -365,7 +365,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Bottom nav — full-width, gesture-nav safe */
 .is-mobile .bottom-nav {
-  height: 56px;
+  height: calc(var(--nav-height) + var(--safe-area-bottom));
   padding-bottom: var(--safe-area-bottom);
 }
 
@@ -375,7 +375,21 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .is-mobile .main-content {
-  padding-bottom: calc(56px + var(--safe-area-bottom));
+  padding-bottom: calc(var(--nav-height) + var(--safe-area-bottom));
+}
+
+.is-mobile .safe-area-top {
+  padding-top: 0 !important;
+}
+
+.is-mobile .discover-view,
+.is-mobile .mylist-view,
+.is-mobile .feed-view,
+.is-mobile .statistics-view,
+.is-mobile .profile-view,
+.is-mobile .va-view {
+  padding-right: max(var(--mobile-gutter), env(safe-area-inset-right, 0px));
+  padding-left: max(var(--mobile-gutter), env(safe-area-inset-left, 0px));
 }
 
 /* Touch feedback — press scale on interactive cards */
@@ -397,6 +411,17 @@ h1, h2, h3, h4, h5, h6 {
 .is-mobile .tab-btn {
   min-height: 40px;
   padding: var(--space-sm) var(--space-lg);
+}
+
+.is-mobile .tab-bar,
+.is-mobile .type-filter {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.is-mobile .tab-bar::-webkit-scrollbar,
+.is-mobile .type-filter::-webkit-scrollbar {
+  display: none;
 }
 
 /* Detail view — tighter layout for mobile */

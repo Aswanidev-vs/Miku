@@ -127,6 +127,8 @@
   /* Layout */
   --nav-height: 56px;
   --header-height: 52px;
+  --mobile-header-height: 60px;
+  --mobile-gutter: clamp(16px, 4vw, 28px);
   --sidebar-width: 224px;
   --sidebar-rail-width: 72px;
   --content-max: 1200px;

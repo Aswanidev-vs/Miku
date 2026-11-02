@@ -140,7 +140,7 @@ async function handleLogin() {
 
 @media (max-width: 820px) {
   .statistics-view {
-    padding-inline: var(--space-lg);
+    padding-inline: max(var(--mobile-gutter), env(safe-area-inset-left, 0px));
   }
 
   .statistics-view :deep(.stats-section) {
@@ -148,10 +148,22 @@ async function handleLogin() {
   }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
   .statistics-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .statistics-header h1 {
+    display: none;
+  }
+
+  .statistics-view {
+    padding-top: var(--space-lg);
+  }
+
+  .statistics-section {
+    margin-top: var(--space-2xl);
   }
 }
 </style>

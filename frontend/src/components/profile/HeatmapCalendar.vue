@@ -184,7 +184,6 @@ function formatTooltip(date: string, count: number): string {
   border-radius: var(--radius-md);
   padding: var(--space-md);
   margin-top: var(--space-md);
-  width: 100%;
 }
 
 .heatmap-header {

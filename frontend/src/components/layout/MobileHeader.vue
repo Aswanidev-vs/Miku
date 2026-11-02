@@ -1,0 +1,175 @@
+<script setup lang="ts">
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import UpdateNotification from './UpdateNotification.vue'
+import SearchDialog from './SearchDialog.vue'
+
+const route = useRoute()
+const router = useRouter()
+const searchOpen = ref(false)
+
+const pageTitles: Record<string, string> = {
+  discover: 'Discover',
+  search: 'Search',
+  mylist: 'My List',
+  feed: 'Activity',
+  profile: 'Profile',
+  statistics: 'Statistics',
+  settings: 'Settings',
+}
+
+const pageTitle = computed(() => pageTitles[String(route.name)] ?? 'Miku')
+
+function openSearch() {
+  searchOpen.value = true
+}
+
+function closeSearch() {
+  searchOpen.value = false
+}
+
+function submitSearch(query: string) {
+  searchOpen.value = false
+  router.push({ name: 'search', query: { search: query } })
+}
+
+function onKeydown(event: KeyboardEvent) {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault()
+    openSearch()
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+</script>
+
+<template>
+  <header class="mobile-header">
+    <button class="mobile-brand" type="button" aria-label="Open Discover" @click="router.push({ name: 'discover' })">
+      <img src="/logo.png" alt="Miku" />
+    </button>
+
+    <div class="mobile-header-title">
+      <span>Miku</span>
+      <h1>{{ pageTitle }}</h1>
+    </div>
+
+    <div class="mobile-header-actions">
+      <button class="mobile-search" type="button" aria-label="Open search" @click="openSearch">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-4-4" />
+        </svg>
+      </button>
+      <UpdateNotification :inline="true" />
+    </div>
+
+    <SearchDialog v-if="searchOpen" @close="closeSearch" @submit="submitSearch" />
+  </header>
+</template>
+
+<style scoped>
+.mobile-header {
+  position: fixed;
+  z-index: calc(var(--z-sticky) + 1);
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  height: calc(var(--mobile-header-height) + var(--safe-area-top));
+  padding: var(--safe-area-top) max(var(--mobile-gutter), env(safe-area-inset-left, 0px)) 0 max(var(--mobile-gutter), env(safe-area-inset-right, 0px));
+  background: color-mix(in srgb, var(--bg-deep) 94%, transparent);
+  border-bottom: 1px solid var(--border-subtle);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.mobile-brand,
+.mobile-search {
+  display: grid;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: var(--radius-md);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.mobile-brand:hover,
+.mobile-search:hover {
+  background: var(--bg-hover);
+}
+
+.mobile-brand img {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  object-fit: cover;
+}
+
+.mobile-header-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mobile-header-title span {
+  color: var(--color-primary);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.mobile-header-title h1 {
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.mobile-search {
+  color: var(--text-secondary);
+}
+
+.mobile-search svg {
+  width: 20px;
+  height: 20px;
+}
+
+@media (max-width: 360px) {
+  .mobile-header {
+    gap: 2px;
+  }
+
+  .mobile-brand,
+  .mobile-search {
+    flex-basis: 40px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .mobile-brand img {
+    width: 29px;
+    height: 29px;
+  }
+}
+</style>

@@ -382,8 +382,37 @@ watch(activeTab, (tab) => {
   to { transform: rotate(360deg); }
 }
 
-@media (max-width: 560px) {
-  .list-tools { align-items: stretch; flex-direction: column; }
+@media (max-width: 640px) {
+  .mylist-header {
+    padding-top: var(--space-lg);
+  }
+
+  .mylist-title {
+    display: none;
+  }
+
+  .mylist-subtitle {
+    margin-top: 0;
+  }
+
+  .tab-bar {
+    margin-right: calc(-1 * var(--mobile-gutter));
+    margin-left: calc(-1 * var(--mobile-gutter));
+    padding-right: var(--mobile-gutter);
+    padding-left: var(--mobile-gutter);
+  }
+
+  .list-tools {
+    align-items: stretch;
+    flex-direction: column;
+    margin-top: 0;
+  }
+
+  .list-search,
+  .sort-select select {
+    min-height: 44px;
+  }
+
   .sort-select { justify-content: space-between; }
   .sort-select select { flex: 1; }
 }

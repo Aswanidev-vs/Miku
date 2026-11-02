@@ -51,14 +51,17 @@ export function usePlatform() {
   })
 
   const os = computed(() => platform.value?.os || 'unknown')
-  const isDesktop = computed(() => platform.value?.isDesktop ?? true)
-  const isMobile = computed(() => platform.value?.isMobile ?? false)
   const isTouch = computed(() => platform.value?.isTouch ?? false)
-  const hasHover = computed(() => platform.value?.hasHover ?? true)
-
   const screenSmall = computed(() => screenWidth.value < 640)
   const screenMedium = computed(() => screenWidth.value >= 640 && screenWidth.value < 1024)
   const screenLarge = computed(() => screenWidth.value >= 1024)
+
+  // Treat a very narrow desktop window as a mobile layout too. This keeps the
+  // shell usable in split-screen, portrait, and embedded WebView sizes instead
+  // of leaving the desktop sidebar with too little room for the content.
+  const isMobile = computed(() => (platform.value?.isMobile ?? false) || screenSmall.value)
+  const isDesktop = computed(() => (platform.value?.isDesktop ?? true) && !screenSmall.value)
+  const hasHover = computed(() => (platform.value?.hasHover ?? true) && !screenSmall.value)
 
   const gridColumns = computed(() => {
     if (screenSmall.value) return 3

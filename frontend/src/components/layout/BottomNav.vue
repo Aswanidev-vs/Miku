@@ -75,7 +75,7 @@ function navigateTo(routeName: string) {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  padding: 0 var(--space-xs);
+  padding: 4px max(var(--space-xs), env(safe-area-inset-right, 0px)) 4px max(var(--space-xs), env(safe-area-inset-left, 0px));
   z-index: var(--z-sticky);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -92,7 +92,8 @@ function navigateTo(routeName: string) {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 6px 0;
+  min-height: 44px;
+  padding: 5px 2px;
   border-radius: var(--radius-sm);
   transition: color var(--transition-fast), background var(--transition-fast);
   flex: 1;
@@ -108,6 +109,7 @@ function navigateTo(routeName: string) {
 
 .nav-item.active {
   color: var(--color-primary);
+  background: var(--color-primary-subtle);
 }
 
 .nav-icon {

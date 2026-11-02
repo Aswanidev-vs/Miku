@@ -7,7 +7,7 @@ import { usePlatform } from './composables/usePlatform'
 import BottomNav from './components/layout/BottomNav.vue'
 import DesktopHeader from './components/layout/DesktopHeader.vue'
 import DesktopSidebar from './components/layout/DesktopSidebar.vue'
-import UpdateNotification from './components/layout/UpdateNotification.vue'
+import MobileHeader from './components/layout/MobileHeader.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -165,8 +165,8 @@ onUnmounted(() => {
   >
     <DesktopHeader v-if="isDesktop" />
     <DesktopSidebar v-if="isDesktop" @update:collapsed="sidebarCollapsed = $event" />
-    <UpdateNotification v-if="!isDesktop" />
-    <main class="main-content" :class="{ 'desktop-main-content': isDesktop }">
+    <MobileHeader v-if="isMobile" />
+    <main class="main-content" :class="{ 'desktop-main-content': isDesktop, 'mobile-main-content': isMobile }">
       <RouterView v-slot="{ Component }">
         <Transition name="view-fade" mode="out-in">
           <component :is="Component" />
@@ -208,5 +208,10 @@ onUnmounted(() => {
 
 .desktop-shell--rail .desktop-main-content {
   left: var(--sidebar-rail-width);
+}
+
+.mobile-main-content {
+  top: calc(var(--mobile-header-height) + var(--safe-area-top));
+  padding-bottom: calc(var(--nav-height) + var(--safe-area-bottom));
 }
 </style>
