@@ -332,6 +332,27 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag branch policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF_NAME" == *"-"* ]]; then
+            EXPECTED_BRANCH="develop"
+            RELEASE_CHANNEL="prerelease"
+          else
+            EXPECTED_BRANCH="main"
+            RELEASE_CHANNEL="stable"
+          fi
+
+          git fetch origin "$EXPECTED_BRANCH" --no-tags
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "origin/$EXPECTED_BRANCH"; then
+            echo "The $RELEASE_CHANNEL tag $GITHUB_REF_NAME must point to a commit on $EXPECTED_BRANCH." >&2
+            exit 1
+          fi
+          echo "Verified $RELEASE_CHANNEL tag $GITHUB_REF_NAME belongs to $EXPECTED_BRANCH."
 
       - name: Download Android artifact
         uses: actions/download-artifact@v8.0.2
