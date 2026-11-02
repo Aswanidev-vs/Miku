@@ -34,18 +34,14 @@ body {
   position: relative;
 }
 
-/* Atmospheric ambient backdrop — soft coral/iris bloom, fixed */
+/* Quiet base backdrop — no ambient color blooms (cover art carries color) */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background:
-    radial-gradient(900px 600px at 12% -8%, var(--ambient-coral), transparent 60%),
-    radial-gradient(800px 600px at 92% 4%, var(--ambient-iris), transparent 55%),
-    radial-gradient(700px 700px at 50% 110%, var(--ambient-gold), transparent 60%),
-    var(--bg-deepest);
+  background: var(--bg-deepest);
 }
 
 /* Subtle film grain for a crafted, non-AI feel */

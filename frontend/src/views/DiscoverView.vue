@@ -496,7 +496,7 @@ onUnmounted(() => {
           <div class="spinner"></div>
           <span>Loading more...</span>
         </div>
-        <p v-else-if="allLoaded" class="all-loaded">You've seen it all ✨</p>
+        <p v-else-if="allLoaded" class="all-loaded">You've seen it all</p>
       </div>
     </div>
   </PullToRefresh>
@@ -516,9 +516,8 @@ onUnmounted(() => {
   font-family: var(--font-body);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
-  letter-spacing: var(--letter-spacing-wider);
-  text-transform: uppercase;
-  color: var(--color-primary);
+  letter-spacing: var(--letter-spacing-normal);
+  color: var(--text-muted);
   margin-bottom: var(--space-xs);
 }
 
@@ -561,8 +560,7 @@ onUnmounted(() => {
   width: 7px;
   height: 7px;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
-  box-shadow: 0 0 10px var(--color-primary-glow);
+  background: var(--color-primary);
   flex-shrink: 0;
 }
 
