@@ -127,25 +127,19 @@ func (s *UpdateService) CheckForUpdate() (*UpdateInfo, error) {
 	if CompareVersions(release.TagName, s.config.CurrentVersion) > 0 {
 		info.Available = true
 
-		var apkAsset *GitHubAsset
-		for i := range release.Assets {
-			a := &release.Assets[i]
-			name := strings.ToLower(a.Name)
-			if strings.HasSuffix(name, ".apk") && !strings.Contains(name, "unsigned") {
-				apkAsset = a
-				info.DownloadURL = a.BrowserDownloadURL
-				info.AssetName = a.Name
-				info.AssetSize = a.Size
-				break
-			}
+		selectedAsset := selectUpdateAsset(release.Assets, runtime.GOOS)
+		if selectedAsset != nil {
+			info.DownloadURL = selectedAsset.BrowserDownloadURL
+			info.AssetName = selectedAsset.Name
+			info.AssetSize = selectedAsset.Size
 		}
 
 		// Best-effort: look for a published checksum sidecar and fetch the
 		// expected SHA-256 for the selected asset. Missing sidecar keeps the
 		// flow working (verification is skipped), so existing releases without
 		// checksums are not broken.
-		if apkAsset != nil {
-			if hash := s.fetchExpectedSHA256(release.Assets, apkAsset.Name); hash != "" {
+		if selectedAsset != nil {
+			if hash := s.fetchExpectedSHA256(release.Assets, selectedAsset.Name); hash != "" {
 				info.SHA256 = hash
 				s.mu.Lock()
 				s.expectedSHA256 = hash
@@ -157,16 +151,46 @@ func (s *UpdateService) CheckForUpdate() (*UpdateInfo, error) {
 	return info, nil
 }
 
+// updateFileExtension returns the distributable file extension supported by
+// the current runtime. Releases can contain both Android and desktop assets,
+// so the updater must never choose an asset for another platform.
+func updateFileExtension(goos string) string {
+	switch goos {
+	case "android":
+		return ".apk"
+	case "windows":
+		return ".exe"
+	default:
+		return ""
+	}
+}
+
+func selectUpdateAsset(assets []GitHubAsset, goos string) *GitHubAsset {
+	extension := updateFileExtension(goos)
+	if extension == "" {
+		return nil
+	}
+
+	for i := range assets {
+		asset := &assets[i]
+		name := strings.ToLower(asset.Name)
+		if strings.HasSuffix(name, extension) && !strings.Contains(name, "unsigned") {
+			return asset
+		}
+	}
+	return nil
+}
+
 // fetchExpectedSHA256 looks for a checksum sidecar published alongside the
-// release assets and returns the hex-encoded SHA-256 for apkName. It supports
-// per-asset "<apk>.sha256" files as well as aggregate "SHA256SUMS"/
+// release assets and returns the hex-encoded SHA-256 for assetName. It supports
+// per-asset "<asset>.sha256" files as well as aggregate "SHA256SUMS"/
 // "checksums.txt" files. Returns "" when no usable checksum is found.
-func (s *UpdateService) fetchExpectedSHA256(assets []GitHubAsset, apkName string) string {
-	lowerApk := strings.ToLower(apkName)
+func (s *UpdateService) fetchExpectedSHA256(assets []GitHubAsset, assetName string) string {
+	lowerAsset := strings.ToLower(assetName)
 	for _, a := range assets {
 		name := strings.ToLower(a.Name)
-		// Per-asset sidecar: "<apk>.sha256"
-		if name == lowerApk+".sha256" || name == lowerApk+".sha256.txt" {
+		// Per-asset sidecar: "<asset>.sha256"
+		if name == lowerAsset+".sha256" || name == lowerAsset+".sha256.txt" {
 			if h := s.downloadText(a.BrowserDownloadURL); h != "" {
 				return firstToken(h)
 			}
@@ -179,7 +203,7 @@ func (s *UpdateService) fetchExpectedSHA256(assets []GitHubAsset, apkName string
 				fields := strings.Fields(line)
 				if len(fields) >= 2 {
 					fname := strings.TrimPrefix(fields[1], "*")
-					if strings.EqualFold(fname, apkName) {
+					if strings.EqualFold(fname, assetName) {
 						return fields[0]
 					}
 				}
@@ -259,7 +283,7 @@ func (s *UpdateService) DownloadUpdate(downloadURL string, expectedSHA256 ...str
 	tmpDir := GetDownloadDir()
 	os.MkdirAll(tmpDir, 0700)
 
-	tmpFile, err := os.CreateTemp(tmpDir, "miku-update-*.apk")
+	tmpFile, err := os.CreateTemp(tmpDir, "miku-update-*"+updateFileExtension(runtime.GOOS))
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp file: %w", err)
 	}
@@ -363,7 +387,7 @@ func (s *UpdateService) CleanupDownloads() {
 	}
 }
 
-func (s *UpdateService) InstallUpdate(apkPath string, expectedSHA256 ...string) error {
+func (s *UpdateService) InstallUpdate(updatePath string, expectedSHA256 ...string) error {
 	expected := ""
 	if len(expectedSHA256) > 0 {
 		expected = strings.TrimSpace(expectedSHA256[0])
@@ -377,11 +401,11 @@ func (s *UpdateService) InstallUpdate(apkPath string, expectedSHA256 ...string) 
 	// Verify integrity of the artifact before handing it to the OS installer.
 	// When an expected hash is known, enforce it; otherwise at least confirm
 	// the file is non-empty and readable.
-	if info, err := os.Stat(apkPath); err != nil || info.Size() == 0 {
+	if info, err := os.Stat(updatePath); err != nil || info.Size() == 0 {
 		return fmt.Errorf("update file missing or empty: %w", err)
 	}
 	if expected != "" {
-		computed, err := fileSHA256(apkPath)
+		computed, err := fileSHA256(updatePath)
 		if err != nil {
 			return fmt.Errorf("failed to hash update file: %w", err)
 		}
@@ -392,13 +416,13 @@ func (s *UpdateService) InstallUpdate(apkPath string, expectedSHA256 ...string) 
 
 	switch runtime.GOOS {
 	case "windows":
-		return openFile(apkPath)
+		return openFile(updatePath)
 	case "darwin":
-		return openFile(apkPath)
+		return openFile(updatePath)
 	case "linux":
-		return openFile(apkPath)
+		return openFile(updatePath)
 	case "android":
-		return installAndroidAPK(apkPath)
+		return installAndroidAPK(updatePath)
 	default:
 		return fmt.Errorf("auto-install not supported on %s — please install manually", runtime.GOOS)
 	}

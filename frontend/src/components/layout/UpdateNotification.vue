@@ -10,7 +10,7 @@ import { preferredTitle } from '../../utils/mediaDisplay'
 const {
   checking, downloading, downloadProgress,
   downloaded, downloadTotal, downloadSpeed, installing,
-  hasUpdate, updateInfo, downloadedApkPath,
+  hasUpdate, updateInfo, downloadedUpdatePath,
   error, checked,
   checkForUpdate, downloadUpdate, installUpdate, dismissUpdate,
   wasDismissedForCurrent, cleanupOldApks,
@@ -228,20 +228,20 @@ function formatSpeed(bytesPerSecond: number): string {
               <div v-if="error" class="error-msg">{{ error }}</div>
 
               <div class="card-actions">
-                <button v-if="!downloadedApkPath && !downloading"
+                <button v-if="!downloadedUpdatePath && !downloading"
                         class="btn btn-primary"
                         @click="handleDownload"
                         :disabled="checking || !updateInfo.downloadUrl">
                   {{ checking ? 'Checking...' : 'Download Update' }}
                 </button>
-                <button v-else-if="downloadedApkPath && !downloading && !installing"
+                <button v-else-if="downloadedUpdatePath && !downloading && !installing"
                         class="btn btn-primary"
                         @click="installUpdate">
                   Install Update
                 </button>
                 <div v-if="installing" class="installing-state">
                   <div class="progress-bar"><div class="progress-fill" style="width: 100%" /></div>
-                  <span>Opening Android installer…</span>
+                  <span>Opening installer…</span>
                 </div>
                 <button class="btn btn-ghost" @click="dismiss">
                   Dismiss

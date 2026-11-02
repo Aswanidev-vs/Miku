@@ -36,7 +36,7 @@ const downloadSpeed = ref(0)
 const updateInfo = ref<UpdateInfo | null>(null)
 const currentVersionFromBackend = ref<string>('')
 const error = ref<string | null>(null)
-const downloadedApkPath = ref<string | null>(null)
+const downloadedUpdatePath = ref<string | null>(null)
 const installing = ref(false)
 
 export function useUpdate() {
@@ -86,7 +86,7 @@ export function useUpdate() {
   async function downloadUpdate(): Promise<string | null> {
     const info = updateInfo.value
     if (!info?.available || !info.downloadUrl) return null
-    if (downloading.value) return downloadedApkPath.value
+    if (downloading.value) return downloadedUpdatePath.value
 
     await ensureLoaded()
     if (!UpdateService) return null
@@ -96,7 +96,7 @@ export function useUpdate() {
     downloaded.value = 0
     downloadTotal.value = 0
     downloadSpeed.value = 0
-    downloadedApkPath.value = null
+    downloadedUpdatePath.value = null
     error.value = null
 
     let lastBytes = 0
@@ -133,7 +133,7 @@ export function useUpdate() {
     try {
       const path = await UpdateService.DownloadUpdate(info.downloadUrl)
       clearInterval(progressInterval)
-      downloadedApkPath.value = path
+      downloadedUpdatePath.value = path
       downloadProgress.value = 100
       downloadSpeed.value = 0
       return path
@@ -148,7 +148,7 @@ export function useUpdate() {
   }
 
   async function installUpdate(): Promise<void> {
-    if (!downloadedApkPath.value) return
+    if (!downloadedUpdatePath.value) return
     installing.value = true
     error.value = null
 
@@ -161,7 +161,7 @@ export function useUpdate() {
         installApk?: (path: string) => boolean
       } | undefined
       if (androidBridge?.platform?.() === 'android' && androidBridge.installApk) {
-        const opened = androidBridge.installApk(downloadedApkPath.value)
+        const opened = androidBridge.installApk(downloadedUpdatePath.value)
         if (!opened) {
           error.value = 'Android installer could not be opened. Please try installing the downloaded APK manually.'
         }
@@ -174,7 +174,7 @@ export function useUpdate() {
         return
       }
 
-      await UpdateService.InstallUpdate(downloadedApkPath.value)
+      await UpdateService.InstallUpdate(downloadedUpdatePath.value)
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Install failed'
     } finally {
@@ -214,7 +214,7 @@ export function useUpdate() {
     downloadSpeed,
     updateInfo,
     error,
-    downloadedApkPath,
+    downloadedUpdatePath,
     installing,
     hasUpdate,
     currentVersion,
