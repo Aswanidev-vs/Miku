@@ -132,6 +132,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   align-items: center;
   gap: var(--space-sm);
   width: min(340px, 30vw);
+  margin-right: 42px;
   min-height: 34px;
   padding: 0 var(--space-sm);
   color: var(--text-muted);
@@ -184,6 +185,16 @@ kbd {
 
   .header-search {
     width: 220px;
+  }
+}
+
+@media (max-width: 600px) {
+  .desktop-header h1 {
+    display: none;
+  }
+
+  .header-search {
+    width: min(220px, calc(100vw - 148px));
   }
 }
 </style>
