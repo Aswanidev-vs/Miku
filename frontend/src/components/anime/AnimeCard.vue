@@ -127,8 +127,8 @@ function statusClass(status?: string): string {
 
 .score-badge {
   position: absolute;
-  top: 7px;
-  right: 7px;
+  top: 8px;
+  right: 8px;
   background: rgba(8, 7, 12, 0.72);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -136,7 +136,7 @@ function statusClass(status?: string): string {
   font-family: var(--font-body);
   font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-bold);
-  padding: 3px 6px;
+  padding: 4px 6px;
   border-radius: var(--radius-xs);
   line-height: 1.2;
   letter-spacing: 0.02em;
@@ -144,20 +144,20 @@ function statusClass(status?: string): string {
 
 .airing-badge {
   position: absolute;
-  bottom: 7px;
-  left: 7px;
+  bottom: 8px;
+  left: 8px;
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
   color: var(--text-on-primary);
   font-family: var(--font-body);
   font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-bold);
-  padding: 3px 7px;
+  padding: 4px 8px;
   border-radius: var(--radius-xs);
   letter-spacing: var(--letter-spacing-wide);
 }
 
 .card-info {
-  padding: 9px 9px 10px;
+  padding: 8px 8px 10px;
   border-radius: 0 0 var(--radius-md) var(--radius-md);
 }
 
@@ -176,7 +176,7 @@ function statusClass(status?: string): string {
 
 .card-meta {
   display: flex;
-  gap: 5px;
+  gap: 4px;
   align-items: center;
 }
 
