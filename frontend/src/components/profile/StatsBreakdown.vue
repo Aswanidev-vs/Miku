@@ -40,16 +40,16 @@ function extractItems<T extends { count?: number | null }>(
   return items.filter((item) => item.count > 0)
 }
 
-// Color palette for multi-bar and stacked progress
+// Restrained palette: primary accent + neutral ramp (no rainbow)
 const paletteColors = [
-  '#00d2c4', // Miku teal
-  '#7b61ff', // Electric purple
-  '#ff5376', // Coral red
-  '#ffb86c', // Warm amber
-  '#50fa7b', // Mint green
-  '#38bdf8', // Sky blue
-  '#f472b6', // Pink
-  '#a78bfa', // Lavender
+  '#ff6f91', // primary (sakura)
+  '#f5c572', // accent (gold)
+  '#9d8df1', // iris
+  '#69cf8c', // watching
+  '#6aa9e2', // completed
+  '#b592ec', // planning
+  '#e6bd5e', // paused
+  '#e57e6e', // dropped
 ]
 
 function getColor(index: number): string {
