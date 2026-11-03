@@ -13,7 +13,7 @@ import (
 )
 
 // Version is the current app version. Bump before each release build.
-const Version = "0.13.4"
+const Version = "0.13.5"
 
 // ReleaseVersion is overridden by release builds with the exact tag version,
 // including prerelease identifiers such as 0.13.3-beta.1.
