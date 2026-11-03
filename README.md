@@ -19,9 +19,7 @@
 </p>
 
 <p align="center">
-  <video src="docs/miku-promo.mp4" width="100%" controls playsinline autoplay muted loop>
-    Your browser does not support the video tag. <a href="docs/miku-promo.mp4">Watch the promo video</a>.
-  </video>
+  <a href="https://aswanidev-vs.github.io/Miku/miku-promo.mp4">Watch the Miku promo video</a>
 </p>
 
 ## Table of Contents

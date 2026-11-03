@@ -90,9 +90,6 @@ function onCustomAccent(e: Event) {
 
 <style scoped>
 .settings-group {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
@@ -145,7 +142,6 @@ function onCustomAccent(e: Event) {
   flex-wrap: wrap;
   justify-content: flex-end;
   flex-shrink: 1;
-  max-width: 100%;
   min-width: 0;
   gap: 2px;
   padding: 2px;
@@ -244,9 +240,8 @@ function onCustomAccent(e: Event) {
   cursor: default;
 }
 
-/* Mobile and tablet: stack the label above the control so the track always
-   follows the card width instead of leaving an uneven trailing region. */
-@media (max-width: 1023px) {
+/* Small screens: stack rows and make pickers full width */
+@media (max-width: 540px) {
   .theme-row,
   .accent-row {
     flex-direction: column;
@@ -255,21 +250,7 @@ function onCustomAccent(e: Event) {
   }
 
   .theme-picker {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    width: 100%;
-    max-width: none;
-    justify-content: initial;
-  }
-
-  .theme-btn {
-    min-width: 0;
-    min-height: 44px;
-    padding-right: var(--space-xs);
-    padding-left: var(--space-xs);
-    text-align: center;
-    letter-spacing: 0;
-    white-space: normal;
+    justify-content: flex-start;
   }
 }
 
@@ -281,43 +262,6 @@ function onCustomAccent(e: Event) {
 
   .setting-row {
     gap: var(--space-sm);
-  }
-
-  .theme-picker {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-/* Android and iOS can report a wide CSS viewport in landscape or on tablets,
-   so keep the mobile layout tied to the platform class as well as width. */
-:global(.is-mobile) .theme-row,
-:global(.is-mobile) .accent-row {
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-sm);
-}
-
-:global(.is-mobile) .theme-picker {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  width: 100%;
-  max-width: none;
-  justify-content: initial;
-}
-
-:global(.is-mobile) .theme-btn {
-  min-width: 0;
-  min-height: 44px;
-  padding-right: var(--space-xs);
-  padding-left: var(--space-xs);
-  text-align: center;
-  letter-spacing: 0;
-  white-space: normal;
-}
-
-@media (max-width: 420px) {
-  :global(.is-mobile) .theme-picker {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>
