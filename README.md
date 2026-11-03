@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.png" alt="Miku Logo" width="150" height="150" style="border-radius: 100%;">   
+  <img src="logo.png" alt="Miku Logo" width="150" height="150" style="border-radius: 25%; object-fit: cover;">
 </p>
 
 <h1 align="center">Miku</h1>
