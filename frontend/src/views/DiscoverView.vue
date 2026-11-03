@@ -11,6 +11,7 @@ import AnimeGrid from '../components/anime/AnimeGrid.vue'
 import PullToRefresh from '../components/common/PullToRefresh.vue'
 import type { Media, MediaListEntry } from '../types'
 import { preferredTitle } from '../utils/mediaDisplay'
+import { renderMarkdown } from '../utils/markdown'
 import { useSettings } from '../composables/useSettings'
 
 const animeStore = useAnimeStore()
@@ -731,7 +732,11 @@ onUnmounted(() => {
               <span v-if="activeCarouselMedia.status">· {{ activeCarouselMedia.status.replaceAll('_', ' ').toLowerCase() }}</span>
               <span v-if="activeCarouselMedia.averageScore">· {{ activeCarouselMedia.averageScore }}%</span>
             </p>
-            <p v-if="settings.carouselShowSynopsis" class="featured-description">{{ activeCarouselMedia.description || 'Explore the cast, details, and related titles for this AniList pick.' }}</p>
+            <p
+              v-if="settings.carouselShowSynopsis"
+              class="featured-description"
+              v-html="renderMarkdown(activeCarouselMedia.description || 'Explore the cast, details, and related titles for this AniList pick.')"
+            ></p>
             <p v-if="settings.carouselShowProgress && activeCarouselMedia.mediaListEntry" class="featured-progress">
               On your list · {{ activeCarouselMedia.mediaListEntry.status.replaceAll('_', ' ').toLowerCase() }}<span v-if="activeCarouselMedia.episodes"> · {{ activeCarouselMedia.mediaListEntry.progress }}/{{ activeCarouselMedia.episodes }} episodes</span>
             </p>
