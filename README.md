@@ -14,9 +14,28 @@
   <img src="https://img.shields.io/badge/Go-1.25-00ADD8?logo=go" alt="Go">
   <img src="https://img.shields.io/badge/TypeScript-5.3-3178C6?logo=typescript" alt="TypeScript">
   <img src="https://img.shields.io/badge/License-MIT-yellow" alt="License">
+  <img src="https://img.shields.io/badge/version-0.13.3-ff69b4" alt="Version">
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android-lightgrey" alt="Platforms">
 </p>
 
----
+<p align="center">
+  <video src="docs/miku-promo.mp4" width="100%" controls playsinline autoplay muted loop>
+    Your browser does not support the video tag. <a href="docs/miku-promo.mp4">Watch the promo video</a>.
+  </video>
+</p>
+
+## Table of Contents
+
+- [About](#about)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Building for Windows](#building-for-windows)
+- [Building for Android](#building-for-android)
+- [AniList API Setup](#anilist-api-setup)
+- [Project Structure](#project-structure)
+- [License](#license)
 
 ## About
 
@@ -87,16 +106,6 @@ Miku is a feature-rich AniList client that delivers a premium anime and manga tr
 - **State Management** — Pinia stores for reactive state handling
 - **Cross-Platform** — Works on Windows, macOS, Linux, and Android
 - **Testing** — Go suites with testify (unit, integration via httptest, regression, chaos) and Vitest frontend suites; run everything with `wails3 task test`
-
-## Screenshots
-
-<p align="center">
-  <img src="docs/1.jpeg" alt="Discover" width="150">
-  <img src="docs/2.jpeg" alt="Search" width="150">
-  <img src="docs/3.jpeg" alt="My List" width="150">
-  <img src="docs/4.jpeg" alt="Feed" width="150">
-  <img src="docs/5.jpeg" alt="Settings" width="150">
-</p>
 
 ## Tech Stack
 
@@ -393,7 +402,9 @@ Miku/
 │   ├── windows/               # Windows build config
 │   └── linux/                 # Linux build config
 ├── docs/
-│   └── compose/               # Specs, plans, reports
+│   ├── compose/               # Specs, plans, reports
+│   ├── miku-promo.mp4         # Promo video used in README
+│   └── logo.png               # Project logo (docs copy)
 ├── main.go                    # Application entry point
 ├── go.mod                     # Go module definition
 ├── go.sum                     # Go dependencies
@@ -465,65 +476,6 @@ This project uses GitHub Actions for automated builds. See [`.github/workflows/b
 - **Pull Request**: Validates build compiles successfully
 - **Manual trigger**: Build from Actions tab
 
-## Changelog
-
-### Unreleased
-
-#### New Features
-- **Themes** — Dark, Light, Black (AMOLED), and System modes plus a custom accent color picker
-- **Activity Composer** — Post status updates directly from the Feed; activity text now renders as rich markdown
-- **Profile Overhaul** — Stats breakdowns (genres, tags, studios, staff, voice actors), character/staff favorites, Following/Followers section, About Me, and browsable activity history
-- **AniList Preferences** — Title language, score format, default tab, and adult content settings (with account-default fallbacks)
-- **Feed Pull-to-Refresh** — Feed tab now supports the mobile gesture + desktop refresh button
-- **Collapsible Stats on Mobile** — Stats breakdown sections collapse/expand via dropdown headers with animated chevrons on mobile; desktop keeps them permanently expanded
-- **Recent Activity Toggle** — New toggle in Preferences (default off) to show or hide the recent activity feed on profile; activity data is only fetched when enabled
-- **Stats Visibility Toggles** — Individual toggles in Preferences for Top Genres, Top Tags, Top Studios, Top Staff, and Top Voice Actors (all on by default); disabling a toggle hides the corresponding section from the stats breakdown
-
-#### Bug Fixes
-- **Pull-to-Refresh on My List** — Fixed dual pull-to-refresh zones and scroll-gets-stuck bug caused by incorrect scroll container detection and missing gesture direction locking; horizontal swipes on filter pills and downward scrolling no longer accidentally trigger refresh
-
-#### Testing
-- **Go** — testify suites for the GraphQL client (integration + chaos), OAuth2 flow, token store, and platform service
-- **Frontend** — Vitest suites (composables, components, utils, Pinia stores); run everything with `wails3 task test`
-
-### v0.9.4
-
-#### New Features
-- **Staff Search** — Search by voice actor/staff name to find their works
-- **Multiple Voice Actors** — Shows all voice actors per character with "(child)" tag for child versions
-
-#### Bug Fixes
-- Fixed voice actor page not showing all voiced roles (uses correct AniList API)
-- Fixed character images not loading for child voice actors
-- Fixed child VA row not showing character name
-
-### v0.9.0
-
-#### New Features
-- **In-App Update Notifications** — Bell icon on Discover page checks GitHub Releases for new versions
-- **Download APK Updates** — Download updates directly in the app with real-time progress (speed, file size)
-- **Character Search** — Search by character name to find anime/manga
-- **Version Display** — Profile page shows current version with update indicator
-- **Go Tests** — Backend tests with testify library
-
-#### Improvements
-- **Activity Heatmap** — Now fetches full year of activity data
-- **Search UI** — Added 4 filter tabs: Anime, Manga, Characters, Staff
-- **Mobile Responsive** — Update notification bell visible on all devices
-
-#### Bug Fixes
-- Fixed version not displaying in ProfileView
-
-### Notification Behavior
-
-- The Discover notification bell continues to check automatically for new app releases and shows a badge when an update is available.
-- The Settings menu contains the manual **Check for Updates** card, which reports whether the installed version is current or an update is available.
-- Anime in the user's **Watching** list generate a bell notification when AniList reports a newly released episode beyond the user's watched progress.
-- Episode and update notifications support both individual **Mark as read** actions and **Mark all as read**.
-
-### v0.8.14
-
-- Initial release with core features
 
 
 
@@ -566,6 +518,8 @@ Contributions are welcome! Here's how to get started:
 - OAuth login links still open in Chrome Custom Tabs on Android because the localhost callback flow depends on that behavior.
 - Staff and voice actor external links use Android's normal app-link resolution instead. If the user has YouTube, Instagram, X/Twitter, or another matching app installed, Android can open that app directly.
 - If no installed app can handle the link, Android falls back to the user's default browser.
+
+## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
