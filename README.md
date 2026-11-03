@@ -22,7 +22,7 @@
   <picture>
     <source srcset="docs/miku-promo.avif" type="image/avif">
     <img src="docs/miku-promo.gif" width="100%" alt="Miku promo">
-     <img src="docs/miku-promo.avif" width="100%" alt="Miku promo">
+     
   </picture>
 </p>
 
