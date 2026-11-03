@@ -15,6 +15,10 @@ const { settings } = useSettings()
 const { os, isDesktop, isMobile, screenSmall, screenMedium, screenLarge } = usePlatform()
 const sidebarCollapsed = ref(false)
 
+watch(isDesktop, (desktop) => {
+  if (!desktop) sidebarCollapsed.value = false
+})
+
 // Lazy-load Wails runtime imports to avoid crash if runtime isn't ready
 let Events: any = null
 let OAuth2Service: any = null

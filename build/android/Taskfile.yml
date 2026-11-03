@@ -51,8 +51,11 @@ tasks:
       - task: compile:go:shared
         vars:
           ARCH: '{{.ARCH | default .HOST_ARCH}}'
+          PRODUCTION: '{{.PRODUCTION}}'
+          VERSION: '{{.VERSION}}'
     vars:
-      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production,android -trimpath -buildvcs=false -ldflags="-w -s"{{else}}-tags android,debug -buildvcs=false -gcflags=all="-l"{{end}}'
+      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production,android -trimpath -buildvcs=false -ldflags="-w -s{{if .VERSION}} -X main.ReleaseVersion={{.VERSION}}{{end}}"{{else}}-tags android,debug -buildvcs=false -gcflags=all="-l"{{if .VERSION}} -ldflags="-X main.ReleaseVersion={{.VERSION}}"{{end}}{{end}}'
+      VERSION: '{{.VERSION | default ""}}'
     env:
       PRODUCTION: '{{.PRODUCTION | default "true"}}'
 
@@ -110,7 +113,8 @@ tasks:
         go build -buildmode=c-shared -overlay build/android/overlay.json {{.BUILD_FLAGS}} \
           -o build/android/app/src/main/jniLibs/$JNI_DIR/libwails.so
     vars:
-      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production,android -trimpath -buildvcs=false -ldflags="-w -s"{{else}}-tags android,debug -buildvcs=false -gcflags=all="-l"{{end}}'
+      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production,android -trimpath -buildvcs=false -ldflags="-w -s{{if .VERSION}} -X main.ReleaseVersion={{.VERSION}}{{end}}"{{else}}-tags android,debug -buildvcs=false -gcflags=all="-l"{{if .VERSION}} -ldflags="-X main.ReleaseVersion={{.VERSION}}"{{end}}{{end}}'
+      VERSION: '{{.VERSION | default ""}}'
 
   compile:go:all-archs:
     summary: Compile Go code for all Android architectures (fat APK)
@@ -118,9 +122,11 @@ tasks:
       - task: compile:go:shared
         vars:
           ARCH: arm64
+          VERSION: '{{.VERSION}}'
       - task: compile:go:shared
         vars:
           ARCH: amd64
+          VERSION: '{{.VERSION}}'
 
   package:
     summary: Packages a production build of the application into a signed release APK
@@ -129,6 +135,7 @@ tasks:
         vars:
           PRODUCTION: "true"
           ARCH: '{{.ARCH | default "arm64"}}'
+          VERSION: '{{.VERSION}}'
     cmds:
       - task: assemble:apk:release
 
@@ -139,11 +146,13 @@ tasks:
         vars:
           PRODUCTION: "true"
           ARCH: arm64
+          VERSION: '{{.VERSION}}'
     cmds:
       - task: compile:go:shared
         vars:
           ARCH: amd64
           PRODUCTION: "true"
+          VERSION: '{{.VERSION}}'
       - task: assemble:apk:release
 
   bundle:
@@ -153,6 +162,7 @@ tasks:
         vars:
           PRODUCTION: "true"
           ARCH: '{{.ARCH | default "arm64"}}'
+          VERSION: '{{.VERSION}}'
     cmds:
       - task: assemble:aab:release
 
@@ -163,11 +173,13 @@ tasks:
         vars:
           PRODUCTION: "true"
           ARCH: arm64
+          VERSION: '{{.VERSION}}'
     cmds:
       - task: compile:go:shared
         vars:
           ARCH: amd64
           PRODUCTION: "true"
+          VERSION: '{{.VERSION}}'
       - task: assemble:aab:release
 
   assemble:apk:

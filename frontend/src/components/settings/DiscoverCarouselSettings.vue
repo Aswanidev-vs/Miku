@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   carouselDefaults,
   useSettings,
@@ -8,7 +9,10 @@ import {
 } from '../../composables/useSettings'
 
 const { settings, set, toggle } = useSettings()
+const router = useRouter()
 const saved = ref(false)
+const confirmationMessage = ref('')
+let confirmationTimer: ReturnType<typeof setTimeout> | null = null
 
 const sourceOptions: { value: CarouselSource; label: string; hint: string }[] = [
   { value: 'trending', label: 'Trending Anime', hint: 'What AniList users are watching now' },
@@ -24,6 +28,7 @@ const sourceOptions: { value: CarouselSource; label: string; hint: string }[] = 
 function update<K extends keyof Settings>(key: K, value: Settings[K]) {
   set(key, value)
   saved.value = false
+  confirmationMessage.value = ''
 }
 
 function toggleSource(source: CarouselSource) {
@@ -38,18 +43,31 @@ function resetCarousel() {
   for (const [key, value] of Object.entries(carouselDefaults) as [keyof typeof carouselDefaults, never][]) {
     set(key, Array.isArray(value) ? [...value] as never : value)
   }
-  saved.value = true
+  showConfirmation('Carousel preferences reset to defaults.')
 }
 
 function saveCarousel() {
-  saved.value = true
-  window.setTimeout(() => { saved.value = false }, 2600)
+  showConfirmation('Carousel preferences are saved automatically on this device.')
 }
 
 function previewCarousel() {
-  saved.value = true
-  window.setTimeout(() => { saved.value = false }, 2600)
+  router.push({ name: 'discover' })
 }
+
+function showConfirmation(message: string) {
+  if (confirmationTimer) clearTimeout(confirmationTimer)
+  confirmationMessage.value = message
+  saved.value = true
+  confirmationTimer = window.setTimeout(() => {
+    saved.value = false
+    confirmationMessage.value = ''
+    confirmationTimer = null
+  }, 2600)
+}
+
+onUnmounted(() => {
+  if (confirmationTimer) clearTimeout(confirmationTimer)
+})
 </script>
 
 <template>
@@ -140,7 +158,7 @@ function previewCarousel() {
       </div>
     </div>
 
-    <div class="carousel-preview">
+    <div class="carousel-preview" :class="{ 'motion-reduced': settings.reduceMotion }">
       <div class="preview-copy"><span class="settings-kicker">Live preview</span><strong>Featured AniList title</strong><small>{{ settings.carouselTransition === 'fade-zoom' ? 'Fade + zoom' : settings.carouselTransition === 'slide' ? 'Horizontal slide' : settings.carouselTransition === 'none' ? 'Static transition' : 'Crossfade' }} · {{ settings.carouselDuration }} seconds</small></div>
       <div class="preview-art" :class="`preview-${settings.carouselTransition}`" aria-hidden="true"></div>
     </div>
@@ -150,7 +168,7 @@ function previewCarousel() {
       <button class="btn btn-secondary" type="button" @click="resetCarousel">Reset to Defaults</button>
       <button class="btn btn-ghost" type="button" @click="previewCarousel">Preview Carousel</button>
     </div>
-    <p v-if="saved" class="settings-confirmation" role="status">Carousel preferences are saved on this device.</p>
+    <p v-if="saved" class="settings-confirmation" role="status">{{ confirmationMessage }}</p>
   </section>
 </template>
 
@@ -197,6 +215,8 @@ select { max-width: 52%; padding: 7px 28px 7px 9px; color: var(--text-primary); 
 .preview-art { position: absolute; right: 10%; bottom: 0; width: 28%; height: 85%; border-radius: 50% 50% 0 0; background: linear-gradient(140deg, var(--color-primary), #704f9c); opacity: .46; transform-origin: bottom right; }
 .preview-fade-zoom { animation: preview-zoom 3s ease-in-out infinite alternate; }
 .preview-slide { animation: preview-slide 3s ease-in-out infinite alternate; }
+.carousel-preview.motion-reduced .preview-fade-zoom,
+.carousel-preview.motion-reduced .preview-slide { animation: none; }
 @keyframes preview-zoom { from { transform: scale(.9); } to { transform: scale(1.06); } }
 @keyframes preview-slide { from { transform: translateX(12%); } to { transform: translateX(-8%); } }
 .carousel-actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-top: var(--space-lg); }
@@ -204,4 +224,5 @@ select { max-width: 52%; padding: 7px 28px 7px 9px; color: var(--text-primary); 
 .settings-confirmation { margin-top: var(--space-sm); color: var(--status-watching); font-size: var(--font-size-xs); }
 @media (max-width: 780px) { .carousel-settings-grid { grid-template-columns: 1fr; gap: var(--space-md); } .layout-toggle-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 500px) { .source-list, .content-controls, .layout-selects { grid-template-columns: 1fr; } .range-control { width: 45%; } }
+@media (prefers-reduced-motion: reduce) { .preview-fade-zoom, .preview-slide { animation: none; } }
 </style>

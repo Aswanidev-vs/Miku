@@ -11,6 +11,7 @@ import AnimeGrid from '../components/anime/AnimeGrid.vue'
 import PullToRefresh from '../components/common/PullToRefresh.vue'
 import type { Media, MediaListEntry } from '../types'
 import { preferredTitle } from '../utils/mediaDisplay'
+import { renderMarkdown } from '../utils/markdown'
 import { useSettings } from '../composables/useSettings'
 
 const animeStore = useAnimeStore()
@@ -55,6 +56,11 @@ function releaseTimestamp(media: Media): number {
   return media.id
 }
 
+function recentlyUpdatedTimestamp(media: Media): number {
+  const updatedAt = media.mediaListEntry?.updatedAt
+  return updatedAt ? updatedAt * 1000 : releaseTimestamp(media)
+}
+
 const carouselMedia = computed(() => {
   const sources = settings.value.carouselSources
   const bySource: Record<string, Media[]> = {
@@ -89,7 +95,7 @@ const carouselMedia = computed(() => {
     if (settings.value.carouselOrder === 'popular') {
       difference = (b.popularity || b.trending || 0) - (a.popularity || a.trending || 0)
     } else if (settings.value.carouselOrder === 'recently-updated') {
-      difference = (b.mediaListEntry?.updatedAt || releaseTimestamp(b)) - (a.mediaListEntry?.updatedAt || releaseTimestamp(a))
+      difference = recentlyUpdatedTimestamp(b) - recentlyUpdatedTimestamp(a)
     } else {
       difference = releaseTimestamp(b) - releaseTimestamp(a)
     }
@@ -195,8 +201,10 @@ async function handleCarouselAction() {
   }
   try {
     const nextProgress = entry ? entry.progress + 1 : 0
-    const savedEntry = await animeStore.updateEntry(media.id, entry?.status || 'PLANNING', entry?.score || 0, nextProgress)
-    if (savedEntry) media.mediaListEntry = savedEntry
+    await animeStore.updateEntry(media.id, entry?.status || 'PLANNING', entry?.score || 0, nextProgress)
+    if (authStore.currentUser) {
+      await animeStore.fetchMyList(authStore.currentUser.id)
+    }
     carouselActionMessage.value = entry ? 'Progress updated' : 'Added to Planning'
     window.setTimeout(() => { carouselActionMessage.value = '' }, 2200)
   } catch {
@@ -724,7 +732,11 @@ onUnmounted(() => {
               <span v-if="activeCarouselMedia.status">· {{ activeCarouselMedia.status.replaceAll('_', ' ').toLowerCase() }}</span>
               <span v-if="activeCarouselMedia.averageScore">· {{ activeCarouselMedia.averageScore }}%</span>
             </p>
-            <p v-if="settings.carouselShowSynopsis" class="featured-description">{{ activeCarouselMedia.description || 'Explore the cast, details, and related titles for this AniList pick.' }}</p>
+            <p
+              v-if="settings.carouselShowSynopsis"
+              class="featured-description"
+              v-html="renderMarkdown(activeCarouselMedia.description || 'Explore the cast, details, and related titles for this AniList pick.')"
+            ></p>
             <p v-if="settings.carouselShowProgress && activeCarouselMedia.mediaListEntry" class="featured-progress">
               On your list · {{ activeCarouselMedia.mediaListEntry.status.replaceAll('_', ' ').toLowerCase() }}<span v-if="activeCarouselMedia.episodes"> · {{ activeCarouselMedia.mediaListEntry.progress }}/{{ activeCarouselMedia.episodes }} episodes</span>
             </p>

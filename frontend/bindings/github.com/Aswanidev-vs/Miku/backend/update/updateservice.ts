@@ -31,8 +31,8 @@ export function GetDownloadProgress(): $CancellablePromise<[number, number, bool
     return $Call.ByID(165365789);
 }
 
-export function InstallUpdate(apkPath: string, ...expectedSHA256: string[]): $CancellablePromise<void> {
-    return $Call.ByID(1230765532, apkPath, expectedSHA256);
+export function InstallUpdate(updatePath: string, ...expectedSHA256: string[]): $CancellablePromise<void> {
+    return $Call.ByID(1230765532, updatePath, expectedSHA256);
 }
 
 // Private type creation functions

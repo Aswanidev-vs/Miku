@@ -1,879 +1,653 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Miku — Anime & Manga Tracker</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=General+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #09090b;
-            --surface: #18181b;
-            --surface-hover: #27272a;
-            --border: #27272a;
-            --text: #fafafa;
-            --text-secondary: #a1a1aa;
-            --teal: #39c5bb;
-            --teal-dim: rgba(57, 197, 187, 0.12);
-            --pink: #e86b9c;
-            --pink-dim: rgba(232, 107, 156, 0.12);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            font-family: 'General Sans', -apple-system, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.5;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        .container {
-            max-width: 1120px;
-            margin: 0 auto;
-            padding: 0 24px;
-        }
-
-        /* ── Nav ── */
-        nav {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-            padding: 16px 0;
-            transition: background 0.3s, backdrop-filter 0.3s;
-        }
-
-        nav.scrolled {
-            background: rgba(9, 9, 11, 0.85);
-            backdrop-filter: blur(16px);
-            border-bottom: 1px solid var(--border);
-        }
-
-        nav .container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .nav-brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            text-decoration: none;
-            color: var(--text);
-        }
-
-        .nav-brand img {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-        }
-
-        .nav-brand span {
-            font-family: 'Space Mono', monospace;
-            font-weight: 700;
-            font-size: 1rem;
-            letter-spacing: -0.02em;
-        }
-
-        .nav-right {
-            display: flex;
-            align-items: center;
-            gap: 24px;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 28px;
-            list-style: none;
-        }
-
-        .nav-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.875rem;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-
-        .nav-links a:hover {
-            color: var(--text);
-        }
-
-        .nav-download {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 16px;
-            background: var(--teal);
-            color: var(--bg);
-            border: none;
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .nav-download:hover {
-            background: #4dd4c9;
-            transform: translateY(-1px);
-        }
-
-        .nav-download svg {
-            width: 14px;
-            height: 14px;
-        }
-
-        /* ── Hero ── */
-        .hero {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            padding: 100px 0 80px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: -200px;
-            right: -200px;
-            width: 700px;
-            height: 700px;
-            background: radial-gradient(circle, var(--teal-dim) 0%, transparent 60%);
-            pointer-events: none;
-        }
-
-        .hero::after {
-            content: '';
-            position: absolute;
-            bottom: -300px;
-            left: -100px;
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, var(--pink-dim) 0%, transparent 60%);
-            pointer-events: none;
-        }
-
-        .hero .container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 64px;
-            align-items: center;
-            position: relative;
-            z-index: 1;
-        }
-
-        .hero-content {
-            max-width: 480px;
-        }
-
-        .hero h1 {
-            font-family: 'Space Mono', monospace;
-            font-size: clamp(2.5rem, 5vw, 3.5rem);
-            font-weight: 700;
-            line-height: 1.15;
-            letter-spacing: -0.03em;
-            margin-bottom: 20px;
-        }
-
-        .hero h1 span {
-            color: var(--teal);
-        }
-
-        .hero p {
-            font-size: 1.05rem;
-            color: var(--text-secondary);
-            line-height: 1.7;
-            margin-bottom: 36px;
-        }
-
-        .hero-actions {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 24px;
-            border-radius: 10px;
-            font-family: inherit;
-            font-size: 0.9rem;
-            font-weight: 600;
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: none;
-        }
-
-        .btn-primary {
-            background: var(--teal);
-            color: var(--bg);
-        }
-
-        .btn-primary:hover {
-            background: #4dd4c9;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(57, 197, 187, 0.25);
-        }
-
-        .btn-ghost {
-            background: transparent;
-            color: var(--text-secondary);
-            border: 1px solid var(--border);
-        }
-
-        .btn-ghost:hover {
-            border-color: var(--text-secondary);
-            color: var(--text);
-            background: var(--surface);
-        }
-
-        .btn svg {
-            width: 16px;
-            height: 16px;
-        }
-
-        .hero-visual {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .hero-logo-wrapper {
-            width: 320px;
-            height: 320px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .hero-logo-wrapper img {
-            width: 320px;
-            height: 320px;
-            border-radius: 40px;
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease;
-            cursor: pointer;
-        }
-
-        .hero-logo-wrapper img:hover {
-            transform: scale(1.08) rotate(2deg);
-            box-shadow: 0 20px 60px rgba(57, 197, 187, 0.25);
-        }
-
-        /* ── Features ── */
-        .features {
-            padding: 100px 0;
-        }
-
-        .section-label {
-            font-family: 'Space Mono', monospace;
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--teal);
-            margin-bottom: 16px;
-        }
-
-        .section-title {
-            font-family: 'Space Mono', monospace;
-            font-size: clamp(1.75rem, 4vw, 2.25rem);
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            margin-bottom: 12px;
-        }
-
-        .section-desc {
-            color: var(--text-secondary);
-            font-size: 1rem;
-            margin-bottom: 56px;
-            max-width: 480px;
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-        }
-
-        .feature-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 28px;
-            transition: all 0.25s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--teal), transparent);
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .feature-card:hover {
-            border-color: var(--surface-hover);
-            transform: translateY(-4px);
-        }
-
-        .feature-card:hover::before {
-            opacity: 1;
-        }
-
-        .feature-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-
-        .feature-icon.teal {
-            background: var(--teal-dim);
-        }
-
-        .feature-icon.teal svg {
-            color: var(--teal);
-        }
-
-        .feature-icon.pink {
-            background: var(--pink-dim);
-        }
-
-        .feature-icon.pink svg {
-            color: var(--pink);
-        }
-
-        .feature-icon svg {
-            width: 22px;
-            height: 22px;
-        }
-
-        .feature-card h3 {
-            font-size: 1rem;
-            font-weight: 600;
-            margin-bottom: 10px;
-        }
-
-        .feature-card p {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-            line-height: 1.65;
-        }
-
-        /* ── Simple banner ── */
-        .banner {
-            padding: 80px 0;
-        }
-
-        .banner-inner {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 40px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .banner-inner::before {
-            content: '';
-            position: absolute;
-            top: -100px;
-            right: -100px;
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, var(--teal-dim) 0%, transparent 60%);
-            pointer-events: none;
-        }
-
-        .banner-text h2 {
-            font-family: 'Space Mono', monospace;
-            font-size: 1.75rem;
-            font-weight: 700;
-            margin-bottom: 12px;
-            position: relative;
-        }
-
-        .banner-text p {
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-            position: relative;
-        }
-
-        .banner .btn {
-            position: relative;
-            flex-shrink: 0;
-        }
-
-        /* ── Footer ── */
-        footer {
-            padding: 48px 0;
-            border-top: 1px solid var(--border);
-        }
-
-        .footer-inner {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .footer-brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .footer-brand img {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-        }
-
-        .footer-brand span {
-            font-family: 'Space Mono', monospace;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-
-        .footer-links {
-            display: flex;
-            gap: 24px;
-        }
-
-        .footer-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.8rem;
-            transition: color 0.2s;
-        }
-
-        .footer-links a:hover {
-            color: var(--text);
-        }
-
-        .footer-social {
-            display: flex;
-            gap: 16px;
-        }
-
-        .footer-social a {
-            color: var(--text-secondary);
-            transition: color 0.2s;
-        }
-
-        .footer-social a:hover {
-            color: var(--text);
-        }
-
-        .footer-social svg {
-            width: 18px;
-            height: 18px;
-        }
-
-        /* ── Screenshots ── */
-        .screenshots {
-            padding: 100px 0;
-        }
-
-        .screenshots-grid {
-            display: flex;
-            gap: 32px;
-            margin-top: 48px;
-            justify-content: center;
-            align-items: flex-start;
-        }
-
-        .screenshot-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .screenshot-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            width: 180px;
-        }
-
-        .screenshot-card:hover {
-            transform: translateY(-8px);
-            border-color: var(--teal);
-            box-shadow: 0 16px 48px rgba(57, 197, 187, 0.2);
-        }
-
-        .screenshot-card img {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-
-        .screenshot-label {
-            text-align: center;
-        }
-
-        .screenshot-label h4 {
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .screenshot-label p {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-
-        /* ── Mobile ── */
-        @media (max-width: 768px) {
-            .hero .container {
-                grid-template-columns: 1fr;
-                text-align: center;
-                gap: 48px;
-            }
-
-            .hero-content {
-                max-width: 100%;
-            }
-
-            .hero-actions {
-                justify-content: center;
-            }
-
-            .hero-logo-wrapper {
-                width: 240px;
-                height: 240px;
-            }
-
-            .hero-logo-wrapper img {
-                width: 240px;
-                height: 240px;
-            }
-
-            .features-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .screenshots-grid {
-                flex-wrap: wrap;
-                justify-content: center;
-                gap: 24px;
-            }
-
-            .screenshot-item {
-                flex: 0 0 calc(50% - 12px);
-                max-width: 150px;
-            }
-
-            .screenshot-card {
-                width: 100%;
-            }
-
-            .banner-inner {
-                flex-direction: column;
-                text-align: center;
-                padding: 40px 28px;
-            }
-
-            .footer-inner {
-                flex-direction: column;
-                gap: 24px;
-                text-align: center;
-            }
-
-            .nav-links {
-                display: none;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .screenshots-grid {
-                gap: 16px;
-            }
-
-            .screenshot-item {
-                flex: 0 0 calc(50% - 8px);
-                max-width: 130px;
-            }
-
-            .screenshot-item:last-child {
-                flex: 0 0 100%;
-                max-width: 150px;
-                margin: 0 auto;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Miku — A premium AniList client for Android & Desktop</title>
+<link rel="icon" href="logo.png" type="image/png">
+<link rel="apple-touch-icon" href="logo.png">
+<meta name="description" content="Miku is a feature-rich AniList client for Android and Desktop. Track anime and manga, manage lists, and follow your activity feed.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0a0f;
+    --bg-2: #12101a;
+    --surface: #17141f;
+    --surface-2: #201c2a;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.14);
+    --text: #f5f2f8;
+    --muted: #9a94a6;
+    --muted-2: #8a8496;
+    --accent: #ff5fa2;
+    --accent-dim: rgba(255, 95, 162, 0.14);
+    --accent-2: #39c5bb;
+    --accent-2-dim: rgba(57, 197, 187, 0.12);
+    --radius: 14px;
+    --radius-lg: 22px;
+    --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  img, video { max-width: 100%; display: block; }
+
+  a { color: inherit; text-decoration: none; }
+
+  .container {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+
+  /* ── Nav ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 50;
+    padding: 18px 0;
+    transition: background 0.3s ease, border-color 0.3s ease;
+    border-bottom: 1px solid transparent;
+  }
+  nav.scrolled {
+    background: rgba(11, 10, 15, 0.72);
+    backdrop-filter: blur(14px);
+    border-bottom-color: var(--border);
+  }
+  nav .container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 1.15rem;
+    letter-spacing: -0.02em;
+  }
+  .nav-brand img {
+    width: 26px; height: 26px;
+    border-radius: 10px;
+  }
+  .nav-brand .dot { color: var(--accent); }
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+    align-items: center;
+  }
+  .nav-links a {
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: color 0.2s ease;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 9px 18px;
+    background: var(--accent);
+    color: #0b0a0f;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .nav-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 28px var(--accent-dim);
+  }
+  .nav-cta svg { width: 14px; height: 14px; }
+
+  /* ── Hero ── */
+  .hero {
+    position: relative;
+    padding: 150px 0 90px;
+    overflow: hidden;
+  }
+  .hero::before { display: none; }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 64px;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+    margin-bottom: 24px;
+  }
+  .hero-eyebrow::before {
+    content: '';
+    width: 28px; height: 1px;
+    background: var(--accent);
+  }
+  .hero h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: clamp(2.6rem, 6.2vw, 4.6rem);
+    font-weight: 700;
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    margin-bottom: 22px;
+  }
+  .hero h1 .accent {
+    color: var(--accent);
+    font-style: italic;
+    font-weight: 600;
+  }
+  .hero p {
+    color: var(--muted);
+    font-size: 1.1rem;
+    max-width: 460px;
+    margin-bottom: 36px;
+    line-height: 1.6;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 13px 22px;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #0b0a0f;
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 34px var(--accent-dim);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+  .btn-ghost:hover {
+    background: var(--surface);
+    border-color: var(--muted-2);
+  }
+  .btn svg { width: 16px; height: 16px; }
+
+  .hero-visual {
+    position: relative;
+  }
+  .hero-video {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow);
+    background: var(--surface);
+    aspect-ratio: 16 / 10;
+  }
+  .hero-video video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .hero-image {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow);
+    background: var(--surface);
+    aspect-ratio: 4 / 3;
+  }
+  .hero-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* ── Marquee strip ── */
+  .strip {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 0;
+    overflow: hidden;
+    background: var(--bg-2);
+  }
+  .strip-track {
+    display: flex;
+    gap: 48px;
+    width: max-content;
+    animation: marquee 28s linear infinite;
+  }
+  .strip-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .strip-item .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .strip-track { animation: none; }
+  }
+
+  /* ── Features ── */
+  .features {
+    padding: 110px 0;
+  }
+  .section-head {
+    max-width: 620px;
+    margin-bottom: 56px;
+  }
+  .section-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: clamp(2rem, 4.2vw, 2.9rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    margin-bottom: 14px;
+  }
+  .section-desc {
+    color: var(--muted);
+    font-size: 1.05rem;
+    line-height: 1.6;
+  }
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 26px;
+    transition: border-color 0.25s ease, transform 0.25s ease;
+  }
+  .feature-card:hover {
+    border-color: var(--border-strong);
+  }
+  .feature-card.featured {
+    grid-column: span 2;
+    background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
+    border-color: var(--accent-dim);
+  }
+  .feature-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 18px;
+    background: var(--accent-dim);
+    color: var(--accent);
+  }
+  .feature-icon.teal { background: var(--accent-2-dim); color: var(--accent-2); }
+  .feature-card h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
+  }
+  .feature-card p {
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
+  /* ── Demo video ── */
+  .demo {
+    padding: 0 0 110px;
+  }
+  .demo-frame {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow);
+    background: var(--surface);
+  }
+  .demo-frame video {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* ── Platforms ── */
+  .platforms {
+    padding: 100px 0;
+    background: var(--bg-2);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .platforms-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: center;
+  }
+  .platform-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 28px;
+  }
+  .platform-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+  .platform-item .badge {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .platform-item .badge img {
+    width: 18px;
+    height: 18px;
+    display: block;
+  }
+  .platform-item .badge img.logo-white {
+    filter: brightness(0) invert(1);
+  }
+  .platform-item .badge.teal { background: var(--accent-2-dim); color: var(--accent-2); }
+
+  /* ── CTA ── */
+  .cta {
+    padding: 120px 0;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .cta::before { display: none; }
+  .cta h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-bottom: 18px;
+    position: relative;
+  }
+  .cta p {
+    color: var(--muted);
+    font-size: 1.05rem;
+    margin-bottom: 32px;
+    position: relative;
+  }
+  .cta-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    position: relative;
+  }
+
+  /* ── Footer ── */
+  footer {
+    padding: 40px 0;
+    border-top: 1px solid var(--border);
+  }
+  .footer-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  .footer-brand img { width: 20px; height: 20px; border-radius: 8px; }
+  .footer-links {
+    display: flex;
+    gap: 24px;
+  }
+  .footer-links a {
+    color: var(--muted);
+    font-size: 0.85rem;
+    transition: color 0.2s ease;
+  }
+  .footer-links a:hover { color: var(--text); }
+
+  /* ── Responsive ── */
+  @media (max-width: 880px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 48px; }
+    .hero-visual { order: -1; }
+    .features-grid { grid-template-columns: 1fr; }
+    .feature-card.featured { grid-column: auto; }
+    .platforms-inner { grid-template-columns: 1fr; }
+    .nav-links { display: none; }
+  }
+  @media (max-width: 560px) {
+    .container { padding: 0 20px; }
+    .hero { padding: 120px 0 70px; }
+    .platform-list { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .feature-card, .btn, .nav-cta { transition: none; }
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+</style>
 </head>
 <body>
-    <nav id="nav">
-        <div class="container">
-            <a href="#" class="nav-brand">
-                <img src="logo.png" alt="Miku">
-                <span>miku</span>
+  <nav id="nav">
+    <div class="container">
+      <a href="#" class="nav-brand">
+        <img src="logo.png" alt="Miku">
+        <span>miku<span class="dot">.</span></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#demo-video">Demo video</a></li>
+        <li><a href="https://github.com/Aswanidev-vs/Miku" target="_blank" rel="noopener">GitHub</a></li>
+      </ul>
+      <a href="https://github.com/Aswanidev-vs/Miku/releases" class="nav-cta" target="_blank" rel="noopener">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+        Download
+      </a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="container">
+      <div class="hero-grid">
+        <div class="hero-content">
+          <span class="hero-eyebrow">AniList client for Android & Desktop</span>
+          <h1>Track your anime and manga, without the clutter.</h1>
+          <p>Miku is a fast, native AniList client. Manage your lists, discover new series, and follow friends — all in one place.</p>
+          <div class="hero-actions">
+            <a href="https://github.com/Aswanidev-vs/Miku/releases" class="btn btn-primary" target="_blank" rel="noopener">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+              Download
             </a>
-            <div class="nav-right">
-                <ul class="nav-links">
-                    <li><a href="#features">Features</a></li>
-                    <li><a href="https://github.com/Aswanidev-vs/miku" target="_blank" rel="noopener">GitHub</a></li>
-                </ul>
-                <a href="https://github.com/Aswanidev-vs/miku/releases" class="nav-download" target="_blank" rel="noopener">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                    </svg>
-                    Download
-                </a>
-            </div>
+            <a href="https://github.com/Aswanidev-vs/Miku" class="btn btn-ghost" target="_blank" rel="noopener">View source</a>
+          </div>
         </div>
-    </nav>
-
-    <section class="hero">
-        <div class="container">
-            <div class="hero-content">
-                <h1>Track your<br><span>anime</span> & manga</h1>
-                <p>A clean AniList client for keeping up with what you watch and read. No clutter, no nonsense.</p>
-                <div class="hero-actions">
-                    <a href="https://github.com/Aswanidev-vs/miku" class="btn btn-primary" target="_blank" rel="noopener">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                        </svg>
-                        GitHub
-                    </a>
-                    <a href="#features" class="btn btn-ghost">Learn more</a>
-                </div>
-            </div>
-            <div class="hero-visual">
-                <div class="hero-logo-wrapper">
-                    <!-- <img src="logo.png" alt="Miku"> -->
-                    <img src="miku.jpg" alt="Miku">
-
-                </div>
-            </div>
+        <div class="hero-visual">
+          <div class="hero-image">
+            <img src="miku.jpg" alt="Miku app preview">
+          </div>
         </div>
-    </section>
+      </div>
+    </div>
+  </section>
 
-    <section class="features" id="features">
-        <div class="container">
-            <p class="section-label">Features</p>
-            <h2 class="section-title">Everything you need</h2>
-            <p class="section-desc">Built for people who care about their list, not the UI around it.</p>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon teal">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-                        </svg>
-                    </div>
-                    <h3>Lightning fast</h3>
-                    <p>Opens instantly, scrolls smoothly. Built with native tech, no framework overhead.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon pink">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                        </svg>
-                    </div>
-                    <h3>Private by default</h3>
-                    <p>No tracking, no analytics. Your watching habits stay on your device.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon teal">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42" />
-                        </svg>
-                    </div>
-                    <h3>Customizable</h3>
-                    <p>Themes, reading modes, color filters. Tweak it until it feels right.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon pink">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25a2.25 2.25 0 01-2.25-2.25v-2.25z" />
-                        </svg>
-                    </div>
-                    <h3>Track everything</h3>
-                    <p>Syncs with AniList, MAL, Kitsu. Your progress stays up to date automatically.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon teal">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                        </svg>
-                    </div>
-                    <h3>Discover new series</h3>
-                    <p>Browse by genre, popularity, or season. Find your next obsession easily.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon pink">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
-                        </svg>
-                    </div>
-                    <h3>Organized library</h3>
-                    <p>Filter, sort, and categorize. Find any series in seconds, not minutes.</p>
-                </div>
-            </div>
+  <section class="features" id="features">
+    <div class="container">
+      <div class="section-head">
+        <p class="section-label">Features</p>
+        <h2 class="section-title">Built for people who care about their list.</h2>
+        <p class="section-desc">No clutter, no nonsense. Just the tools you need to track what you watch and read.</p>
+      </div>
+      <div class="features-grid">
+        <article class="feature-card featured">
+          <div class="feature-icon"><img src="https://api.iconify.design/lucide/zap.svg?color=%23ff5fa2&width=22&height=22" alt="" width="22" height="22"></div>
+          <h3>Lightning fast, native feel</h3>
+          <p>Opens instantly and scrolls smoothly. Built with Wails 3 and Go, so it feels like a real desktop app — not a browser tab.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon teal"><img src="https://api.iconify.design/lucide/shield.svg?color=%2339c5bb&width=22&height=22" alt="" width="22" height="22"></div>
+          <h3>Private by default</h3>
+          <p>No tracking, no analytics. Your watching habits stay on your device.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon"><img src="https://api.iconify.design/lucide/compass.svg?color=%23ff5fa2&width=22&height=22" alt="" width="22" height="22"></div>
+          <h3>Discover new series</h3>
+          <p>Browse by genre, popularity, or season. Find your next obsession easily.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon teal"><img src="https://api.iconify.design/lucide/palette.svg?color=%2339c5bb&width=22&height=22" alt="" width="22" height="22"></div>
+          <h3>Customizable</h3>
+          <p>Themes, accent colors, reading modes. Tweak it until it feels right.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon"><img src="https://api.iconify.design/lucide/folder.svg?color=%23ff5fa2&width=22&height=22" alt="" width="22" height="22"></div>
+          <h3>Organized library</h3>
+          <p>Filter, sort, and categorize. Find any series in seconds, not minutes.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo" id="demo-video">
+    <div class="container">
+      <div class="section-head">
+        <p class="section-label">Demo video</p>
+        <h2 class="section-title">Watch the full tour.</h2>
+        <p class="section-desc">A short walk-through on desktop and Android.</p>
+      </div>
+      <div class="demo-frame">
+        <video src="miku-promo.mp4" controls playsinline></video>
+      </div>
+    </div>
+  </section>
+
+  <section class="platforms">
+    <div class="container">
+      <div class="platforms-inner">
+        <div>
+          <p class="section-label">Platforms</p>
+          <h2 class="section-title">One app, everywhere you watch.</h2>
+          <p class="section-desc">Windows, macOS, Linux, and Android — from a single codebase.</p>
         </div>
-    </section>
-
-    <section class="screenshots" id="screenshots">
-        <div class="container">
-            <p class="section-label">Screenshots</p>
-            <h2 class="section-title">See it in action</h2>
-            <p class="section-desc">A clean interface designed for anime and manga fans.</p>
-            <div class="screenshots-grid">
-                <div class="screenshot-item">
-                    <div class="screenshot-card">
-                        <img src="1.jpeg" alt="Discover trending anime" loading="lazy">
-                    </div>
-                    <div class="screenshot-label">
-                        <h4>Discover</h4>
-                        <p>Find trending series</p>
-                    </div>
-                </div>
-                <div class="screenshot-item">
-                    <div class="screenshot-card">
-                        <img src="2.jpeg" alt="Search" loading="lazy">
-                    </div>
-                    <div class="screenshot-label">
-                        <h4>Search</h4>
-                        <p>Find anime & manga</p>
-                    </div>
-                </div>
-                <div class="screenshot-item">
-                    <div class="screenshot-card">
-                        <img src="3.jpeg" alt="My List" loading="lazy">
-                    </div>
-                    <div class="screenshot-label">
-                        <h4>My List</h4>
-                        <p>Track your collection</p>
-                    </div>
-                </div>
-                <div class="screenshot-item">
-                    <div class="screenshot-card">
-                        <img src="4.jpeg" alt="Feed" loading="lazy">
-                    </div>
-                    <div class="screenshot-label">
-                        <h4>Feed</h4>
-                        <p>See friend activity</p>
-                    </div>
-                </div>
-                <div class="screenshot-item">
-                    <div class="screenshot-card">
-                        <img src="5.jpeg" alt="Settings" loading="lazy">
-                    </div>
-                    <div class="screenshot-label">
-                        <h4>Settings</h4>
-                        <p>Customize your experience</p>
-                    </div>
-                </div>
-            </div>
+        <div class="platform-list">
+          <div class="platform-item"><span class="badge"><img src="https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/windows.svg" alt="" width="18" height="18" class="logo-white"></span> Windows</div>
+          <div class="platform-item"><span class="badge teal"><img src="https://cdn.simpleicons.org/apple/ffffff" alt="" width="18" height="18"></span> macOS</div>
+          <div class="platform-item"><span class="badge"><img src="https://cdn.simpleicons.org/linux/ffffff" alt="" width="18" height="18"></span> Linux</div>
+          <div class="platform-item"><span class="badge teal"><img src="https://cdn.simpleicons.org/android/ffffff" alt="" width="18" height="18"></span> Android</div>
         </div>
-    </section>
+      </div>
+    </div>
+  </section>
 
-    <section class="banner">
-        <div class="container">
-            <div class="banner-inner">
-                <div class="banner-text">
-                    <h2>Ready to start?</h2>
-                    <p>Download Miku and take control of your anime and manga list.</p>
-                </div>
-                <a href="#" class="btn btn-primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                    </svg>
-                    Download now
-                </a>
-            </div>
+  <section class="cta">
+    <div class="container">
+      <h2>Start tracking today.</h2>
+      <p>Download Miku and take control of your anime and manga list.</p>
+      <div class="cta-actions">
+        <a href="https://github.com/Aswanidev-vs/Miku/releases" class="btn btn-primary" target="_blank" rel="noopener">Download now</a>
+        <a href="https://github.com/Aswanidev-vs/Miku" class="btn btn-ghost" target="_blank" rel="noopener">Star on GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <img src="logo.png" alt="Miku">
+          <span>miku</span>
         </div>
-    </section>
-
-    <footer>
-        <div class="container">
-            <div class="footer-inner">
-                <div class="footer-brand">
-                    <img src="logo.png" alt="Miku">
-                    <span>miku</span>
-                </div>
-                <div class="footer-links">
-                    <a href="#">Privacy</a>
-                    <a href="#">Terms</a>
-                    <a href="https://github.com/Aswanidev-vs/miku" target="_blank" rel="noopener">Source</a>
-                </div>
-                <div class="footer-social">
-                    <a href="https://github.com/Aswanidev-vs/miku" target="_blank" rel="noopener" aria-label="GitHub">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                        </svg>
-                    </a>
-                    <!-- <a href="https://discord.gg" target="_blank" rel="noopener" aria-label="Discord">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/>
-                        </svg>
-                    </a> -->
-                </div>
-            </div>
+        <div class="footer-links">
+          <a href="https://github.com/Aswanidev-vs/Miku" target="_blank" rel="noopener">Source</a>
+          <a href="https://github.com/Aswanidev-vs/Miku/releases" target="_blank" rel="noopener">Releases</a>
+          <a href="https://github.com/Aswanidev-vs/Miku/issues" target="_blank" rel="noopener">Issues</a>
         </div>
-    </footer>
+      </div>
+    </div>
+  </footer>
 
-    <script>
-        // Nav scroll effect
-        const nav = document.getElementById('nav');
-        window.addEventListener('scroll', () => {
-            nav.classList.toggle('scrolled', window.scrollY > 20);
-        });
+  <script>
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 24);
+    }, { passive: true });
 
-        // Scroll-triggered fade-in
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
-                }
-            });
-        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
-
-        document.querySelectorAll('.feature-card').forEach((card, i) => {
-            card.style.opacity = '0';
-            card.style.transform = 'translateY(24px)';
-            card.style.transition = `opacity 0.5s ease ${i * 0.08}s, transform 0.5s ease ${i * 0.08}s`;
-            observer.observe(card);
-        });
-    </script>
+    const strip = document.querySelector('.strip-track');
+    if (strip && 'IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(e => { strip.style.animationPlayState = e.isIntersecting ? 'running' : 'paused'; });
+      });
+      io.observe(strip.parentElement);
+    }
+  </script>
 </body>
 </html>

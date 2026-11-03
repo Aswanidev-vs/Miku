@@ -46,6 +46,12 @@ describe('renderMarkdown', () => {
     expect(res).toContain('<img src="https://anilist.co/img.jpg"')
   })
 
+  it('preserves safe inline HTML formatting from AniList descriptions', () => {
+    const res = renderMarkdown('<i>Cyberpunk: Edgerunners 2</i> pulls you back into Night City.')
+    expect(res).toContain('<i>Cyberpunk: Edgerunners 2</i>')
+    expect(res).not.toContain('&lt;i&gt;')
+  })
+
   it('renders spoilers', () => {
     const input = 'This is a ~!secret spoiler!~'
     const res = renderMarkdown(input)

@@ -32,14 +32,16 @@ Target: desktop application window (Wails 3, Go backend, Vue 3).
 
 Vertical, top-to-bottom:
 
-1. **Miku logo + app name** (top, clickable → Discover)
-2. Discover
-3. Search
-4. My List
-5. Activity
-6. Profile
-7. Statistics
-8. Settings
+The **DesktopHeader.vue** brand (Miku logo + app name) is clickable → Discover.
+
+DesktopSidebar.vue navigation items:
+
+1. Discover
+2. Search
+3. My List
+4. Activity
+5. Statistics
+6. Settings
 
 **Bottom (pinned):** logged-in AniList account block
 - Avatar (placeholder)
@@ -95,9 +97,10 @@ Each media card: cover placeholder, title, format, status/score (neutral placeho
 
 - Top: search input (full width, prominent)
 - Filter row: Anime / Manga / Character / Staff (toggle chips)
-- Optional filters: genre (multi-select), format (TV/Movie/OVA/etc.)
-- Results area: grid (default) or list toggle
-- Each result: cover placeholder, title, format, status, score
+- Available type chips: Anime, Manga, Character, Staff.
+- Media results currently render with `AnimeGrid`.
+- Genre/format filters and a grid/list switch are future requirements, not current controls.
+- Each media result: cover, title, format, status, score
 - Click → relevant detail screen (Media / Character / Staff)
 
 ---
@@ -140,12 +143,11 @@ Modal (centered) or right-side contextual panel:
 ## G. My List Screen
 
 - Page heading: "My List"
-- Anime / Manga selector (tabs or segmented control)
-- Status tabs: Watching, Completed, Planning, Paused, Dropped
-- Toolbar: search input + sort control (title, score, progress, updated)
-- Content: table (desktop) or dense list
-  - Columns: Cover (thumb), Title, Progress, Total, Score, Status, Edit action
-- Row click → Media Details; Edit → panel (F)
+- Status tabs: Watching, Planning, Completed, Paused, Dropped, Favourites.
+- Favourites has an Anime/Manga sub-filter.
+- Toolbar: title filter input + sort control. Entry-backed lists support title, score, progress, and recently updated; Favourites supports title sorting because favourite media has no list-entry fields.
+- Content: responsive `AnimeGrid` with configurable card sizing from Settings.
+- Card click → Media Details; list editing is handled from the detail page.
 
 ---
 
@@ -179,7 +181,7 @@ Sections top-to-bottom:
 
 ## J. Settings Screen
 
-Two-pane layout:
+Current implementation: `SettingsView.vue` delegates to `ProfileView.vue`, which renders one vertically scrolling settings panel. The following two-pane layout is a future design direction, not the current screen:
 
 - **Left**: settings category list (vertical)
   - Account & AniList connection
@@ -197,7 +199,7 @@ Each category section: grouped rows (label + hint + control).
 ## K. Desktop Workflow Diagram
 
 ```
-Launch → AniList Login → Discover → Search → Media Details → Add to List → Update Progress → My List → Sync with AniList
+Launch → (optional) AniList Login → Discover → Search → Media Details → Add to List → Update Progress → My List → Sync with AniList
 ```
 
 ---
@@ -210,5 +212,5 @@ Launch → AniList Login → Discover → Search → Media Details → Add to Li
 - Media cards and data tables organized in grids/tables.
 - Clear hierarchy: page heading > section heading > card/row.
 - No streaming players, video playback controls, or watch buttons.
-- No features beyond anime/manga tracking.
+- The client supports anime/manga tracking, Character and Staff search, favourites, and optional social actions; it does not add streaming functionality.
 - Neutral placeholders for all visual styling.

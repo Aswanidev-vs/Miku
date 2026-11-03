@@ -22,6 +22,18 @@ const favFilter = ref<'ALL' | 'ANIME' | 'MANGA'>('ALL')
 const searchFilter = ref('')
 const sortBy = ref<'updated' | 'title' | 'score' | 'progress'>('updated')
 
+const sortOptions = computed(() => {
+  if (activeTab.value === 'FAVOURITES') {
+    return [{ value: 'title', label: 'Title' }]
+  }
+  return [
+    { value: 'updated', label: 'Recently updated' },
+    { value: 'title', label: 'Title' },
+    { value: 'score', label: 'Score' },
+    { value: 'progress', label: 'Progress' },
+  ]
+})
+
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const user = computed(() => authStore.currentUser)
 const loading = computed(() => animeStore.loading)
@@ -64,17 +76,16 @@ const listMedia = computed(() => {
     .map(({ media }) => media)
 })
 
-// Avoid reserving a permanently empty grid track when a list contains fewer
-// titles than the desktop grid. Loading still uses the normal platform count.
+// Keep the selected card width stable when filtering down to a small result.
+// Loading still uses the normal platform count.
 const listGridColumns = computed(() => {
-  const count = listMedia.value.length
   const size = settings.value.myListCardSize
   const preferredColumns = size === 'small' && !screenSmall.value
     ? gridColumns.value + 1
     : size === 'large'
       ? Math.max(2, gridColumns.value - 1)
       : gridColumns.value
-  return count > 0 ? Math.min(preferredColumns, count) : preferredColumns
+  return preferredColumns
 })
 
 function titleFor(media: Media) {
@@ -122,7 +133,7 @@ watch(isLoggedIn, (val) => {
 
 watch(activeTab, (tab) => {
   searchFilter.value = ''
-  sortBy.value = 'updated'
+  sortBy.value = tab === 'FAVOURITES' ? 'title' : 'updated'
   if (tab === 'FAVOURITES' && user.value) {
     animeStore.fetchFavourites(user.value.id)
   }
@@ -170,10 +181,9 @@ watch(activeTab, (tab) => {
         <label class="sort-select">
           <span>Sort</span>
           <select v-model="sortBy" aria-label="Sort list">
-            <option value="updated">Recently updated</option>
-            <option value="title">Title</option>
-            <option value="score">Score</option>
-            <option value="progress">Progress</option>
+            <option v-for="option in sortOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
           </select>
         </label>
       </div>

@@ -26,6 +26,7 @@ tasks:
           EXTRA_TAGS: '{{.EXTRA_TAGS}}'
           OBFUSCATED: '{{.OBFUSCATED}}'
           GARBLE_ARGS: '{{.GARBLE_ARGS}}'
+          VERSION: '{{.VERSION}}'
     vars:
       # Default to CGO_ENABLED=0 if not explicitly set
       CGO_ENABLED: '{{.CGO_ENABLED | default "0"}}'
@@ -57,7 +58,8 @@ tasks:
       - cmd: rm -f *.syso
         platforms: [linux, darwin]
     vars:
-      BUILD_FLAGS: '{{if eq .DEV "true"}}{{if or .EXTRA_TAGS (eq .OBFUSCATED "true")}}-tags {{if eq .OBFUSCATED "true"}}wails_obfuscated{{if .EXTRA_TAGS}},{{end}}{{end}}{{.EXTRA_TAGS}} {{end}}-buildvcs=false -gcflags=all="-l"{{else}}-tags production{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s -H windowsgui"{{end}}'
+      BUILD_FLAGS: '{{if eq .DEV "true"}}{{if or .EXTRA_TAGS (eq .OBFUSCATED "true")}}-tags {{if eq .OBFUSCATED "true"}}wails_obfuscated{{if .EXTRA_TAGS}},{{end}}{{end}}{{.EXTRA_TAGS}} {{end}}-buildvcs=false -gcflags=all="-l"{{if .VERSION}} -ldflags="-X main.ReleaseVersion={{.VERSION}}"{{end}}{{else}}-tags production{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s{{if .VERSION}} -X main.ReleaseVersion={{.VERSION}}{{end}} -H windowsgui"{{end}}'
+      VERSION: '{{.VERSION | default ""}}'
     env:
       GOOS: windows
       CGO_ENABLED: '{{.CGO_ENABLED | default "0"}}'
@@ -118,6 +120,8 @@ tasks:
     dir: build/windows/nsis
     deps:
       - task: build
+        vars:
+          VERSION: '{{.VERSION}}'
     preconditions:
       - sh: '[ "{{.INSTALL_SCOPE}}" = "user" ] || [ "{{.INSTALL_SCOPE}}" = "machine" ]'
         msg: "INSTALL_SCOPE must be 'user' or 'machine', got '{{.INSTALL_SCOPE}}'"
@@ -152,6 +156,7 @@ tasks:
           EXTRA_TAGS: '{{.EXTRA_TAGS}}'
           OBFUSCATED: '{{.OBFUSCATED}}'
           GARBLE_ARGS: '{{.GARBLE_ARGS}}'
+          VERSION: '{{.VERSION}}'
     preconditions:
       - sh: '{{if eq OS "windows"}}where.exe powershell{{else}}false{{end}}'
         msg: "PowerShell is required to build the Inno Setup installer."
@@ -168,6 +173,8 @@ tasks:
     summary: Creates an MSIX package
     deps:
       - task: build
+        vars:
+          VERSION: '{{.VERSION}}'
     cmds:
       - |-
         wails3 tool msix \
@@ -203,6 +210,8 @@ tasks:
       Password is retrieved from system keychain (run: wails3 setup signing)
     deps:
       - task: build
+        vars:
+          VERSION: '{{.VERSION}}'
     cmds:
       # Certificate vars are optional: if unset, `wails3 tool sign` falls back to
       # the certificate configured globally via `wails3 setup`.
