@@ -19,7 +19,8 @@
 </p>
 
 <p align="center">
-  <a href="https://aswanidev-vs.github.io/Miku/miku-promo.mp4">Watch the Miku promo video</a>
+ <video controls src="docs/miku-promo.mp4" title="Title"></video>
+
 </p>
 
 ## Table of Contents
