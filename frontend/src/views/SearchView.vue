@@ -215,6 +215,10 @@ function goToStaff(id: number) {
 }
 
 function clearSearch() {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer)
+    debounceTimer = null
+  }
   query.value = ''
   hasSearched.value = false
   animeStore.clearSearch()
@@ -229,7 +233,11 @@ onUnmounted(() => {
 
 function applyRouteSearch(value: unknown) {
   const routeQuery = typeof value === 'string' ? value.trim() : ''
-  if (!routeQuery || routeQuery === query.value.trim()) return
+  if (!routeQuery) {
+    clearSearch()
+    return
+  }
+  if (routeQuery === query.value.trim()) return
   query.value = routeQuery
   performSearch()
 }

@@ -1,6 +1,6 @@
 # Feature Inventory — Miku AniList Client
 
-Repo root: `G:/fastbeam/multiplefolder/space/Miku`. Status legend: **exists** = implemented in code; **needs verify** = present but wiring/state uncertain.
+Repo: `Aswanidev-vs/Miku`. Status legend: **exists** = implemented in code; **needs verify** = present but wiring/state uncertain.
 
 ## Routes (frontend/src/router/index.ts)
 | Path | Name | Component |
@@ -10,10 +10,11 @@ Repo root: `G:/fastbeam/multiplefolder/space/Miku`. Status legend: **exists** = 
 | `/mylist` | mylist | MyListView.vue |
 | `/feed` | feed | FeedView.vue |
 | `/profile` | profile | ProfileView.vue |
+| `/statistics` | statistics | StatisticsView.vue |
 | `/media/:id` | media-detail | MediaDetailView.vue |
 | `/voice-actor/:id` | voice-actor | VoiceActorView.vue |
 | `/character/:id` | character | CharacterView.vue |
-| `/settings` | settings | SettingsView.vue (redirect) |
+| `/settings` | settings | SettingsView.vue |
 | `/login` | login | LoginView.vue |
 
 ## Stores (frontend/src/stores/)
@@ -125,8 +126,3 @@ Repo root: `G:/fastbeam/multiplefolder/space/Miku`. Status legend: **exists** = 
 ## Collapsible stats on mobile
 - StatsBreakdown component: `frontend/src/components/profile/StatsBreakdown.vue` — needs verify collapsible implementation; check file.
 - Status: needs verify
-```
-
-Let me maybe verify StatsBreakdown collapsible. But word budget. I'll keep.
-
-Now write file.<|end|><|start|> fileList

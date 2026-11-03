@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -27,6 +28,9 @@ func TestCompareVersions(t *testing.T) {
 		{"v0.0.1", "v0.0.0", 1},
 		{"v2.1.3", "v2.1.3", 0},
 		{"v1.0.0", "v1.0.1", -1},
+		{"v0.13.3-beta.1", "v0.13.3-beta.2", -1},
+		{"v0.13.3-beta.1", "v0.13.3", -1},
+		{"v0.13.3", "v0.13.3-beta.1", 1},
 	}
 	for _, tc := range tests {
 		t.Run(tc.a+"_vs_"+tc.b, func(t *testing.T) {
@@ -40,6 +44,30 @@ func TestCompareVersions(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSelectUpdateReleaseByChannel(t *testing.T) {
+	releases := []GitHubRelease{
+		{TagName: "v0.13.3-beta.2", Prerelease: true},
+		{TagName: "v0.13.3-beta.1", Prerelease: true},
+		{TagName: "v0.13.2"},
+		{TagName: "v0.13.4", Draft: true},
+	}
+
+	stable := selectUpdateRelease(releases, "0.13.2")
+	require.NotNil(t, stable)
+	assert.Equal(t, "v0.13.2", stable.TagName)
+
+	beta := selectUpdateRelease(releases, "0.13.3-beta.1")
+	require.NotNil(t, beta)
+	assert.Equal(t, "v0.13.3-beta.2", beta.TagName)
+
+	stableAfterBeta := selectUpdateRelease(append(releases, GitHubRelease{TagName: "v0.13.3"}), "0.13.3-beta.1")
+	require.NotNil(t, stableAfterBeta)
+	assert.Equal(t, "v0.13.3", stableAfterBeta.TagName)
+
+	assert.Nil(t, selectUpdateRelease(nil, "0.13.2"))
+	assert.Nil(t, selectUpdateRelease([]GitHubRelease{{TagName: "v0.13.3-beta.3"}}, "0.13.2"))
 }
 
 func TestGetCurrentVersion(t *testing.T) {
@@ -64,6 +92,32 @@ func TestSelectUpdateAssetForPlatform(t *testing.T) {
 	assert.Equal(t, "Miku-v0.9.0-windows-setup.exe", windowsAsset.Name)
 
 	assert.Nil(t, selectUpdateAsset(assets, "linux"))
+}
+
+func TestFetchExpectedSHA256SkipsMalformedSidecars(t *testing.T) {
+	validHash := strings.Repeat("a", 64)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/invalid-per-asset":
+			_, _ = w.Write([]byte("not-a-checksum"))
+		case "/invalid-aggregate":
+			_, _ = w.Write([]byte("not-a-checksum  Miku.exe\n"))
+		case "/valid-per-asset":
+			_, _ = w.Write([]byte(validHash + "  Miku.exe\n"))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	svc := &UpdateService{httpClient: server.Client()}
+	hash := svc.fetchExpectedSHA256([]GitHubAsset{
+		{Name: "Miku.exe.sha256", BrowserDownloadURL: server.URL + "/invalid-per-asset"},
+		{Name: "SHA256SUMS", BrowserDownloadURL: server.URL + "/invalid-aggregate"},
+		{Name: "Miku.exe.sha256.txt", BrowserDownloadURL: server.URL + "/valid-per-asset"},
+	}, "Miku.exe")
+
+	assert.Equal(t, validHash, hash)
 }
 
 func TestCheckForUpdate_NewerAvailable(t *testing.T) {

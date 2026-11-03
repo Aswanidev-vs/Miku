@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -47,9 +48,11 @@ type GitHubAsset struct {
 }
 
 type GitHubRelease struct {
-	TagName string        `json:"tag_name"`
-	Name    string        `json:"name"`
-	Assets  []GitHubAsset `json:"assets"`
+	TagName    string        `json:"tag_name"`
+	Name       string        `json:"name"`
+	Prerelease bool          `json:"prerelease"`
+	Draft      bool          `json:"draft"`
+	Assets     []GitHubAsset `json:"assets"`
 }
 
 type UpdateInfo struct {
@@ -86,7 +89,7 @@ func (s *UpdateService) GetDownloadProgress() (downloaded int64, total int64, ac
 
 func (s *UpdateService) CheckForUpdate() (*UpdateInfo, error) {
 	url := fmt.Sprintf(
-		"https://api.github.com/repos/%s/%s/releases/latest",
+		"https://api.github.com/repos/%s/%s/releases?per_page=100",
 		s.config.RepoOwner, s.config.RepoName,
 	)
 
@@ -112,17 +115,21 @@ func (s *UpdateService) CheckForUpdate() (*UpdateInfo, error) {
 		return nil, fmt.Errorf("GitHub API returned %d", resp.StatusCode)
 	}
 
-	var release GitHubRelease
-	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+	var releases []GitHubRelease
+	if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil {
 		return nil, fmt.Errorf("failed to parse release: %w", err)
 	}
+	release := selectUpdateRelease(releases, s.config.CurrentVersion)
 
 	info := &UpdateInfo{
-		Available:   false,
-		CurrentVer:  s.config.CurrentVersion,
-		LatestVer:   release.TagName,
-		ReleaseName: release.Name,
+		Available:  false,
+		CurrentVer: s.config.CurrentVersion,
 	}
+	if release == nil {
+		return info, nil
+	}
+	info.LatestVer = release.TagName
+	info.ReleaseName = release.Name
 
 	if CompareVersions(release.TagName, s.config.CurrentVersion) > 0 {
 		info.Available = true
@@ -149,6 +156,27 @@ func (s *UpdateService) CheckForUpdate() (*UpdateInfo, error) {
 	}
 
 	return info, nil
+}
+
+func selectUpdateRelease(releases []GitHubRelease, currentVersion string) *GitHubRelease {
+	allowPrereleases := isPrereleaseVersion(currentVersion)
+	var selected *GitHubRelease
+	for i := range releases {
+		release := &releases[i]
+		releaseIsPrerelease := release.Prerelease || isPrereleaseVersion(release.TagName)
+		if release.Draft || (!allowPrereleases && releaseIsPrerelease) {
+			continue
+		}
+		if selected == nil || CompareVersions(release.TagName, selected.TagName) > 0 {
+			selected = release
+		}
+	}
+	return selected
+}
+
+func isPrereleaseVersion(version string) bool {
+	version = strings.TrimPrefix(strings.TrimSpace(version), "v")
+	return strings.Contains(version, "-")
 }
 
 // updateFileExtension returns the distributable file extension supported by
@@ -192,7 +220,9 @@ func (s *UpdateService) fetchExpectedSHA256(assets []GitHubAsset, assetName stri
 		// Per-asset sidecar: "<asset>.sha256"
 		if name == lowerAsset+".sha256" || name == lowerAsset+".sha256.txt" {
 			if h := s.downloadText(a.BrowserDownloadURL); h != "" {
-				return firstToken(h)
+				if hash := firstToken(h); isValidSHA256(hash) {
+					return hash
+				}
 			}
 		}
 		// Aggregate checksum files.
@@ -204,7 +234,9 @@ func (s *UpdateService) fetchExpectedSHA256(assets []GitHubAsset, assetName stri
 				if len(fields) >= 2 {
 					fname := strings.TrimPrefix(fields[1], "*")
 					if strings.EqualFold(fname, assetName) {
-						return fields[0]
+						if isValidSHA256(fields[0]) {
+							return fields[0]
+						}
 					}
 				}
 			}
@@ -237,26 +269,86 @@ func firstToken(s string) string {
 	return fields[0]
 }
 
-// Strips leading "v" and compares major.minor.patch numerically.
-func CompareVersions(a, b string) int {
-	a = strings.TrimPrefix(a, "v")
-	b = strings.TrimPrefix(b, "v")
-
-	parse := func(s string) [3]int {
-		var parts [3]int
-		for i, p := range strings.SplitN(s, ".", 3) {
-			fmt.Sscanf(p, "%d", &parts[i])
-		}
-		return parts
+func isValidSHA256(value string) bool {
+	if len(value) != sha256.Size*2 {
+		return false
 	}
+	_, err := hex.DecodeString(value)
+	return err == nil
+}
 
-	va, vb := parse(a), parse(b)
+// CompareVersions compares semantic versions, including prerelease labels.
+func CompareVersions(a, b string) int {
+	va, prea := parseVersion(a)
+	vb, preb := parseVersion(b)
 	for i := 0; i < 3; i++ {
 		if va[i] != vb[i] {
 			return va[i] - vb[i]
 		}
 	}
+	if len(prea) == 0 && len(preb) == 0 {
+		return 0
+	}
+	if len(prea) == 0 {
+		return 1
+	}
+	if len(preb) == 0 {
+		return -1
+	}
+	for i := 0; i < len(prea) && i < len(preb); i++ {
+		if prea[i] == preb[i] {
+			continue
+		}
+		return comparePrereleaseIdentifier(prea[i], preb[i])
+	}
+	if len(prea) < len(preb) {
+		return -1
+	}
+	if len(prea) > len(preb) {
+		return 1
+	}
 	return 0
+}
+
+func parseVersion(version string) ([3]int, []string) {
+	var core [3]int
+	version = strings.TrimPrefix(strings.TrimSpace(version), "v")
+	version = strings.SplitN(version, "+", 2)[0]
+	parts := strings.SplitN(version, "-", 2)
+	for i, part := range strings.Split(parts[0], ".") {
+		if i >= len(core) {
+			break
+		}
+		fmt.Sscanf(part, "%d", &core[i])
+	}
+	if len(parts) == 1 || parts[1] == "" {
+		return core, nil
+	}
+	return core, strings.Split(parts[1], ".")
+}
+
+func comparePrereleaseIdentifier(a, b string) int {
+	aNumber, aErr := strconv.Atoi(a)
+	bNumber, bErr := strconv.Atoi(b)
+	if aErr == nil && bErr == nil {
+		if aNumber < bNumber {
+			return -1
+		}
+		if aNumber > bNumber {
+			return 1
+		}
+		return 0
+	}
+	if aErr == nil {
+		return -1
+	}
+	if bErr == nil {
+		return 1
+	}
+	if a < b {
+		return -1
+	}
+	return 1
 }
 
 func (s *UpdateService) DownloadUpdate(downloadURL string, expectedSHA256 ...string) (string, error) {

@@ -55,6 +55,11 @@ function releaseTimestamp(media: Media): number {
   return media.id
 }
 
+function recentlyUpdatedTimestamp(media: Media): number {
+  const updatedAt = media.mediaListEntry?.updatedAt
+  return updatedAt ? updatedAt * 1000 : releaseTimestamp(media)
+}
+
 const carouselMedia = computed(() => {
   const sources = settings.value.carouselSources
   const bySource: Record<string, Media[]> = {
@@ -89,7 +94,7 @@ const carouselMedia = computed(() => {
     if (settings.value.carouselOrder === 'popular') {
       difference = (b.popularity || b.trending || 0) - (a.popularity || a.trending || 0)
     } else if (settings.value.carouselOrder === 'recently-updated') {
-      difference = (b.mediaListEntry?.updatedAt || releaseTimestamp(b)) - (a.mediaListEntry?.updatedAt || releaseTimestamp(a))
+      difference = recentlyUpdatedTimestamp(b) - recentlyUpdatedTimestamp(a)
     } else {
       difference = releaseTimestamp(b) - releaseTimestamp(a)
     }
@@ -195,8 +200,10 @@ async function handleCarouselAction() {
   }
   try {
     const nextProgress = entry ? entry.progress + 1 : 0
-    const savedEntry = await animeStore.updateEntry(media.id, entry?.status || 'PLANNING', entry?.score || 0, nextProgress)
-    if (savedEntry) media.mediaListEntry = savedEntry
+    await animeStore.updateEntry(media.id, entry?.status || 'PLANNING', entry?.score || 0, nextProgress)
+    if (authStore.currentUser) {
+      await animeStore.fetchMyList(authStore.currentUser.id)
+    }
     carouselActionMessage.value = entry ? 'Progress updated' : 'Added to Planning'
     window.setTimeout(() => { carouselActionMessage.value = '' }, 2200)
   } catch {

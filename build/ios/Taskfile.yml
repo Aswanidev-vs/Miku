@@ -275,6 +275,8 @@ tasks:
   generate:ios:xcode:
     internal: true
     summary: Generate iOS Xcode project structure and assets
+    deps:
+      - task: common:sync:branding
     sources:
       - build/config.yml
       - build/appicon.png

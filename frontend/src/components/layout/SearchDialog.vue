@@ -26,6 +26,7 @@ const results = ref<SearchResult[]>([])
 const loading = ref(false)
 const hasSearched = ref(false)
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
+let requestId = 0
 
 const MEDIA_SEARCH_QUERY = `
 query ($search: String, $type: MediaType) {
@@ -85,6 +86,8 @@ function mediaSubtitle(media: { format?: string; status?: string }) {
 
 async function fetchResults() {
   const value = query.value.trim()
+  const searchKind = activeKind.value
+  const currentRequestId = ++requestId
   if (value.length < 2) {
     results.value = []
     hasSearched.value = false
@@ -94,41 +97,45 @@ async function fetchResults() {
   loading.value = true
   hasSearched.value = true
   try {
-    if (activeKind.value === 'CHARACTER' || activeKind.value === 'STAFF') {
+    if (searchKind === 'CHARACTER' || searchKind === 'STAFF') {
       const response = await gqlQuery(
-        activeKind.value === 'CHARACTER' ? CHARACTER_SEARCH_QUERY : STAFF_SEARCH_QUERY,
+        searchKind === 'CHARACTER' ? CHARACTER_SEARCH_QUERY : STAFF_SEARCH_QUERY,
         { search: value, page: 1, perPage: 6 },
       )
+      if (currentRequestId !== requestId) return
       const page = response?.data?.Page
-      const people = activeKind.value === 'CHARACTER' ? page?.characters || [] : page?.staff || []
+      const people = searchKind === 'CHARACTER' ? page?.characters || [] : page?.staff || []
       results.value = people.map((person: any) => ({
         id: person.id,
-        kind: activeKind.value as 'CHARACTER' | 'STAFF',
+        kind: searchKind,
         title: person.name?.full || 'Unknown staff member',
-        subtitle: activeKind.value === 'CHARACTER'
+        subtitle: searchKind === 'CHARACTER'
           ? person.name?.native || 'Character'
           : person.primaryOccupations?.join(', ') || 'Staff',
         image: person.image?.large || person.image?.medium,
       }))
     } else {
-      const response = await gqlQuery(MEDIA_SEARCH_QUERY, { search: value, type: activeKind.value })
+      const response = await gqlQuery(MEDIA_SEARCH_QUERY, { search: value, type: searchKind })
+      if (currentRequestId !== requestId) return
       results.value = (response?.data?.Page?.media || []).map((media: any) => ({
         id: media.id,
-        kind: activeKind.value,
+        kind: searchKind,
         title: titleFor(media.title || {}),
         subtitle: mediaSubtitle(media),
         image: media.coverImage?.large || media.coverImage?.medium,
       }))
     }
   } catch {
+    if (currentRequestId !== requestId) return
     results.value = []
   } finally {
-    loading.value = false
+    if (currentRequestId === requestId) loading.value = false
   }
 }
 
 function scheduleSearch() {
   if (debounceTimer) clearTimeout(debounceTimer)
+  requestId++
   debounceTimer = setTimeout(fetchResults, 280)
 }
 
@@ -156,6 +163,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
   if (debounceTimer) clearTimeout(debounceTimer)
+  requestId++
 })
 </script>
 

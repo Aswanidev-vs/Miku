@@ -41,14 +41,15 @@ const MY_LIST_CARD_SIZE_OPTIONS: { value: MyListCardSize; label: string; hint: s
 
 // Auto-sync toggle -> start/stop the 60s polling loop
 watch(
-  () => settings.value.autoSync,
-  (on) => {
-    if (on && isLoggedIn.value && user.value) {
-      animeStore.startSync(user.value.id)
+  [() => settings.value.autoSync, isLoggedIn, user],
+  ([on, loggedIn, currentUser]) => {
+    if (on && loggedIn && currentUser) {
+      animeStore.startSync(currentUser.id)
     } else {
       animeStore.stopSync()
     }
-  }
+  },
+  { immediate: true }
 )
 
 // Defer profile-only sections so account and preference controls render first.
@@ -493,7 +494,7 @@ function handleAboutClick(e: Event) {
           <span class="about-value">
             v{{ currentVersion }}
             <span v-if="hasUpdate" class="update-indicator">
-              → v{{ latestVersion }} available
+              → v{{ latestVersion.replace(/^v/, '') }} available
             </span>
           </span>
         </div>
@@ -543,7 +544,7 @@ function handleAboutClick(e: Event) {
       </section>
     </template>
 
-    <div v-else class="profile-empty">
+    <div v-else-if="!isLoggedIn" class="profile-empty">
       <p>Sign in with AniList to see your profile.</p>
       <button class="btn btn-primary" type="button" @click="handleLogin">Sign in with AniList</button>
     </div>

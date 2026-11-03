@@ -120,8 +120,12 @@ jobs:
         env:
           ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
           ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
-          RELEASE_VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
-        run: wails3 task windows:package FORMAT=inno ARCH=amd64 VERSION="$env:RELEASE_VERSION"
+        run: |
+          $releaseVersion = ""
+          if ($env:GITHUB_REF -like "refs/tags/v*") {
+            $releaseVersion = $env:GITHUB_REF_NAME.Substring(1)
+          }
+          wails3 task windows:package FORMAT=inno ARCH=amd64 VERSION="$releaseVersion"
 
       - name: Verify installer
         shell: pwsh
@@ -259,7 +263,13 @@ jobs:
         run: GOFLAGS=-tags=gtk3 wails3 generate bindings
 
       - name: Build Android APK
-        run: wails3 task android:package:fat
+        shell: bash
+        run: |
+          release_version=""
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            release_version="${GITHUB_REF#refs/tags/v}"
+          fi
+          wails3 task android:package:fat VERSION="$release_version"
         env:
           ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
           ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}

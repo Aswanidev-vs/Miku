@@ -15,6 +15,10 @@ import (
 // Version is the current app version. Bump before each release build.
 const Version = "0.13.3"
 
+// ReleaseVersion is overridden by release builds with the exact tag version,
+// including prerelease identifiers such as 0.13.3-beta.1.
+var ReleaseVersion = Version
+
 //go:embed all:frontend/dist
 var assets embed.FS
 
@@ -79,7 +83,7 @@ func main() {
 
 	// Update service — checks GitHub Releases for new versions
 	updateService, err := update.NewUpdateService(update.Config{
-		CurrentVersion: Version,
+		CurrentVersion: ReleaseVersion,
 		RepoOwner:      "Aswanidev-vs",
 		RepoName:       "Miku",
 	})
