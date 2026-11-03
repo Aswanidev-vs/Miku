@@ -20,7 +20,7 @@
 
 <p align="center">
   <picture>
-    <source srcset="docs/miku-promo.avif" type="image/avif">
+    <source srcset="docs/miku-promo.gif" type="image/avif">
     <img src="docs/miku-promo.gif" width="100%" alt="Miku promo">
      
   </picture>
