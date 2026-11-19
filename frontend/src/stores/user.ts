@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { User, Activity, TextActivity, ListActivity } from '../types'
+import type { User, Activity, TextActivity, ListActivity, UserActivityHistory } from '../types'
 import { gqlQuery, gqlMutate } from '../api/graphql'
 
 const USER_PROFILE_QUERY = `
@@ -327,7 +327,7 @@ async function fetchFollowingIds(userId: number, cap = 200): Promise<number[]> {
 export const useUserStore = defineStore('user', () => {
   const profile = ref<User | null>(null)
   const activities = ref<(TextActivity | ListActivity)[]>([])
-  const heatmapActivities = ref<(TextActivity | ListActivity)[]>([])
+  const heatmapActivities = ref<UserActivityHistory[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
   const activityPageInfo = ref<{
@@ -397,39 +397,31 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // Fetch all activities for the heatmap (past year)
-  async function fetchAllActivitiesForHeatmap(userId: number) {
-    const allActivities: any[] = []
-    let page = 1
-    const perPage = 50
-    const oneYearAgo = Date.now() / 1000 - 365 * 24 * 60 * 60
-
-    try {
-      while (page <= 20) { // Max 20 pages = 1000 activities
-        const response = await gqlQuery(ACTIVITY_FEED_QUERY, {
-          userId,
-          page,
-          perPage,
-        })
-        const items = response?.data?.Page?.activities ?? []
-        if (items.length === 0) break
-
-        for (const item of items) {
-          if (item.createdAt >= oneYearAgo) {
-            allActivities.push(item)
-          } else {
-            // Reached activities older than 1 year
-            page = 999 // break outer loop
-            break
+  // Fetch activity history for the heatmap via AniList's native activityHistory
+  // (pre-aggregated by AniList, 1 API call instead of 20, covers past 6 months).
+  // Note: activityHistory lives on the deprecated User.stats field, not User.statistics.
+  const HEATMAP_QUERY = `
+    query ($userId: Int!) {
+      User(id: $userId) {
+        stats {
+          activityHistory {
+            date
+            amount
+            level
           }
         }
-        page++
       }
-    } catch {
-      // Ignore errors, use what we have
     }
+  `
 
-    heatmapActivities.value = allActivities
+  async function fetchAllActivitiesForHeatmap(userId: number) {
+    try {
+      const response = await gqlQuery(HEATMAP_QUERY, { userId })
+      const history = response?.data?.User?.stats?.activityHistory ?? []
+      heatmapActivities.value = history
+    } catch {
+      // Ignore errors, keep existing heatmap data
+    }
   }
 
   async function fetchFollowingActivities(userId: number, page = 1, perPage = 20) {

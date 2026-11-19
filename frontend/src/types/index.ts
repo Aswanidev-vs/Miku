@@ -132,6 +132,12 @@ export interface UserStatistics {
   }
 }
 
+export interface UserActivityHistory {
+  date: number
+  amount: number
+  level: number
+}
+
 /* ---- User Statistics Breakdowns ---- */
 
 export interface GenreStat {

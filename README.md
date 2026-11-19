@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Go-1.25-00ADD8?logo=go" alt="Go">
   <img src="https://img.shields.io/badge/TypeScript-5.3-3178C6?logo=typescript" alt="TypeScript">
   <img src="https://img.shields.io/badge/License-MIT-yellow" alt="License">
-  <img src="https://img.shields.io/badge/version-0.13.3-ff69b4" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.13.6-ff69b4" alt="Version">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android-lightgrey" alt="Platforms">
 </p>
 
@@ -52,7 +52,7 @@ Miku is a feature-rich AniList client that delivers a premium anime and manga tr
 - **Personal Lists** — Manage your anime lists (Watching, Planning, Completed, Dropped, Paused)
 - **List Management** — Add/update anime to your list directly from detail pages (status, score, progress)
 - **Activity Feed** — Following-style feed showing your own activity plus the activity of everyone you follow on AniList (like the AniList site). Post status updates with the built-in composer; activity text renders as rich markdown. Tap a friend's avatar to open their AniList profile
-- **Profile & Stats** — View your profile with detailed statistics and breakdowns (genres, tags, studios, staff, voice actors), favourites (anime, manga, characters, staff), following/followers, paginated activity history, and an activity heatmap
+- **Profile & Stats** — View your profile with detailed statistics and breakdowns (genres, tags, studios, staff, voice actors), favourites (anime, manga, characters, staff), following/followers, paginated activity history, and an activity heatmap (powered by AniList's native `activityHistory` for minimal API usage)
 
 ### In-App Updates
 - **Update Notifications** — Bell icon on Discover page checks GitHub Releases for new versions
@@ -104,6 +104,7 @@ Miku is a feature-rich AniList client that delivers a premium anime and manga tr
 
 ### Technical
 - **GraphQL API** — Efficient data fetching with AniList's GraphQL API
+- **Smart Caching** — Per-query TTL cache with in-flight deduplication; static data (trending, media details) cached longer, user data (lists, feed) kept fresh
 - **Type Safety** — Full TypeScript coverage with strict mode
 - **State Management** — Pinia stores for reactive state handling
 - **Cross-Platform** — Works on Windows, macOS, Linux, and Android
@@ -531,7 +532,6 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 - [Wails](https://wails.io) — For the cross-platform framework
 - [Vue.js](https://vuejs.org) — For the frontend framework
 - [Pinia](https://pinia.vuejs.org) — For state management
-- [Dexie.js](https://dexie.org) — For IndexedDB wrapper
 - [Testify](https://github.com/stretchr/testify) — For Go testing assertions
 
 ---

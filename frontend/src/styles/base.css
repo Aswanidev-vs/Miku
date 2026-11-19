@@ -29,8 +29,6 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   overflow: hidden;
-  -webkit-user-select: none;
-  user-select: none;
   position: relative;
 }
 
