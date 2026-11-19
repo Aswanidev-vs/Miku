@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.png" alt="Miku Logo" width="150" height="150" style="border-radius: 100%;">   
+  <img src="logo.png" alt="Miku Logo" width="150" height="150" style="border-radius: 50%; object-fit: cover;">
 </p>
 
 <h1 align="center">Miku</h1>
@@ -20,8 +20,9 @@
 
 <p align="center">
   <picture>
-    <source srcset="docs/miku-promo.avif" type="image/avif">
+    <source srcset="docs/miku-promo.gif" type="image/avif">
     <img src="docs/miku-promo.gif" width="100%" alt="Miku promo">
+     
   </picture>
 </p>
 
