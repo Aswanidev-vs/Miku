@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, nextTick, watch } from 'vue'
-import type { Activity } from '../../types'
+import type { UserActivityHistory } from '../../types'
 
 const props = defineProps<{
-  activities: Activity[]
+  activities: UserActivityHistory[]
 }>()
 
 const CELL_SIZE = 12
@@ -26,16 +26,12 @@ function scrollToLatest() {
 onMounted(scrollToLatest)
 watch(() => props.activities.length, scrollToLatest)
 
-function getActivityDate(activity: Activity): string {
-  const date = new Date(activity.createdAt * 1000)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
-
-const activityMap = computed(() => {
+const activityLevelMap = computed(() => {
   const map: Record<string, number> = {}
-  for (const activity of props.activities) {
-    const date = getActivityDate(activity)
-    map[date] = (map[date] || 0) + 1
+  for (const entry of props.activities) {
+    const date = new Date(entry.date * 1000)
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+    map[dateStr] = entry.level
   }
   return map
 })
@@ -64,7 +60,7 @@ const monthLabels = computed(() => {
 })
 
 const heatmapData = computed(() => {
-  const cells: { date: string; count: number; x: number; y: number }[] = []
+  const cells: { date: string; count: number; level: number; x: number; y: number }[] = []
   const today = new Date()
   const startDate = new Date(today)
   startDate.setDate(startDate.getDate() - (WEEKS * WEEK_DAYS - 1))
@@ -76,10 +72,11 @@ const heatmapData = computed(() => {
       const date = new Date(startDate)
       date.setDate(date.getDate() + (week * WEEK_DAYS + day))
       const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-      const count = activityMap.value[dateStr] || 0
+      const level = activityLevelMap.value[dateStr] || 0
       cells.push({
         date: dateStr,
-        count,
+        count: level,
+        level,
         x: week * (CELL_SIZE + CELL_GAP),
         y: HEADER_OFFSET + day * (CELL_SIZE + CELL_GAP),
       })
@@ -89,18 +86,18 @@ const heatmapData = computed(() => {
 })
 
 const totalActivity = computed(() => {
-  return Object.values(activityMap.value).reduce((sum, count) => sum + count, 0)
+  return props.activities.reduce((sum, entry) => sum + entry.amount, 0)
 })
 
 const uniqueDays = computed(() => {
-  return Object.keys(activityMap.value).length
+  return props.activities.filter(entry => entry.amount > 0).length
 })
 
-function getIntensityClass(count: number): string {
-  if (count === 0) return 'level-0'
-  if (count === 1) return 'level-1'
-  if (count <= 3) return 'level-2'
-  if (count <= 6) return 'level-3'
+function getIntensityClass(level: number): string {
+  if (level === 0) return 'level-0'
+  if (level <= 2) return 'level-1'
+  if (level <= 4) return 'level-2'
+  if (level <= 7) return 'level-3'
   return 'level-4'
 }
 
@@ -160,7 +157,7 @@ function formatTooltip(date: string, count: number): string {
             :height="CELL_SIZE"
             :rx="2"
             :ry="2"
-            :class="['heatmap-cell', getIntensityClass(cell.count)]"
+            :class="['heatmap-cell', getIntensityClass(cell.level)]"
           >
             <title>{{ formatTooltip(cell.date, cell.count) }}</title>
           </rect>
@@ -169,7 +166,7 @@ function formatTooltip(date: string, count: number): string {
     </div>
 
     <div class="heatmap-stats">
-      <span class="stat"><strong>{{ totalActivity }}</strong> activities in the past year</span>
+      <span class="stat"><strong>{{ totalActivity }}</strong> activities in the past 6 months</span>
       <span class="stat-sep">|</span>
       <span class="stat"><strong>{{ uniqueDays }}</strong> active days</span>
     </div>

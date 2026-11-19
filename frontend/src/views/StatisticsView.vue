@@ -48,7 +48,7 @@ async function handleLogin() {
       <section class="statistics-section">
         <div class="section-heading">
           <h2>Activity heatmap</h2>
-          <p>Your activity over the last year</p>
+          <p>Your activity over the last 6 months</p>
         </div>
         <HeatmapCalendar :activities="userStore.heatmapActivities" />
       </section>

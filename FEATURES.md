@@ -68,7 +68,7 @@ Repo: `Aswanidev-vs/Miku`. Status legend: **exists** = implemented in code; **ne
 - StatsBreakdown: `components/profile/StatsBreakdown.vue`
 - UserFavorites: `components/profile/UserFavorites.vue`
 - SocialList (following/followers): `components/profile/SocialList.vue`
-- HeatmapCalendar: `components/profile/HeatmapCalendar.vue`
+- HeatmapCalendar: `components/profile/HeatmapCalendar.vue` — uses AniList's native `activityHistory` field (pre-aggregated, 1 API call, covers past 6 months). Intensity levels use AniList's `level` (1-10) mapped to 5 visual buckets.
 - About Me markdown: `ProfileView.vue:431-433`
 - Version display: `ProfileView.vue:479-487`
 - Recent activity history pagination: `ProfileView.vue:60-88`
@@ -126,3 +126,6 @@ Repo: `Aswanidev-vs/Miku`. Status legend: **exists** = implemented in code; **ne
 ## Collapsible stats on mobile
 - StatsBreakdown component: `frontend/src/components/profile/StatsBreakdown.vue` — needs verify collapsible implementation; check file.
 - Status: needs verify
+
+## Future enhancements
+- **Heatmap 12-month coverage**: AniList's `activityHistory` only covers the past 6 months. To show a full-year heatmap, cache 6-month chunks periodically and merge them with deduplication of overlapping days. Expire chunks older than 12 months. Not yet implemented.
