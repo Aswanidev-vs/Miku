@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/Go-1.25-00ADD8?logo=go" alt="Go">
   <img src="https://img.shields.io/badge/TypeScript-5.3-3178C6?logo=typescript" alt="TypeScript">
   <img src="https://img.shields.io/badge/License-MIT-yellow" alt="License">
-  <img src="https://img.shields.io/badge/version-0.13.3-ff69b4" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.13.6-ff69b4" alt="Version">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android-lightgrey" alt="Platforms">
 </p>
 
